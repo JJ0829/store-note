@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Position, Task } from "@/lib/types";
+import type { Position, Step } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /* 매장 공용 태블릿에서 첫날 교육용으로 한 항목씩 넘겨 보는 화면.        */
@@ -12,7 +12,7 @@ import type { Position, Task } from "@/lib/types";
 /* [시작하기]를 누를 때마다 새 세션으로 초기화한다.                      */
 /* ------------------------------------------------------------------ */
 
-type FlatTask = Task & { sectionTitle: string };
+type FlatTask = Step & { sectionTitle: string };
 
 type RunState = {
   runId: string;
@@ -57,7 +57,7 @@ export default function TrainingMode({
   const tasks = useMemo<FlatTask[]>(
     () =>
       position.sections.flatMap((s) =>
-        s.tasks.map((t) => ({ ...t, sectionTitle: s.title })),
+        s.steps.map((t) => ({ ...t, sectionTitle: s.title })),
       ),
     [position],
   );
@@ -252,7 +252,7 @@ export default function TrainingMode({
   if (!task || !run) return null;
 
   const ytId = task.videoUrl ? youtubeId(task.videoUrl) : null;
-  const hasMedia = Boolean(task.imageUrl || ytId);
+  const hasMedia = Boolean(task.goodImage || ytId);
   const pct = Math.round(((run.idx + 1) / total) * 100);
 
   return (
@@ -301,7 +301,7 @@ export default function TrainingMode({
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={task.imageUrl ?? ""}
+                  src={task.goodImage ?? ""}
                   alt={task.title}
                   className="max-h-full w-full rounded-2xl border border-zinc-200 object-contain dark:border-zinc-800"
                 />

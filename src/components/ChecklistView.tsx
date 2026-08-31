@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Position, Task } from "@/lib/types";
+import type { Position, Step } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /* 저장은 전부 localStorage. 회원가입이 없는 게 이 MVP의 핵심이라서,     */
@@ -58,8 +58,8 @@ export default function ChecklistView({
   position: Position;
   storeName: string;
 }) {
-  const allTasks = useMemo<Task[]>(
-    () => position.sections.flatMap((s) => s.tasks),
+  const allTasks = useMemo<Step[]>(
+    () => position.sections.flatMap((s) => s.steps),
     [position],
   );
   const total = allTasks.length;
@@ -167,7 +167,7 @@ export default function ChecklistView({
           </div>
 
           <ul className="flex flex-col gap-2">
-            {section.tasks.map((task) => {
+            {section.steps.map((task) => {
               const checked = done.has(task.id);
               const ytId = task.videoUrl ? youtubeId(task.videoUrl) : null;
 
@@ -241,12 +241,12 @@ export default function ChecklistView({
                   </button>
 
                   {/* 사진·영상은 버튼 밖에 둔다 (버튼 안에 iframe을 넣지 않기 위해) */}
-                  {(task.imageUrl || ytId) && (
+                  {(task.goodImage || ytId) && (
                     <div className="px-4 pb-4 pl-[3.75rem]">
-                      {task.imageUrl && (
+                      {task.goodImage && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={task.imageUrl}
+                          src={task.goodImage}
                           alt={task.title}
                           loading="lazy"
                           className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800"
