@@ -395,8 +395,14 @@ export default function PrepView({
                         key={ing.name}
                         className="flex items-baseline justify-between gap-3 text-[14px]"
                       >
-                        <span className="text-zinc-600 dark:text-zinc-300">
+                        <span className="min-w-0 text-zinc-600 dark:text-zinc-300">
                           {ing.name}
+                          {ing.note && (
+                            // 배합률(60%, 6%)은 배수를 곱해도 그대로다. 그래서 기준이 된다.
+                            <span className="ml-1.5 text-[11px] text-zinc-400">
+                              {ing.note}
+                            </span>
+                          )}
                         </span>
                         <span className="shrink-0 font-bold tabular-nums">
                           {scaled(ing.amount, scale)}

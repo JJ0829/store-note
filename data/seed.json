@@ -365,15 +365,15 @@
       "yield": { "amount": 1, "unit": "잔" },
       "forNewbie": true,
       "ingredients": [
-        { "name": "원두 (도징)", "amount": 20, "unit": "g", "note": "2샷 기준" },
-        { "name": "추출량", "amount": 40, "unit": "ml", "note": "25~30초" },
+        { "name": "원두 (도징)", "amount": 18, "unit": "g", "note": "더블 바스켓 18~22g" },
+        { "name": "추출량", "amount": 36, "unit": "g", "note": "원두의 2배 (1:2)" },
         { "name": "물", "amount": 200, "unit": "ml", "note": "아이스는 150ml + 얼음" }
       ],
       "sections": [
         {
           "id": "sec-am-1",
           "title": "만드는 순서",
-          "note": null,
+          "note": "업계 표준값입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
           "steps": [
             {
               "id": "s-am-1",
@@ -398,7 +398,7 @@
             {
               "id": "s-am-3",
               "title": "추출 — 시간을 본다",
-              "desc": "25~30초 안에 목표량이 나와야 합니다. 너무 빠르면 연하고 느리면 씁니다.",
+              "desc": "18g 넣고 36g이 25~30초에 나오는 것이 기준입니다. 빠르면 연하고(과소추출), 느리면 씁니다(과다추출).",
               "tip": null,
               "critical": false,
               "goodImage": null,
@@ -417,14 +417,14 @@
       "yield": { "amount": 1, "unit": "잔" },
       "forNewbie": true,
       "ingredients": [
-        { "name": "원두 (도징)", "amount": 20, "unit": "g", "note": null },
-        { "name": "우유", "amount": 200, "unit": "ml", "note": "스팀 후 부피가 늘어납니다" }
+        { "name": "원두 (도징)", "amount": 18, "unit": "g", "note": "추출 36g" },
+        { "name": "우유", "amount": 150, "unit": "ml", "note": "스팀 후 부피가 늘어납니다" }
       ],
       "sections": [
         {
           "id": "sec-lt-1",
           "title": "만드는 순서",
-          "note": null,
+          "note": "업계 표준값입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
           "steps": [
             {
               "id": "s-lt-1",
@@ -439,7 +439,7 @@
             {
               "id": "s-lt-2",
               "title": "스팀 — 온도와 거품",
-              "desc": "60~65℃까지. 손으로 피처를 잡고 있기 뜨거워지는 순간이 대략 그때입니다.",
+              "desc": "공기 주입은 2~3초만, 그다음 노즐을 깊이 넣어 회전시킵니다. 60~65℃에서 멈춥니다. 65℃를 넘기면 단맛이 사라지고 쇠맛이 납니다.",
               "tip": "이 항목이 사람마다 제일 다릅니다. 영상으로 보세요.",
               "critical": false,
               "goodImage": null,
@@ -475,7 +475,7 @@
         {
           "id": "sec-cb-1",
           "title": "만드는 순서",
-          "note": "오늘 걸면 내일 씁니다",
+          "note": "표준 1:10 · 침출 12~18시간. 오늘 걸면 내일 씁니다",
           "steps": [
             {
               "id": "s-cb-1",
@@ -519,18 +519,18 @@
       "yield": { "amount": 6, "unit": "개" },
       "forNewbie": true,
       "ingredients": [
-        { "name": "강력분", "amount": 1000, "unit": "g", "note": null },
-        { "name": "물", "amount": 700, "unit": "g", "note": "70%" },
-        { "name": "설탕", "amount": 60, "unit": "g", "note": null },
-        { "name": "소금", "amount": 18, "unit": "g", "note": "이스트와 직접 닿지 않게" },
-        { "name": "생이스트", "amount": 25, "unit": "g", "note": null },
-        { "name": "버터", "amount": 50, "unit": "g", "note": "실온 상태로" }
+        { "name": "강력분", "amount": 2000, "unit": "g", "note": "100% (기준)" },
+        { "name": "물", "amount": 1200, "unit": "g", "note": "60%" },
+        { "name": "설탕", "amount": 120, "unit": "g", "note": "6%" },
+        { "name": "소금", "amount": 40, "unit": "g", "note": "2% · 이스트와 직접 닿지 않게" },
+        { "name": "이스트", "amount": 40, "unit": "g", "note": "2% · 인스턴트 드라이 기준" },
+        { "name": "버터", "amount": 120, "unit": "g", "note": "6% · 실온 상태로" }
       ],
       "sections": [
         {
           "id": "sec-sk-1",
           "title": "만드는 순서",
-          "note": null,
+          "note": "표준 세미리치 배합입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
           "steps": [
             {
               "id": "s-sk-1",
@@ -555,7 +555,7 @@
             {
               "id": "s-sk-3",
               "title": "냉장 발효 12~18시간",
-              "desc": "여기서 하루가 걸립니다. 오늘 만들어야 내일 굽습니다.",
+              "desc": "총 반죽 3520g을 6등분하면 개당 약 590g입니다(1.5근 틀 기준). 여기서 하루가 걸립니다. 오늘 만들어야 내일 굽습니다.",
               "tip": null,
               "critical": true,
               "goodImage": null,
