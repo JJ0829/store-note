@@ -754,5 +754,48 @@
         }
       ]
     }
+  ],
+  "shifts": [
+    {
+      "id": "sh-bakery",
+      "name": "제빵",
+      "start": "05:00",
+      "end": "13:00",
+      "note": "어제 걸어둔 것 받고, 내일 것 다시 걸어두기",
+      "focus": [
+        { "kind": "position", "slug": "bakery-morning", "label": "제빵 순서 보기" },
+        { "kind": "recipes", "label": "레시피 찾기" }
+      ]
+    },
+    {
+      "id": "sh-open",
+      "name": "오픈조",
+      "start": "07:30",
+      "end": "15:30",
+      "note": "오픈 준비 → 오전 영업 → 오후 프렙",
+      "focus": [
+        { "kind": "position", "slug": "cafe-open", "label": "오픈 체크리스트" },
+        { "kind": "prep", "slug": "afternoon", "label": "오후 프렙" }
+      ]
+    },
+    {
+      "id": "sh-middle",
+      "name": "미들",
+      "start": "11:00",
+      "end": "19:00",
+      "note": "피크 커버",
+      "focus": [{ "kind": "recipes", "label": "레시피 찾기" }]
+    },
+    {
+      "id": "sh-close",
+      "name": "마감조",
+      "start": "14:30",
+      "end": "22:30",
+      "note": "오후 프렙부터 마감까지",
+      "focus": [
+        { "kind": "prep", "slug": "afternoon", "label": "오후 프렙 (내일 것 걸기)" },
+        { "kind": "position", "slug": "cafe-close", "label": "마감 체크리스트" }
+      ]
+    }
   ]
 }

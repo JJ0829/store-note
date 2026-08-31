@@ -5,6 +5,7 @@ import type {
   PrepList,
   PrepTask,
   Recipe,
+  Shift,
   SeedData,
   Store,
 } from "./types";
@@ -80,4 +81,12 @@ export function getPrepListBySlug(slug: string): PrepList | null {
  */
 export function irreversibleTasks(list: PrepList): PrepTask[] {
   return list.tasks.filter((t) => !t.recoverable);
+}
+
+/* ------------------------------------------------------------------ */
+/* 근무 스케줄                                                          */
+/* ------------------------------------------------------------------ */
+
+export function listShifts(): Shift[] {
+  return load().shifts ?? [];
 }

@@ -159,6 +159,33 @@ export type PrepList = {
 
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* 4. 근무 스케줄                                                       */
+/*                                                                      */
+/* 부가 기능이 아니다. 태블릿을 켰을 때 어떤 화면을 먼저 띄울지          */
+/* 고르는 기준이다. 메뉴를 뒤지게 만들면 아무도 안 쓴다.                */
+/* ------------------------------------------------------------------ */
+
+export type ShiftFocus =
+  | { kind: "position"; slug: string; label: string }
+  | { kind: "prep"; slug: string; label: string }
+  | { kind: "recipes"; label: string };
+
+export type Shift = {
+  id: string;
+  /** 제빵 / 오픈조 / 미들 / 마감조 */
+  name: string;
+  /** "05:00" */
+  start: string;
+  /** "13:00" */
+  end: string;
+  /** 이 시간대에 띄울 화면. 첫 번째가 대표 */
+  focus: ShiftFocus[];
+  note: string | null;
+};
+
+/* ------------------------------------------------------------------ */
+
 export type Store = {
   id: string;
   name: string;
@@ -170,4 +197,5 @@ export type SeedData = {
   positions: Position[];
   recipes: Recipe[];
   prepLists: PrepList[];
+  shifts: Shift[];
 };
