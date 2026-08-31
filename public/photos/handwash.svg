@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img">
+  <rect width="640" height="360" rx="14" fill="#e4e4e7"/>
+  <rect x="10" y="10" width="620" height="340" rx="12" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-dasharray="10 8"/>
+  <text x="320" y="172" text-anchor="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="30" font-weight="700" fill="#52525b">손 씻기</text>
+  <text x="320" y="212" text-anchor="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif" font-size="17" fill="#a1a1aa">실제 사진으로 교체하세요</text>
+</svg>

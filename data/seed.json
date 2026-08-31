@@ -1,0 +1,407 @@
+{
+  "store": {
+    "id": "st_demo",
+    "name": "데모 키친 · 시청점",
+    "slug": "demo-kitchen"
+  },
+  "positions": [
+    {
+      "id": "pos_grill",
+      "shareSlug": "grill-day1",
+      "name": "그릴 담당",
+      "subtitle": "첫날 체크리스트",
+      "summary": "출근부터 마감까지 순서대로 따라 하시면 됩니다. 빨간 표시는 절대 건너뛰면 안 되는 항목이에요.",
+      "sections": [
+        {
+          "id": "sec_g1",
+          "title": "출근 직후",
+          "note": "0~15분",
+          "tasks": [
+            {
+              "id": "t_g101",
+              "title": "손 씻고 위생복 착용",
+              "desc": "비누로 30초 이상 손을 씻고 앞치마 → 모자 → 위생장갑 순서로 착용합니다. 반지·시계는 라커에 두고 오세요.",
+              "tip": "30초는 생각보다 깁니다. 벽에 붙은 타이머를 눌러놓고 씻으세요.",
+              "critical": true,
+              "imageUrl": "/photos/handwash.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_g102",
+              "title": "냉장·냉동고 온도 확인 후 기록",
+              "desc": "냉장 0~5℃, 냉동 -18℃ 이하인지 확인하고 문 옆 온도일지에 숫자와 시간을 적습니다.",
+              "tip": "범위를 벗어나 있으면 아무것도 만지지 말고 바로 매니저를 부르세요.",
+              "critical": true,
+              "imageUrl": "/photos/fridge-temp.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_g103",
+              "title": "오늘 준비 수량 확인",
+              "desc": "주방 화이트보드에 적힌 오늘 예상 판매량과 준비할 패티 수량을 확인합니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            }
+          ]
+        },
+        {
+          "id": "sec_g2",
+          "title": "오픈 준비",
+          "note": "15~60분",
+          "tasks": [
+            {
+              "id": "t_g201",
+              "title": "그릴 예열 켜기",
+              "desc": "상판 250℃, 하판 230℃로 설정하고 전원을 켭니다. 예열에 15분이 걸리니 가장 먼저 켜두고 다른 일을 하세요.",
+              "tip": "예열이 덜 된 상태로 구우면 육즙이 다 빠집니다. 온도 램프가 초록불이 될 때까지 기다리세요.",
+              "critical": false,
+              "imageUrl": "/photos/grill-preheat.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_g202",
+              "title": "그릴판 잔여물 제거",
+              "desc": "예열되는 동안 스크레이퍼로 어제 남은 탄 자국을 밀어냅니다. 긁어낸 찌꺼기는 앞쪽 기름받이로 모읍니다.",
+              "tip": "그릴이 미지근할 때가 가장 잘 밀립니다. 완전히 뜨거워지기 전에 하세요.",
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g203",
+              "title": "육류 해동 상태 확인",
+              "desc": "패티 중앙을 손가락으로 눌러봅니다. 말랑하면 사용 가능, 가운데가 딱딱하면 아직 얼어 있는 것이니 사용하지 마세요.",
+              "tip": "덜 녹은 패티는 겉만 타고 속은 안 익습니다. 식중독의 1번 원인이에요.",
+              "critical": true,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g204",
+              "title": "소스·시즈닝 통 채우기",
+              "desc": "각 통의 라벨에 적힌 개봉일을 확인합니다. 개봉 후 3일이 지난 것은 버리고 새로 채웁니다.",
+              "tip": "새로 채운 통에는 반드시 오늘 날짜를 다시 적어주세요.",
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g205",
+              "title": "집게·타이머·온도계 제자리에 놓기",
+              "desc": "빨간 집게(생고기용)는 왼쪽, 파란 집게(익힌 고기용)는 오른쪽. 타이머와 심부 온도계는 그릴 위 선반에 둡니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": "/photos/tongs.svg",
+              "videoUrl": null
+            }
+          ]
+        },
+        {
+          "id": "sec_g3",
+          "title": "영업 중",
+          "note": "주문이 들어오면",
+          "tasks": [
+            {
+              "id": "t_g301",
+              "title": "굽는 순서: 두꺼운 것부터",
+              "desc": "주문이 여러 개 들어오면 두꺼운 패티를 먼저 올립니다. 뒤집기는 딱 한 번만 하세요.",
+              "tip": "자꾸 뒤집으면 육즙이 빠져서 퍽퍽해집니다. 한 번만.",
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g302",
+              "title": "타이머 반드시 사용",
+              "desc": "패티를 올리는 순간 타이머를 누릅니다. 감으로 굽지 않습니다.",
+              "tip": "바쁠수록 타이머입니다. 바쁠 때 감으로 하면 100% 실수해요.",
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g303",
+              "title": "심부 온도 측정",
+              "desc": "가장 두꺼운 부분에 온도계를 꽂아 확인합니다. 돼지·닭 75℃ 이상 15초, 소고기 63℃ 이상.",
+              "tip": "온도계 꽂는 위치가 중요합니다. 가장자리 말고 정중앙에 꽂으세요.",
+              "critical": true,
+              "imageUrl": "/photos/thermometer.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_g304",
+              "title": "집게 색깔 구분해서 쓰기",
+              "desc": "생고기는 빨간 집게, 익힌 고기는 파란 집게. 절대 섞어 쓰지 않습니다.",
+              "tip": "헷갈리면 그냥 새 집게를 꺼내 쓰세요. 집게는 얼마든지 있습니다.",
+              "critical": true,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g305",
+              "title": "30분마다 그릴 밀기",
+              "desc": "한가한 틈이 나면 스크레이퍼로 그릴판을 한 번 밀어줍니다. 탄 찌꺼기가 다음 패티에 붙습니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            }
+          ]
+        },
+        {
+          "id": "sec_g4",
+          "title": "마감",
+          "note": "영업 종료 후",
+          "tasks": [
+            {
+              "id": "t_g401",
+              "title": "그릴 전원 차단 후 식히기",
+              "desc": "전원을 내리고 10분 정도 식힙니다. 뜨거울 때 물을 부으면 그릴판이 휩니다.",
+              "tip": "식는 동안 다른 마감을 먼저 하세요.",
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g402",
+              "title": "그릴 청소 (스크레이퍼 → 그릴 브릭 → 전용 세제)",
+              "desc": "이 순서를 지켜야 합니다. 세제를 먼저 뿌리면 찌꺼기가 굳어서 안 지워집니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": "/photos/grill-clean.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_g403",
+              "title": "남은 육류 라벨 붙여서 냉장 보관",
+              "desc": "라벨에 개봉일과 폐기 예정일을 적어 붙이고 냉장고 지정 칸에 넣습니다.",
+              "tip": "날짜 없는 재료는 다음 날 무조건 폐기됩니다. 꼭 적어주세요.",
+              "critical": true,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g404",
+              "title": "폐기 목록 작성",
+              "desc": "오늘 버린 재료와 수량을 폐기 기록지에 적습니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_g405",
+              "title": "선배에게 마감 확인 받기",
+              "desc": "청소가 끝나면 선배나 매니저를 불러 확인을 받고 퇴근합니다.",
+              "tip": "첫 주에는 꼭 받으세요. 2주차부터는 혼자 마감하게 됩니다.",
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pos_fry",
+      "shareSlug": "fryer-day1",
+      "name": "튀김 담당",
+      "subtitle": "첫날 체크리스트",
+      "summary": "기름을 다루는 자리입니다. 화상 위험이 있으니 빨간 항목은 반드시 지켜주세요.",
+      "sections": [
+        {
+          "id": "sec_f1",
+          "title": "오픈 준비",
+          "note": "0~30분",
+          "tasks": [
+            {
+              "id": "t_f101",
+              "title": "손 씻고 위생복 착용",
+              "desc": "비누로 30초 이상. 튀김 담당은 긴팔 토시를 반드시 착용합니다.",
+              "tip": null,
+              "critical": true,
+              "imageUrl": "/photos/handwash.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_f102",
+              "title": "기름 상태 확인",
+              "desc": "기름 색이 진한 갈색이거나 연기가 나면 교체 대상입니다. 판단이 어려우면 선배를 부르세요.",
+              "tip": "간장색보다 진하면 교체라고 외우면 쉽습니다.",
+              "critical": false,
+              "imageUrl": "/photos/oil-check.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_f103",
+              "title": "기름 온도 175℃로 예열",
+              "desc": "다이얼을 175℃에 맞추고 예열합니다. 20분 정도 걸립니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_f104",
+              "title": "튀김망·집게 물기 완전히 제거",
+              "desc": "물이 묻은 도구를 기름에 넣으면 기름이 튑니다. 마른 행주로 완전히 닦으세요.",
+              "tip": "이게 화상 사고 1번 원인입니다. 꼭 확인하세요.",
+              "critical": true,
+              "imageUrl": null,
+              "videoUrl": null
+            }
+          ]
+        },
+        {
+          "id": "sec_f2",
+          "title": "영업 중",
+          "note": "주문이 들어오면",
+          "tasks": [
+            {
+              "id": "t_f201",
+              "title": "재료는 몸 반대쪽으로 천천히 넣기",
+              "desc": "기름 위 10cm 높이에서 몸 바깥쪽 방향으로 미끄러뜨리듯 넣습니다. 절대 위에서 떨어뜨리지 않습니다.",
+              "tip": null,
+              "critical": true,
+              "imageUrl": "/photos/fry-drop.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_f202",
+              "title": "한 번에 바구니의 2/3까지만",
+              "desc": "너무 많이 넣으면 기름 온도가 떨어져서 눅눅해집니다.",
+              "tip": "급할수록 나눠서 튀기는 게 결국 더 빠릅니다.",
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_f203",
+              "title": "타이머 사용 후 기름 털기",
+              "desc": "타이머가 울리면 건져서 바구니를 3번 털어 기름을 뺍니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_f204",
+              "title": "1시간마다 찌꺼기 건지기",
+              "desc": "타공 국자로 기름 속 부스러기를 걷어냅니다. 태우면 기름 수명이 확 줄어듭니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            }
+          ]
+        },
+        {
+          "id": "sec_f3",
+          "title": "마감",
+          "note": "영업 종료 후",
+          "tasks": [
+            {
+              "id": "t_f301",
+              "title": "전원 끄고 최소 1시간 식히기",
+              "desc": "뜨거운 기름은 절대 옮기지 않습니다. 충분히 식은 뒤 작업합니다.",
+              "tip": "급하다고 뜨거울 때 옮기다가 크게 다칩니다. 절대 하지 마세요.",
+              "critical": true,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_f302",
+              "title": "기름 거름망으로 여과",
+              "desc": "식은 기름을 거름망에 통과시켜 보관 통에 옮깁니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_f303",
+              "title": "튀김기 내부 닦고 주변 바닥 청소",
+              "desc": "튀김기 벽면과 바닥의 기름때를 전용 세제로 닦습니다. 바닥이 미끄러우면 다음 사람이 넘어집니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pos_close",
+      "shareSlug": "closing",
+      "name": "마감 청소",
+      "subtitle": "전 포지션 공통",
+      "summary": "포지션 마감이 끝난 뒤 다 같이 하는 공통 마감입니다.",
+      "sections": [
+        {
+          "id": "sec_c1",
+          "title": "공통 마감",
+          "note": "약 40분",
+          "tasks": [
+            {
+              "id": "t_c101",
+              "title": "작업대 소독",
+              "desc": "모든 작업대를 세제로 닦고 소독제를 뿌린 뒤 1분 두었다가 마른 행주로 닦습니다.",
+              "tip": "소독제는 뿌리고 바로 닦으면 효과가 없습니다. 1분 기다리세요.",
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_c102",
+              "title": "냉장고 온도 재확인 및 기록",
+              "desc": "마감에도 온도를 확인해 온도일지에 적습니다.",
+              "tip": null,
+              "critical": true,
+              "imageUrl": "/photos/fridge-temp.svg",
+              "videoUrl": null
+            },
+            {
+              "id": "t_c103",
+              "title": "쓰레기 분리 배출",
+              "desc": "일반·음식물·재활용을 분리해서 뒷문 지정 위치에 내놓습니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_c104",
+              "title": "바닥 청소 (쓸기 → 밀대)",
+              "desc": "먼저 쓸어낸 뒤 세제를 푼 물로 밀대질합니다. 배수구 거름망도 비웁니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_c105",
+              "title": "가스 밸브 잠금 확인",
+              "desc": "메인 가스 밸브가 잠겼는지 직접 손으로 확인합니다.",
+              "tip": "눈으로만 보지 말고 손으로 돌려서 확인하세요.",
+              "critical": true,
+              "imageUrl": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t_c106",
+              "title": "소등 및 문단속",
+              "desc": "주방 → 홀 순서로 소등하고 뒷문부터 잠근 뒤 정문으로 나갑니다.",
+              "tip": null,
+              "critical": false,
+              "imageUrl": null,
+              "videoUrl": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

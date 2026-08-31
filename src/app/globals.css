@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui,
+    sans-serif;
+}
+
+html {
+  /* 주방에서 젖은 손으로 스크롤하는 상황을 가정 — 확대/축소는 막지 않는다 */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: #fafafa;
+  color: #18181b;
+  font-family: var(--font-sans);
+  /* 체크할 때 파란 하이라이트가 번쩍이지 않도록 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #09090b;
+    color: #fafafa;
+  }
+}
