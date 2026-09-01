@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { SCALES, scaled } from "@/lib/scale";
 import type { PrepList, PrepTask, Recipe, Trigger } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -94,14 +95,6 @@ function triggerLabel(t: Trigger): string {
           ? `${Math.round(t.everyDays / 30)}개월마다`
           : `${t.everyDays}일마다`;
   }
-}
-
-const SCALES = [0.5, 1, 1.5, 2, 3];
-
-/** 배수를 곱한 재료 양. 소수점이 지저분해지지 않게 다듬는다. */
-function scaled(amount: number, scale: number): string {
-  const v = amount * scale;
-  return Number.isInteger(v) ? String(v) : v.toFixed(1);
 }
 
 /* ------------------------------------------------------------------ */
@@ -381,7 +374,13 @@ export default function PrepView({
                   </div>
 
                   <p className="mt-2.5 text-[12px] text-zinc-500 dark:text-zinc-400">
-                    {recipe.name} · 1배합 = {recipe.yield.amount}
+                    <Link
+                      href={`/r/${recipe.slug}`}
+                      className="font-semibold text-zinc-700 underline underline-offset-2 dark:text-zinc-200"
+                    >
+                      {recipe.name}
+                    </Link>{" "}
+                    · 1배합 = {recipe.yield.amount}
                     {recipe.yield.unit} →{" "}
                     <b className="text-orange-600 dark:text-orange-400">
                       {scaled(recipe.yield.amount, scale)}

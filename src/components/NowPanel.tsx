@@ -23,7 +23,7 @@ function focusHref(f: ShiftFocus): string {
     case "prep":
       return `/prep/${f.slug}`;
     case "recipes":
-      return "/#recipes";
+      return "/r";
   }
 }
 

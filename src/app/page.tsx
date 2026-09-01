@@ -126,30 +126,44 @@ export default function Home() {
         </ul>
       </section>
 
-      {/* ---------- 레시피 (화면은 다음 작업) ---------- */}
+      {/* ---------- 레시피 ---------- */}
       <section id="recipes" className="mt-8">
         <h2 className="text-[15px] font-bold">레시피</h2>
         <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
-          신입이 첫 주에 만드는 것부터 넣었습니다.
+          이름으로 찾고, 필요한 만큼 배수로 계산합니다.
         </p>
-        <ul className="mt-3 flex flex-wrap gap-2">
+
+        <Link
+          href="/r"
+          className="mt-3 flex items-center justify-between rounded-2xl bg-zinc-900 px-4 py-3.5 text-white active:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          <span className="text-[15px] font-bold">
+            레시피 찾기
+            <span className="ml-2 text-[12px] font-normal opacity-70">
+              {recipes.length}개
+            </span>
+          </span>
+          <span aria-hidden className="text-lg leading-none">
+            ›
+          </span>
+        </Link>
+
+        <ul className="mt-2 flex flex-wrap gap-2">
           {recipes.map((r) => (
-            <li
-              key={r.id}
-              className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[13px] dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <b>{r.name}</b>
-              <span className="ml-1.5 text-zinc-500 dark:text-zinc-400">
-                1배합 {r.yield.amount}
-                {r.yield.unit}
-              </span>
+            <li key={r.id}>
+              <Link
+                href={`/r/${r.slug}`}
+                className="block rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[13px] active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <b>{r.name}</b>
+                <span className="ml-1.5 text-zinc-500 dark:text-zinc-400">
+                  1배합 {r.yield.amount}
+                  {r.yield.unit}
+                </span>
+              </Link>
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-[12px] text-zinc-400">
-          레시피 전용 화면(이름으로 찾기 + 배수)은 다음 작업입니다. 지금은 프렙
-          화면 안에서 배수 계산을 쓸 수 있습니다.
-        </p>
       </section>
     </main>
   );
