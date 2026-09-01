@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import { SCALES, scaled } from "@/lib/scale";
 import type { Recipe } from "@/lib/types";
 
@@ -63,7 +64,8 @@ export default function RecipeDetail({
     <div className="mx-auto min-h-dvh w-full max-w-[720px] bg-zinc-50 pb-24 dark:bg-zinc-950">
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
+          <BackButton fallback="/r" />
+          <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
               {storeName} · {recipe.category}
             </p>

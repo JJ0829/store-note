@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import RecipeSearch from "@/components/RecipeSearch";
 import { getStore, listRecipes } from "@/lib/repo";
 
@@ -16,8 +17,9 @@ export default function RecipeListPage() {
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[720px] bg-zinc-50 px-4 py-8 dark:bg-zinc-950">
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex items-center justify-between gap-3">
+        <BackButton />
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {store.name}
           </p>

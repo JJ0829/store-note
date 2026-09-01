@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import BackButton from "@/components/BackButton";
 import type { Position, Step } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -116,8 +117,9 @@ export default function ChecklistView({
     <div className="mx-auto min-h-dvh w-full max-w-[560px] bg-zinc-50 pb-24 dark:bg-zinc-950">
       {/* ---------- 진행 상황 (스크롤해도 상단 고정) ---------- */}
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <BackButton />
+          <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
               {storeName}
             </p>

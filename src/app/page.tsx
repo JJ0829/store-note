@@ -58,7 +58,7 @@ export default function Home() {
                         <>
                           {" · "}
                           <b className="text-red-600 dark:text-red-400">
-                            돈으로 못 사는 것 {cannotBuy}개
+                            까먹지 말 것 {cannotBuy}개
                           </b>
                         </>
                       )}
@@ -72,6 +72,23 @@ export default function Home() {
             );
           })}
         </ul>
+      </section>
+
+      {/* ---------- 근무표 ---------- */}
+      <section className="mt-8">
+        <h2 className="text-[15px] font-bold">근무표</h2>
+        <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
+          누가 언제 나오는지 정하고, 직원들에게 보냅니다.
+        </p>
+        <Link
+          href="/roster"
+          className="mt-3 flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:active:bg-zinc-800"
+        >
+          <span className="text-[15px] font-bold">이번 주 근무표</span>
+          <span aria-hidden className="text-lg text-zinc-400">
+            ›
+          </span>
+        </Link>
       </section>
 
       {/* ---------- 포지션 ---------- */}

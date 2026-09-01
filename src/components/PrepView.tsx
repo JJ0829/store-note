@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import { SCALES, scaled } from "@/lib/scale";
 import type { PrepList, PrepTask, Recipe, Trigger } from "@/lib/types";
 
@@ -176,8 +177,9 @@ export default function PrepView({
     <div className="mx-auto min-h-dvh w-full max-w-[720px] bg-zinc-50 pb-24 dark:bg-zinc-950">
       {/* ---------- 상단 고정 ---------- */}
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <BackButton />
+          <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
               {storeName}
             </p>
@@ -216,16 +218,16 @@ export default function PrepView({
             {irreversibleLeft > 0 ? (
               <>
                 <p className="text-[15px] font-bold text-red-800 dark:text-red-200">
-                  오늘 꼭 걸어야 하는 것 {irreversibleLeft}개 남았습니다
+                  까먹지 말고 해야 할 것 {irreversibleLeft}개
                 </p>
                 <p className="mt-1 text-[13px] leading-relaxed text-red-700/90 dark:text-red-200/80">
-                  이건 깜빡하면 <b>사올 수도 없습니다.</b> 시간이 지나야 되는
-                  일이라 내일 아침에 되돌릴 방법이 없습니다.
+                  빨간 테두리로 표시된 것들입니다. 오늘 안 하면 내일 아침에
+                  되돌릴 방법이 없습니다.
                 </p>
               </>
             ) : (
               <p className="text-[15px] font-bold text-emerald-800 dark:text-emerald-200">
-                되돌릴 수 없는 항목은 전부 끝냈습니다
+                오늘 꼭 해야 할 건 다 했습니다
               </p>
             )}
           </div>
@@ -291,15 +293,6 @@ export default function PrepView({
                 <div className="min-w-0 flex-1">
                   {/* 뱃지 줄 */}
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                    {!task.recoverable ? (
-                      <span className="rounded-md bg-red-600 px-1.5 py-0.5 text-[11px] font-bold text-white">
-                        돈으로 못 삼
-                      </span>
-                    ) : (
-                      <span className="rounded-md bg-zinc-200 px-1.5 py-0.5 text-[11px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                        급하면 사서 메움
-                      </span>
-                    )}
                     <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                       {triggerLabel(task.trigger)}
                     </span>
