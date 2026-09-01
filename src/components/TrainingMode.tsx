@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import BackButton from "@/components/BackButton";
 import type { Position, Step } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -163,7 +164,10 @@ export default function TrainingMode({
   /* ---------------- 시작 화면 ---------------- */
   if (!run && !finished) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-8 text-center dark:bg-zinc-950">
+      <div className="relative flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-8 text-center dark:bg-zinc-950">
+        <div className="absolute left-5 top-5">
+          <BackButton />
+        </div>
         <p className="text-base text-zinc-500 dark:text-zinc-400">{storeName}</p>
         <h1 className="mt-2 text-4xl font-bold lg:text-5xl">{position.name}</h1>
         <p className="mt-2 text-xl text-zinc-500 dark:text-zinc-400">
@@ -197,7 +201,10 @@ export default function TrainingMode({
   /* ---------------- 끝 화면 ---------------- */
   if (finished) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-8 text-center dark:bg-zinc-950">
+      <div className="relative flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-8 text-center dark:bg-zinc-950">
+        <div className="absolute left-5 top-5">
+          <BackButton />
+        </div>
         <h1 className="text-4xl font-bold lg:text-5xl">수고하셨습니다</h1>
         <p className="mt-3 text-xl text-zinc-500 dark:text-zinc-400">
           {position.name} 교육을 모두 마쳤습니다.
@@ -259,8 +266,9 @@ export default function TrainingMode({
     <div className="flex h-dvh flex-col bg-zinc-50 dark:bg-zinc-950">
       {/* 상단: 어디쯤 왔는지 */}
       <header className="shrink-0 border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex items-baseline justify-between gap-4">
-          <p className="truncate text-lg font-bold">
+        <div className="flex items-center justify-between gap-4">
+          <BackButton />
+          <p className="min-w-0 flex-1 truncate text-lg font-bold">
             {position.name}
             <span className="ml-2 text-base font-normal text-zinc-500 dark:text-zinc-400">
               {task.sectionTitle}
