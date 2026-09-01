@@ -10,6 +10,7 @@ import {
   newStaffId,
   OFF,
   saveRoster,
+  SECTIONS,
   weekDays,
   ymd,
   type RosterData,
@@ -38,7 +39,8 @@ export default function RosterView({
   const [monday, setMonday] = useState<Date | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
+  const [section, setSection] = useState("");
+  const [phone, setPhone] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -63,15 +65,17 @@ export default function RosterView({
         ...data.staff,
         {
           id: newStaffId(),
+          section: section.trim(),
           name: name.trim(),
           email: email.trim(),
-          role: role.trim(),
+          phone: phone.trim(),
         },
       ],
     });
     setName("");
     setEmail("");
-    setRole("");
+    setPhone("");
+    // 섹션은 남겨둔다. 같은 섹션 사람을 연달아 넣는 경우가 많다
   }
 
   function removeStaff(id: string) {
@@ -170,6 +174,31 @@ export default function RosterView({
       <section className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="text-[15px] font-bold">직원 추가</h2>
         <div className="mt-2 flex flex-wrap gap-2">
+          {SECTIONS.map((sec) => (
+            <button
+              key={sec}
+              type="button"
+              onClick={() => setSection(sec)}
+              className={[
+                "rounded-lg border-2 px-3 py-1.5 text-[13px] font-semibold",
+                section === sec
+                  ? "border-orange-500 bg-orange-500 text-white"
+                  : "border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300",
+              ].join(" ")}
+            >
+              {sec}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-2">
+          <input
+            value={section}
+            onChange={(e) => setSection(e.target.value)}
+            placeholder="섹션"
+            aria-label="섹션"
+            className={`${inputBase} w-28`}
+          />
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -178,19 +207,20 @@ export default function RosterView({
             className={`${inputBase} w-32`}
           />
           <input
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="담당 (예: 제빵)"
-            aria-label="담당"
-            className={`${inputBase} w-36`}
-          />
-          <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="이메일 (선택)"
+            placeholder="이메일"
             aria-label="이메일"
             className={`${inputBase} min-w-[200px] flex-1`}
+          />
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="전화번호"
+            aria-label="전화번호"
+            className={`${inputBase} w-40`}
           />
           <button
             type="button"
@@ -202,6 +232,55 @@ export default function RosterView({
           </button>
         </div>
       </section>
+
+      {/* ---------- 직원 명단 (메일에 그대로 들어간다) ---------- */}
+      {data.staff.length > 0 && (
+        <section className="mt-5 overflow-x-auto rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <table className="w-full border-collapse text-[13px]">
+            <caption className="px-4 pt-3 text-left text-[15px] font-bold">
+              직원 명단
+              <span className="ml-2 text-[12px] font-normal text-zinc-500 dark:text-zinc-400">
+                메일에 이 표가 그대로 들어갑니다
+              </span>
+            </caption>
+            <thead>
+              <tr className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                <th className="px-3 py-2 text-left font-semibold">섹션</th>
+                <th className="px-3 py-2 text-left font-semibold">이름</th>
+                <th className="px-3 py-2 text-left font-semibold">이메일</th>
+                <th className="px-3 py-2 text-left font-semibold">전화번호</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.staff.map((s) => (
+                <tr
+                  key={s.id}
+                  className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
+                >
+                  <td className="px-3 py-2 font-semibold">{s.section || "—"}</td>
+                  <td className="px-3 py-2 font-bold">{s.name}</td>
+                  <td
+                    className={[
+                      "px-3 py-2",
+                      s.email ? "" : "text-zinc-400",
+                    ].join(" ")}
+                  >
+                    {s.email || "없음"}
+                  </td>
+                  <td
+                    className={[
+                      "px-3 py-2 tabular-nums",
+                      s.phone ? "" : "text-zinc-400",
+                    ].join(" ")}
+                  >
+                    {s.phone || "없음"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {/* ---------- 근무표 ---------- */}
       {data.staff.length === 0 ? (
@@ -242,8 +321,8 @@ export default function RosterView({
                 >
                   <th className="sticky left-0 z-10 w-[120px] min-w-[120px] bg-white px-3 py-2 text-left dark:bg-zinc-900">
                     <span className="block truncate font-bold">{s.name}</span>
-                    <span className="block text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
-                      {s.role || "—"}
+                    <span className="block truncate text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                      {s.section || "—"}
                       {!s.email && " · 메일 없음"}
                     </span>
                   </th>
@@ -298,7 +377,9 @@ export default function RosterView({
         <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-[15px] font-bold">보내기</h2>
           <p className="mt-1 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            메일 앱이 내용까지 채워진 채로 열립니다.{" "}
+            메일 한 통에 <b>직원 명단(섹션·이름·이메일·전화번호)</b>과{" "}
+            <b>이번 주 근무표</b>가 함께 들어가고, 전 직원에게 한꺼번에
+            나갑니다. 메일 앱이 내용까지 채워진 채로 열리고,{" "}
             <b>보내기는 직접 누르셔야 합니다.</b> 받는 사람은 숨은참조로 넣어서
             직원끼리 서로 주소가 보이지 않습니다.
           </p>

@@ -10,11 +10,12 @@
 
 export type Staff = {
   id: string;
+  /** 어느 섹션인지 — 제빵 / 바 / 홀 / 주방 */
+  section: string;
   name: string;
-  /** 근무표를 보낼 주소. 없으면 발송 대상에서 빠진다 */
+  /** 근무표를 보낼 주소. 없으면 메일 발송 대상에서 빠진다 */
   email: string;
-  /** 제빵 / 바 / 홀 등. 자유 입력 */
-  role: string;
+  phone: string;
 };
 
 /** `assign[staffId][날짜(YYYY-MM-DD)] = 조 이름 또는 "" (휴무)` */
@@ -30,15 +31,25 @@ const KEY = "sop:roster";
 export const OFF = "";
 export const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
+/** 자주 쓰는 섹션. 버튼으로 넣어주고, 직접 입력도 받는다 */
+export const SECTIONS = ["제빵", "바", "홀", "주방"];
+
 export function loadRoster(): RosterData {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { staff: [], assign: {} };
-    const parsed = JSON.parse(raw) as RosterData;
-    return {
-      staff: Array.isArray(parsed.staff) ? parsed.staff : [],
-      assign: parsed.assign ?? {},
-    };
+    const parsed = JSON.parse(raw) as { staff?: unknown; assign?: Assign };
+    const staff = Array.isArray(parsed.staff)
+      ? (parsed.staff as Array<Partial<Staff> & { role?: string }>).map((s) => ({
+          id: String(s.id ?? ""),
+          // 이전 버전은 'role'이었다. 남아 있는 데이터를 버리지 않는다
+          section: s.section ?? s.role ?? "",
+          name: s.name ?? "",
+          email: s.email ?? "",
+          phone: s.phone ?? "",
+        }))
+      : [];
+    return { staff, assign: parsed.assign ?? {} };
   } catch {
     return { staff: [], assign: {} };
   }
@@ -84,29 +95,77 @@ export function label(d: Date): string {
   return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY[d.getDay()]})`;
 }
 
+/** 섹션별로 묶는다. 섹션이 비어 있으면 '미지정'으로 모은다 */
+export function bySection(staff: Staff[]): Array<[string, Staff[]]> {
+  const map = new Map<string, Staff[]>();
+  for (const s of staff) {
+    const key = s.section.trim() || "미지정";
+    map.set(key, [...(map.get(key) ?? []), s]);
+  }
+  return [...map.entries()];
+}
+
+/** 칸을 맞춰 표처럼 보이게. 한글은 폭이 2배라 그만큼 세어준다 */
+function pad(text: string, width: number): string {
+  let w = 0;
+  for (const ch of text) w += ch.charCodeAt(0) > 0x2000 ? 2 : 1;
+  return text + " ".repeat(Math.max(1, width - w));
+}
+
 /**
- * 메일에 넣을 본문. 표는 메일 클라이언트마다 깨지므로 줄글로 만든다.
- * 폰에서 그대로 읽을 수 있는 형태가 목적이다.
+ * 메일 본문.
+ *
+ * 두 덩어리다.
+ *   1) 전체 직원 명단 — 섹션 / 이름 / 이메일 / 전화번호
+ *   2) 이번 주 근무표 — 섹션별로 묶어서
+ *
+ * HTML 표는 메일 앱마다 깨지므로 글자 그대로 폭을 맞춘다.
+ * 폰에서 그대로 읽히는 것이 목적이다.
  */
 export function buildEmailBody(
   storeName: string,
   days: Date[],
   data: RosterData,
 ): string {
-  const lines: string[] = [];
-  lines.push(`${storeName} 근무표`);
-  lines.push(`${label(days[0])} ~ ${label(days[6])}`);
-  lines.push("");
+  const out: string[] = [];
+  out.push(`${storeName} 근무표`);
+  out.push(`${label(days[0])} ~ ${label(days[6])}`);
+  out.push("");
 
+  /* ---------- 1. 전체 직원 명단 ---------- */
+  out.push("[ 직원 명단 ]");
+  out.push(
+    pad("섹션", 8) + pad("이름", 12) + pad("이메일", 26) + "전화번호",
+  );
+  out.push("-".repeat(64));
   for (const s of data.staff) {
-    lines.push(`■ ${s.name}${s.role ? ` (${s.role})` : ""}`);
-    for (const d of days) {
-      const shift = data.assign[s.id]?.[ymd(d)] ?? OFF;
-      lines.push(`   ${label(d)}  ${shift || "휴무"}`);
+    out.push(
+      pad(s.section || "-", 8) +
+        pad(s.name, 12) +
+        pad(s.email || "-", 26) +
+        (s.phone || "-"),
+    );
+  }
+  out.push("");
+
+  /* ---------- 2. 이번 주 근무표 ---------- */
+  out.push("[ 이번 주 근무 ]");
+  out.push("");
+  for (const [section, members] of bySection(data.staff)) {
+    out.push(`● ${section}`);
+    for (const s of members) {
+      const line = days
+        .map((d) => {
+          const shift = data.assign[s.id]?.[ymd(d)] ?? OFF;
+          return `${label(d)} ${shift || "휴무"}`;
+        })
+        .join("  /  ");
+      out.push(`  - ${s.name}`);
+      out.push(`    ${line}`);
     }
-    lines.push("");
+    out.push("");
   }
 
-  lines.push("변경 사항이 있으면 알려주세요.");
-  return lines.join("\n");
+  out.push("변경 사항이 있으면 알려주세요.");
+  return out.join("\n");
 }
