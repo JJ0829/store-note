@@ -76,9 +76,29 @@ function readyAt(hours: number): string {
   ).padStart(2, "0")}`;
 }
 
-function arrivesIn(days: number): string {
-  const d = new Date(Date.now() + days * 86400 * 1000);
-  return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY[d.getDay()]})`;
+/**
+ * 발주하면 언제 오는지.
+ *
+ * 주말을 건너뛴다. 거래처는 토·일에 배송하지 않는다(조사 확인).
+ * 이걸 안 하면 "9/6(일) 도착"처럼 실제로 오지 않는 날짜를 알려주게 되고,
+ * 그러면 금요일 발주의 무게가 화면에서 사라진다.
+ */
+function arrivesIn(days: number): { label: string; overWeekend: boolean } {
+  const d = new Date();
+  let left = days;
+  let skipped = 0;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() === 0 || d.getDay() === 6) {
+      skipped += 1;
+      continue; // 주말은 배송일로 세지 않는다
+    }
+    left -= 1;
+  }
+  return {
+    label: `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY[d.getDay()]})`,
+    overWeekend: skipped > 0,
+  };
 }
 
 function triggerLabel(t: Trigger): string {
@@ -231,12 +251,15 @@ export default function PrepView({
               </p>
             )}
           </div>
-          {list.note && (
-            <p className="mt-2 px-1 text-[12px] text-zinc-500 dark:text-zinc-400">
-              {list.note}
-            </p>
-          )}
         </div>
+      )}
+
+      {/* 목록 설명은 요약 블록과 무관하게 항상 보여야 한다.
+          주기 점검처럼 되돌릴 수 없는 항목이 없는 목록에서도 필요하다. */}
+      {list.note && (
+        <p className="px-5 pt-3 text-[12px] text-zinc-500 dark:text-zinc-400">
+          {list.note}
+        </p>
       )}
 
       {/* ---------- 항목 ---------- */}
@@ -293,6 +316,12 @@ export default function PrepView({
                 <div className="min-w-0 flex-1">
                   {/* 뱃지 줄 */}
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                    {task.critical && (
+                      // 위생·안전 항목. 체크리스트·교육 모드와 같은 표시를 쓴다
+                      <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
+                        꼭 지키기
+                      </span>
+                    )}
                     <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                       {triggerLabel(task.trigger)}
                     </span>
@@ -316,15 +345,39 @@ export default function PrepView({
                   </p>
 
                   {/* 언제 쓸 수 있나 — 종이가 못 하는 계산 */}
-                  {now && task.leadTimeHours !== null && (
+                  {/* 이 줄이 제품의 핵심이다. 서버에서도 일단 그려두고(시간 없이),
+                      클라이언트에서 정확한 시각으로 바꾼다. 안 그러면 첫 화면에
+                      제일 중요한 문장이 비어 보인다. */}
+                  {task.leadTimeHours !== null && (
                     <p className="mt-2 rounded-lg bg-zinc-100 px-2.5 py-2 text-[13px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                      지금 걸면 → <b>{readyAt(task.leadTimeHours)}</b>부터 사용
-                      가능 <span className="font-normal text-zinc-500">({task.leadTimeHours}시간)</span>
+                      지금 걸면 →{" "}
+                      <b>
+                        {now
+                          ? `${readyAt(task.leadTimeHours)}부터`
+                          : `${task.leadTimeHours}시간 뒤부터`}
+                      </b>{" "}
+                      사용 가능{" "}
+                      {now && (
+                        <span className="font-normal text-zinc-500">
+                          ({task.leadTimeHours}시간)
+                        </span>
+                      )}
                     </p>
                   )}
-                  {now && task.leadTimeDays !== null && (
+                  {task.leadTimeDays !== null && (
                     <p className="mt-2 rounded-lg bg-zinc-100 px-2.5 py-2 text-[13px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                      오늘 주문 → <b>{arrivesIn(task.leadTimeDays)}</b> 도착
+                      오늘 주문 →{" "}
+                      <b>
+                        {now
+                          ? arrivesIn(task.leadTimeDays).label
+                          : `영업일 ${task.leadTimeDays}일 뒤`}
+                      </b>{" "}
+                      도착
+                      {now && arrivesIn(task.leadTimeDays).overWeekend && (
+                        <span className="ml-1 font-normal text-zinc-500">
+                          (주말 배송 없음)
+                        </span>
+                      )}
                     </p>
                   )}
 
@@ -345,17 +398,17 @@ export default function PrepView({
               {/* 배수 계산기 (버튼 밖에 둔다) */}
               {recipe && (
                 <div className="border-t border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/60">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
-                      오늘 몇 배?
-                    </span>
+                  <span className="mb-1.5 block text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
+                    오늘 몇 배?
+                  </span>
+                  <div className="grid grid-cols-5 gap-1.5">
                     {SCALES.map((s) => (
                       <button
                         key={s}
                         type="button"
                         onClick={() => setScale(task.id, s)}
                         className={[
-                          "rounded-lg border px-2.5 py-1.5 text-[13px] font-bold tabular-nums transition-colors",
+                          "rounded-lg border py-2 text-center text-[13px] font-bold tabular-nums transition-colors",
                           scale === s
                             ? "border-orange-500 bg-orange-500 text-white"
                             : "border-zinc-300 bg-white text-zinc-600 active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300",
