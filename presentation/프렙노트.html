@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#D9480F">
+<meta name="description" content="개인 카페·베이커리 주방 기준 관리">
+<title>프렙노트</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+
+<style>
+/* ------------------------------------------------------------------ *
+   프렙노트 — 단일 파일 버전
+   개인 카페·베이커리 주방 기준 관리. 서버 없이 이 파일 하나로 동작한다.
+ * ------------------------------------------------------------------ */
+
+:root {
+  /* 밀가루빛 웜 뉴트럴 + 가마 색 액센트 */
+  --ground:   #FBF9F7;
+  --surface:  #FFFFFF;
+  --sunken:   #F4F0EC;
+  --line:     #E7E1DA;
+  --ink:      #1C1917;
+  --ink-2:    #57534E;
+  --ink-3:    #8A817A;
+  --accent:   #D9480F;
+  --accent-w: #FDF1EA;
+  --accent-b: #F3CDB8;
+  --danger:   #B4232A;
+  --danger-w: #FDF0F0;
+  --danger-b: #EFC3C3;
+  --ok:       #1F7A44;
+  --ok-w:     #EDF7F1;
+  --ok-b:     #BCE0CA;
+  --warn-w:   #FBF3DE;
+  --warn-t:   #7A5A16;
+
+  --sans: "IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+
+  --r: 14px;
+  --shadow: 0 1px 2px rgba(28,25,23,.05), 0 8px 24px -16px rgba(28,25,23,.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:   #15120F;
+    --surface:  #201C18;
+    --sunken:   #2A251F;
+    --line:     #38312A;
+    --ink:      #F5F0EA;
+    --ink-2:    #BDB4AA;
+    --ink-3:    #8C837A;
+    --accent:   #F2762F;
+    --accent-w: #34190D;
+    --accent-b: #6B3417;
+    --danger:   #F0757B;
+    --danger-w: #351417;
+    --danger-b: #6B2A2E;
+    --ok:       #64C48C;
+    --ok-w:     #12271B;
+    --ok-b:     #2C5740;
+    --warn-w:   #2E2513;
+    --warn-t:   #DFC177;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:   #15120F;
+  --surface:  #201C18;
+  --sunken:   #2A251F;
+  --line:     #38312A;
+  --ink:      #F5F0EA;
+  --ink-2:    #BDB4AA;
+  --ink-3:    #8C837A;
+  --accent:   #F2762F;
+  --accent-w: #34190D;
+  --accent-b: #6B3417;
+  --danger:   #F0757B;
+  --danger-w: #351417;
+  --danger-b: #6B2A2E;
+  --ok:       #64C48C;
+  --ok-w:     #12271B;
+  --ok-b:     #2C5740;
+  --warn-w:   #2E2513;
+  --warn-t:   #DFC177;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 108px; }
+
+/* ---------- 상단 ---------- */
+.top {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--ground) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.top-in {
+  max-width: 760px; margin: 0 auto; padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.top h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+.top .sub {
+  margin: 0; font-size: 11px; color: var(--ink-3);
+  font-family: var(--mono); letter-spacing: .06em; text-transform: uppercase;
+}
+.top .grow { flex: 1; min-width: 0; }
+.top .grow > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 버튼 ---------- */
+button, .btn {
+  font: inherit; color: inherit; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface);
+  border-radius: 10px; padding: 9px 14px;
+  transition: background .12s ease, border-color .12s ease;
+}
+button:hover, .btn:hover { background: var(--sunken); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
+}
+.btn-primary:hover { background: color-mix(in srgb, var(--accent) 88%, #000); }
+.btn-ghost { background: transparent; }
+.back { padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); flex: none; }
+
+/* ---------- 카드 ---------- */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); box-shadow: var(--shadow);
+}
+.rows { display: flex; flex-direction: column; gap: 10px; }
+
+.nav-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; text-align: left; padding: 14px 16px; border-radius: var(--r);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.nav-row b { font-size: 15px; }
+.nav-row .meta { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.nav-row .chev { color: var(--ink-3); font-size: 18px; flex: none; }
+
+/* .btn-primary가 위에서 정의돼 .nav-row에 덮인다. 조합 선택자로 되살린다 */
+.nav-row.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: none;
+}
+.nav-row.btn-primary:hover { background: color-mix(in srgb, var(--accent) 88%, #000); }
+.nav-row.btn-primary .chev { color: #fff; }
+
+/* ---------- 라벨 ---------- */
+.eyebrow {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.sec { margin-top: 30px; }
+.sec > h2 { margin: 0 0 3px; font-size: 15px; font-weight: 700; }
+.sec > p.hint { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-3); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; padding: 3px 7px; border-radius: 6px;
+  background: var(--sunken); color: var(--ink-2); white-space: nowrap;
+}
+.pill.mono { font-family: var(--mono); font-weight: 500; letter-spacing: .02em; }
+.pill.crit { background: var(--danger-w); color: var(--danger); border: 1px solid var(--danger-b); }
+.pill.warn { background: var(--warn-w); color: var(--warn-t); }
+.pill.new  { background: var(--accent-w); color: var(--accent); border: 1px solid var(--accent-b); }
+
+/* ---------- 진행 ---------- */
+.bar { height: 5px; border-radius: 99px; background: var(--sunken); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); transition: width .3s ease; }
+.count { font-family: var(--mono); font-weight: 600; color: var(--accent); font-size: 14px; }
+
+/* ---------- 알림 ---------- */
+.notice { border-radius: var(--r); padding: 14px 16px; border: 1px solid; }
+.notice.red   { background: var(--danger-w); border-color: var(--danger-b); color: var(--danger); }
+.notice.green { background: var(--ok-w); border-color: var(--ok-b); color: var(--ok); }
+.notice b { display: block; font-size: 15px; }
+.notice p { margin: 4px 0 0; font-size: 13px; line-height: 1.55; opacity: .92; }
+
+/* ---------- 작업 카드 ---------- */
+.task { border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.task.keep { border-color: var(--danger-b); }
+.task.done { opacity: .5; }
+.task-hit { display: flex; gap: 12px; width: 100%; text-align: left; padding: 15px 16px; background: none; border: 0; border-radius: 0; }
+.task-hit:hover { background: var(--sunken); }
+.tick {
+  flex: none; width: 28px; height: 28px; margin-top: 2px; border-radius: 50%;
+  border: 2px solid var(--line); display: grid; place-items: center;
+  color: transparent; /* 체크 전에는 표시가 보이면 안 된다 */
+}
+.task.done .tick { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+.task h3 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.35; }
+.task.done h3 { text-decoration: line-through; }
+.task .desc { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
+.slot {
+  margin-top: 9px; padding: 8px 11px; border-radius: 9px;
+  background: var(--sunken); font-size: 13px; font-weight: 600;
+}
+.slot b { font-family: var(--mono); }
+.slot .dim { font-weight: 400; color: var(--ink-3); font-family: var(--sans); }
+.conseq { margin: 9px 0 0; font-size: 13px; color: var(--ink-3); }
+.task.keep .conseq { color: var(--danger); font-weight: 600; }
+
+/* ---------- 배수 ---------- */
+.scaler { border-top: 1px solid var(--line); background: var(--sunken); padding: 12px 16px; }
+.scale-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 6px; }
+.scale-grid button { padding: 9px 0; font-family: var(--mono); font-weight: 600; font-size: 13px; }
+.scale-grid button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.yield { margin: 11px 0 6px; font-size: 12.5px; color: var(--ink-3); }
+.yield b { color: var(--accent); font-family: var(--mono); }
+
+.ing { list-style: none; margin: 0; padding: 0; }
+.ing li { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 5px 0; }
+.ing .nm { font-size: 14px; color: var(--ink-2); }
+.ing .nt { font-size: 11px; color: var(--ink-3); font-family: var(--mono); margin-left: 6px; }
+.ing .amt { font-family: var(--mono); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ing .amt.on { color: var(--accent); }
+
+/* ---------- 입력 ---------- */
+input, select, textarea {
+  font: inherit; color: inherit; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%;
+}
+input::placeholder, textarea::placeholder { color: var(--ink-3); }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.row-in { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- 표 ---------- */
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--line); }
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+thead th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-family: var(--mono); font-weight: 500; }
+td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.sticky-col { position: sticky; left: 0; background: var(--surface); min-width: 116px; }
+
+/* ---------- 하단 탭 ---------- */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(10px); border-top: 1px solid var(--line);
+}
+.tabbar-in { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tabbar button {
+  border: 0; border-radius: 0; background: none; padding: 9px 4px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
+}
+.tabbar button[aria-current="page"] { color: var(--accent); }
+.tabbar .ic { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- 교육 모드 ---------- */
+.study { min-height: 78vh; display: flex; flex-direction: column; gap: 16px; }
+.study .big { font-size: 27px; font-weight: 700; line-height: 1.3; text-wrap: balance; margin: 0; }
+.study .body { font-size: 17px; color: var(--ink-2); margin: 0; }
+.study .tip { background: var(--sunken); border-radius: 11px; padding: 12px 14px; font-size: 14px; color: var(--ink-2); }
+.study-nav { display: flex; gap: 10px; }
+.study-nav button { flex: 1; padding: 15px; font-weight: 700; font-size: 15px; }
+
+.center { text-align: center; display: grid; place-items: center; gap: 8px; min-height: 68vh; align-content: center; }
+.center h2 { font-size: 30px; margin: 0; font-weight: 700; }
+
+.muted { color: var(--ink-3); font-size: 12.5px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.hr { height: 1px; background: var(--line); border: 0; margin: 22px 0; }
+.ph {
+  aspect-ratio: 4/3; border-radius: 10px; border: 1px dashed var(--line);
+  background: var(--sunken); display: grid; place-items: center;
+  color: var(--ink-3); font-size: 12px; text-align: center; padding: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<header class="top">
+  <div class="top-in" id="top"></div>
+</header>
+
+<main class="wrap" id="view"></main>
+
+<nav class="tabbar" aria-label="주요 화면">
+  <div class="tabbar-in" id="tabs"></div>
+</nav>
+
+<script>
+/* ------------------------------------------------------------------ *
+   데이터 — 서버 없이 돌도록 시드를 그대로 안고 간다
+ * ------------------------------------------------------------------ */
+const DATA = {
+  store: { name: "○○ 베이커리 카페" },
+
+  shifts: [
+    { id:"sh-bakery", name:"제빵",   start:"05:00", end:"13:00", note:"어제 걸어둔 것 받고, 내일 것 다시 걸어두기",
+      focus:[{kind:"study", slug:"bakery-morning", label:"제빵 순서 보기"},{kind:"recipes", label:"레시피 찾기"}] },
+    { id:"sh-open",   name:"오픈조", start:"07:30", end:"15:30", note:"오픈 준비 → 오전 영업 → 오후 프렙",
+      focus:[{kind:"study", slug:"cafe-open", label:"오픈 체크리스트"},{kind:"prep", slug:"afternoon", label:"오후 프렙"}] },
+    { id:"sh-middle", name:"미들",   start:"11:00", end:"19:00", note:"피크 커버",
+      focus:[{kind:"recipes", label:"레시피 찾기"}] },
+    { id:"sh-close",  name:"마감조", start:"14:30", end:"22:30", note:"오후 프렙부터 마감까지",
+      focus:[{kind:"prep", slug:"afternoon", label:"오후 프렙 (내일 것 걸기)"},{kind:"study", slug:"cafe-close", label:"마감 체크리스트"}] }
+  ],
+
+  positions: [
+    { slug:"cafe-open", name:"오픈조", subtitle:"첫날 체크리스트",
+      summary:"07:30 출근해서 08:00 오픈까지 30분입니다. 순서대로 하시면 시간 안에 끝납니다.",
+      sections:[
+        { title:"들어오자마자", note:"머신 예열이 20~30분 걸려서 이게 제일 먼저입니다", steps:[
+          { title:"손 씻고 위생 복장 착용", desc:"손목까지 30초 이상. 앞치마, 모자, 편한 신발까지 갖추고 시작합니다.", critical:true, tip:null },
+          { title:"에스프레소 머신 전원 켜기", desc:"예열에 20~30분 걸립니다. 다른 걸 먼저 하면 오픈 시간에 못 맞춥니다.", critical:false, tip:"이것만 먼저 켜두고 나머지를 하세요." },
+          { title:"냉장·냉동고 온도 확인 후 기록", desc:"냉장 0~5℃, 냉동 -18℃ 이하. 벗어나 있으면 그 자리에서 점장에게 알립니다.", critical:true, tip:"기록은 몰아서 쓰면 의미가 없습니다. 본 순간에 적으세요." }
+        ]},
+        { title:"바 세팅", note:null, steps:[
+          { title:"그룹헤드 물 흘리기", desc:"밤새 고인 물을 5초 정도 빼냅니다. 첫 잔 맛이 달라집니다.", critical:false, tip:null },
+          { title:"추출 테스트 (원두를 새로 깠을 때만)", desc:"매일 하는 게 아닙니다. 원두를 새로 개봉했거나, 로스팅 날짜가 바뀌었거나, 그라인더를 청소한 뒤에 합니다.", critical:false, tip:"합격 기준은 영상으로 보세요. 글로는 설명이 안 되는 항목입니다." },
+          { title:"우유 소분, 스팀피처·행주 세팅", desc:"행주는 스팀용과 작업대용을 따로 둡니다. 섞이면 위생 사고입니다.", critical:true, tip:null },
+          { title:"어제 담근 콜드브루 여과·병입", desc:"어제 오후에 걸어둔 것을 오늘 아침에 받아냅니다. 그대로 두면 과추출로 씁니다.", critical:false, tip:"여과하면서 오늘 분량이 충분한지 봅니다." }
+        ]},
+        { title:"매장 열기", note:null, steps:[
+          { title:"쇼케이스 진열 + 가격표·알레르기 표시", desc:"제빵조가 구운 것을 받아 진열합니다. 알레르기 표시가 빠지면 법적 문제가 됩니다.", critical:true, tip:null },
+          { title:"POS 개시, 잔돈 확인", desc:"시재 확인하고 영수증 용지 남은 양도 같이 봅니다.", critical:false, tip:null }
+        ]}
+      ]},
+
+    { slug:"cafe-close", name:"마감조", subtitle:"첫날 체크리스트",
+      summary:"22:00부터 30분 안에 끝냅니다. 내일 아침 오픈조가 바로 시작할 수 있는 상태로 만들어두는 게 목표입니다.",
+      sections:[
+        { title:"기계", note:null, steps:[
+          { title:"에스프레소 머신 백플러시 + 세제 청소", desc:"세제 넣고 백플러시 5회, 헹굼 5회. 거르면 다음날 커피에서 쩐내가 납니다.", critical:true, tip:null },
+          { title:"그라인더 청소", desc:"호퍼 원두 비우고 안쪽까지 닦습니다. 원두 기름이 굳으면 다음날 맛이 무너집니다.", critical:false, tip:null }
+        ]},
+        { title:"재료·위생", note:null, steps:[
+          { title:"우유 폐기 / 보관, 개봉일 라벨", desc:"개봉한 우유는 날짜를 적어둡니다. 라벨 없는 우유는 다음 사람이 못 씁니다.", critical:true, tip:null },
+          { title:"쇼케이스 비우고 청소", desc:"남은 베이커리는 폐기 기준에 따라 처리하고, 유리면까지 닦습니다.", critical:false, tip:null },
+          { title:"냉장·냉동고 온도 재확인 후 기록", desc:"아침과 같은 방식으로 한 번 더 기록합니다.", critical:true, tip:null },
+          { title:"폐기 기록 작성", desc:"무엇을 몇 개 버렸는지 적습니다. 이 기록이 다음 발주 수량의 근거가 됩니다.", critical:false, tip:null }
+        ]},
+        { title:"내일 준비 확인 · 문단속", note:"여기서 빠뜨리면 내일 아침에 터집니다", steps:[
+          { title:"내일 제빵용 반죽·재료 걸려 있는지 확인", desc:"냉장고에 내일 쓸 반죽이 실제로 들어 있는지 눈으로 봅니다. 없으면 지금이 마지막 기회입니다.", critical:true, tip:"\"했겠지\"가 제일 위험합니다. 열어서 확인하세요." },
+          { title:"가스·전원·문단속", desc:"가스 밸브 잠금, 오븐 전원, 조명, 출입문 순서로 확인합니다.", critical:true, tip:null },
+          { title:"정산", desc:"POS 마감하고 시재 맞춰서 기록합니다.", critical:false, tip:null }
+        ]}
+      ]},
+
+    { slug:"bakery-morning", name:"제빵", subtitle:"새벽 05:00~",
+      summary:"어제 걸어둔 것을 받아서 오늘 진열분을 만듭니다. 그리고 내일 것을 다시 걸어둡니다.",
+      sections:[
+        { title:"어제 것 받기", note:null, steps:[
+          { title:"르방 상태 확인", desc:"부피가 2배 정도 올랐는지, 냄새가 시큼하고 상쾌한지 봅니다. 쏘는 냄새면 과발효입니다.", critical:false, tip:"판단이 어려우면 영상을 보세요. 사람마다 제일 다른 항목입니다." },
+          { title:"냉장 발효 반죽 꺼내 실온 복원", desc:"어제 만들어둔 반죽을 꺼냅니다. 차가운 채로 성형하면 안 됩니다.", critical:false, tip:null }
+        ]},
+        { title:"오늘 것 만들기", note:null, steps:[
+          { title:"성형 → 2차 발효", desc:"품목별 성형 후 발효기에 넣습니다. 완료 판단은 손가락 자국 테스트로 합니다.", critical:false, tip:null },
+          { title:"굽기", desc:"품목별 온도·시간은 레시피를 보세요.", critical:false, tip:null },
+          { title:"식힘 · 포장 · 쇼케이스로 넘기기", desc:"완전히 식기 전에 포장하면 물이 생겨서 눅눅해집니다.", critical:false, tip:null }
+        ]},
+        { title:"내일 것 걸어두기", note:"오늘은 아무 일도 안 생깁니다. 안 하면 내일 아침에 터집니다", steps:[
+          { title:"내일용 반죽 제조 후 냉장", desc:"12~18시간 냉장 발효합니다. 오늘 안 만들면 내일 아침에 구울 게 없습니다.", critical:true, tip:null },
+          { title:"르방 갱신", desc:"매일 해야 합니다. 하루 거르면 살리는 데 2~3일 걸립니다.", critical:true, tip:null },
+          { title:"오븐·발효기·작업대 청소", desc:"밀가루가 남아 있으면 벌레가 생깁니다.", critical:false, tip:null }
+        ]}
+      ]}
+  ],
+
+  recipes: [
+    { slug:"americano", name:"아메리카노", category:"음료", forNewbie:true,
+      yield:{amount:1, unit:"잔"}, note:"업계 표준값입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
+      ingredients:[
+        {name:"원두 (도징)", amount:18, unit:"g", note:"18~22g"},
+        {name:"추출량", amount:36, unit:"g", note:"1:2"},
+        {name:"물", amount:200, unit:"ml", note:"아이스는 150ml+얼음"}
+      ],
+      steps:[
+        {title:"포터필터 비우고 물기 닦기", desc:"젖은 채로 원두를 받으면 추출이 무너집니다."},
+        {title:"도징 후 수평 맞춰 탬핑", desc:"한쪽이 기울면 그쪽으로 물이 몰려서 신맛이 납니다."},
+        {title:"추출 — 시간을 본다", desc:"18g 넣고 36g이 25~30초에 나오는 것이 기준입니다."}
+      ]},
+    { slug:"cafe-latte", name:"카페라떼", category:"음료", forNewbie:true,
+      yield:{amount:1, unit:"잔"}, note:"업계 표준값입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
+      ingredients:[
+        {name:"원두 (도징)", amount:18, unit:"g", note:"추출 36g"},
+        {name:"우유", amount:150, unit:"ml", note:null}
+      ],
+      steps:[
+        {title:"에스프레소 먼저 내린다", desc:"우유를 먼저 스팀하면 기다리는 동안 거품이 꺼집니다."},
+        {title:"스팀 — 온도와 거품", desc:"공기 주입은 2~3초만. 60~65℃에서 멈춥니다. 넘기면 단맛이 사라집니다."},
+        {title:"스팀완드 즉시 닦기", desc:"우유가 굳으면 안 지워지고 위생 문제가 됩니다.", critical:true}
+      ]},
+    { slug:"cold-brew", name:"콜드브루 (1배치)", category:"음료", forNewbie:true,
+      yield:{amount:2000, unit:"ml"}, note:"표준 1:10 · 침출 12~18시간",
+      ingredients:[
+        {name:"원두 (굵게 분쇄)", amount:200, unit:"g", note:"1:10"},
+        {name:"정수", amount:2000, unit:"ml", note:null}
+      ],
+      steps:[
+        {title:"굵게 분쇄", desc:"가늘면 잡미가 나고 필터가 막힙니다."},
+        {title:"물에 담그고 날짜·시각 라벨", desc:"안 적으면 다음 사람이 언제 빼야 할지 모릅니다.", critical:true},
+        {title:"냉장 12~24시간", desc:"다음날 아침에 여과합니다."}
+      ]},
+    { slug:"shokupan", name:"식빵 (1배합)", category:"베이커리", forNewbie:true,
+      yield:{amount:6, unit:"개"}, note:"표준 세미리치 배합입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
+      ingredients:[
+        {name:"강력분", amount:2000, unit:"g", note:"100%"},
+        {name:"물", amount:1200, unit:"g", note:"60%"},
+        {name:"설탕", amount:120, unit:"g", note:"6%"},
+        {name:"소금", amount:40, unit:"g", note:"2%"},
+        {name:"이스트", amount:40, unit:"g", note:"2%"},
+        {name:"버터", amount:120, unit:"g", note:"6%"}
+      ],
+      steps:[
+        {title:"버터 뺀 재료 먼저 반죽", desc:"버터를 처음부터 넣으면 글루텐이 안 잡힙니다."},
+        {title:"글루텐 잡히면 버터 투입", desc:"반죽이 매끈해지고 얇게 늘어나면 그때 넣습니다."},
+        {title:"냉장 발효 12~18시간", desc:"총 반죽 3520g을 6등분하면 개당 약 590g입니다.", critical:true}
+      ]}
+  ],
+
+  prepLists: [
+    { slug:"afternoon", name:"오후 프렙", note:"14:00~15:30. 대부분 내일을 위한 일입니다.", tasks:[
+      { id:"p1", title:"내일용 콜드브루 걸기", desc:"원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.",
+        trigger:"매일 14:00", hours:16, days:null, recoverable:false, critical:true, varies:true,
+        conseq:"내일 콜드브루 못 팝니다. 사올 수도 없습니다.", recipe:"cold-brew" },
+      { id:"p2", title:"내일용 반죽 제조 후 냉장", desc:"내일 아침 구울 분량만큼. 판매량 보고 배수를 정합니다.",
+        trigger:"매일 14:00", hours:15, days:null, recoverable:false, critical:true, varies:true,
+        conseq:"내일 아침 빵이 없습니다. 사올 수도 없습니다.", recipe:"shokupan" },
+      { id:"p3", title:"르방 갱신", desc:"매일 같은 시간에. 거르면 되살리는 데 2~3일 걸립니다.",
+        trigger:"매일 14:00", hours:24, days:null, recoverable:false, critical:true, varies:false,
+        conseq:"복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.", recipe:null },
+      { id:"p4", title:"시럽 제조", desc:"잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
+        trigger:"시럽 잔량이 1/3 이하일 때", hours:4, days:null, recoverable:true, critical:false, varies:true,
+        conseq:"당장은 남은 걸로 버팁니다. 다만 피크에 떨어지면 곤란합니다.", recipe:null },
+      { id:"p5", title:"우유·식자재 발주", desc:"재고 확인하고 주문합니다. 금요일에는 주말치까지 함께 넣습니다.",
+        trigger:"월·화·수·목·금 15:00", hours:null, days:1, recoverable:true, critical:false, varies:true,
+        conseq:"쿠팡으로 메울 수 있습니다. 다만 값이 더 나갑니다.", recipe:null },
+      { id:"p6", title:"원두 발주", desc:"볶은 뒤 며칠 두어야 쓸 수 있으므로 넉넉히 앞서 주문합니다.",
+        trigger:"원두 재고가 3일치 이하일 때", hours:null, days:4, recoverable:false, critical:true, varies:true,
+        conseq:"거래처 원두는 다른 데서 못 삽니다. 맛이 바뀝니다.", recipe:null }
+    ]},
+    { slug:"cycle", name:"주기 점검", note:"며칠 걸러도 티가 안 납니다. 그래서 아무도 기억 못 합니다.", tasks:[
+      { id:"c1", title:"정수 필터 교체", desc:"커피 맛의 절반은 물입니다. 교체일을 적어두지 않으면 아무도 모릅니다.",
+        trigger:"4개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        conseq:"맛이 서서히 나빠지고, 오래 두면 머신에 스케일이 껴서 수리비가 나옵니다.", recipe:null },
+      { id:"c2", title:"그룹헤드 개스킷·샤워스크린 점검", desc:"추출 중 옆으로 물이 새면 교체 시기입니다.",
+        trigger:"6개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        conseq:"추출 불량과 누수. 방치하면 부품이 더 상합니다.", recipe:null },
+      { id:"c3", title:"제빙기 청소", desc:"안 보이는 곳이라 제일 잘 잊습니다. 위생 점검에서 자주 걸리는 항목입니다.",
+        trigger:"1개월마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        conseq:"위생 사고로 이어질 수 있습니다.", recipe:null },
+      { id:"c4", title:"보건증 갱신 확인", desc:"직원 전원. 만료되면 과태료 대상입니다.",
+        trigger:"1년마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        conseq:"법정 의무입니다. 적발되면 과태료가 나옵니다.", recipe:null }
+    ]}
+  ]
+};
+
+/* ------------------------------------------------------------------ *
+   저장 — 파일로 열면 localStorage가 막힌 브라우저가 있어 메모리로 물러난다
+ * ------------------------------------------------------------------ */
+const mem = {};
+const store = {
+  get(k, fb) {
+    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : (k in mem ? mem[k] : fb); }
+    catch { return k in mem ? mem[k] : fb; }
+  },
+  set(k, v) {
+    mem[k] = v;
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 파일 모드 */ }
+  }
+};
+
+/* ---------- 날짜 ---------- */
+const WD = ["일","월","화","수","목","금","토"];
+const pad = n => String(n).padStart(2, "0");
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const dayLabel = d => `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;
+
+function daysApart(a, b) {
+  const x = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  const y = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((y - x) / 86400000);
+}
+/** 지금 걸면 언제 쓸 수 있는지 */
+function readyAt(hours) {
+  const now = new Date(), d = new Date(now.getTime() + hours * 3600000);
+  const diff = daysApart(now, d);
+  const w = diff === 0 ? "오늘" : diff === 1 ? "내일" : diff === 2 ? "모레" : `${d.getMonth()+1}/${d.getDate()}`;
+  return `${w} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+/** 발주 도착일 — 거래처는 토·일에 배송하지 않는다 */
+function arrivesIn(days) {
+  const d = new Date(); let left = days, skipped = 0;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() === 0 || d.getDay() === 6) { skipped++; continue; }
+    left--;
+  }
+  return { label: dayLabel(d), overWeekend: skipped > 0 };
+}
+function mondayOf(base) {
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1));
+  return d;
+}
+
+/* ---------- 도우미 ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+const el = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+const SCALES = [0.5, 1, 1.5, 2, 3];
+const fmt = (n, s) => { const v = n * s; return Number.isInteger(v) ? String(v) : v.toFixed(1); };
+const recipeBy = s => DATA.recipes.find(r => r.slug === s);
+const CHECK = '<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 8 14.5 16 6"/></svg>';
+
+/* ------------------------------------------------------------------ *
+   라우팅
+ * ------------------------------------------------------------------ */
+const routes = {
+  "": renderHome,
+  "prep": renderPrep,
+  "recipes": renderRecipes,
+  "recipe": renderRecipe,
+  "roster": renderRoster,
+  "study": renderStudy,
+  "list": renderChecklist
+};
+
+function go(hash) { location.hash = hash; }
+function parseHash() {
+  const raw = location.hash.replace(/^#\/?/, "");
+  const [name, arg] = raw.split("/");
+  return { name: name || "", arg: arg || "" };
+}
+
+function render() {
+  const { name, arg } = parseHash();
+  const fn = routes[name] || renderHome;
+  document.getElementById("view").innerHTML = "";
+  document.getElementById("top").innerHTML = "";
+  fn(arg);
+  renderTabs(name);
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", render);
+
+function topbar({ title, sub, back, right }) {
+  const t = document.getElementById("top");
+  if (back) {
+    const b = el(`<button class="back" type="button">‹ 뒤로</button>`);
+    b.onclick = () => history.length > 1 ? history.back() : go("#/");
+    t.appendChild(b);
+  }
+  t.appendChild(el(`<div class="grow">${sub ? `<p class="sub">${esc(sub)}</p>` : ""}<h1>${esc(title)}</h1></div>`));
+  if (right) t.appendChild(right);
+}
+
+const TABS = [
+  { key:"",        label:"오늘",   icon:'<path d="M3 10.5 12 4l9 6.5V19a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>' },
+  { key:"prep",    label:"프렙",   icon:'<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/>' },
+  { key:"recipes", label:"레시피", icon:'<path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2z"/><path d="M6 16h12"/>' },
+  { key:"roster",  label:"근무표", icon:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
+  { key:"study",   label:"교육",   icon:'<path d="M12 5 3 8l9 3 9-3z"/><path d="M7 10v5c0 1.5 2.2 3 5 3s5-1.5 5-3v-5"/>' }
+];
+
+function renderTabs(active) {
+  const wrap = document.getElementById("tabs");
+  wrap.innerHTML = "";
+  const cur = ["recipe"].includes(active) ? "recipes" : ["list"].includes(active) ? "study" : active;
+  for (const t of TABS) {
+    const b = el(`<button type="button" ${cur === t.key ? 'aria-current="page"' : ""}>
+      <svg class="ic" viewBox="0 0 24 24">${t.icon}</svg>${t.label}</button>`);
+    b.onclick = () => go(t.key === "" ? "#/" : `#/${t.key}`);
+    wrap.appendChild(b);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+   오늘
+ * ------------------------------------------------------------------ */
+function renderHome() {
+  topbar({ title: "오늘", sub: DATA.store.name });
+  const v = document.getElementById("view");
+
+  /* 지금 근무 중인 조 */
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const mins = s => +s.slice(0,2) * 60 + +s.slice(3);
+  const active = DATA.shifts.filter(s => cur >= mins(s.start) && cur < mins(s.end));
+  const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  const panel = el(`<div class="stack" style="margin-top:18px"></div>`);
+  if (!active.length) {
+    const next = DATA.shifts.filter(s => mins(s.start) > cur).sort((a,b) => mins(a.start) - mins(b.start))[0] || DATA.shifts[0];
+    panel.appendChild(el(`<div class="card" style="padding:16px">
+      <p class="eyebrow" style="margin:0">지금 ${clock} · 근무 시간 아님</p>
+      <p style="margin:4px 0 0;font-weight:700">다음은 ${esc(next.name)} · <span style="font-family:var(--mono)">${next.start}</span></p></div>`));
+  } else {
+    active.forEach((sh, i) => {
+      const card = el(`<div class="card" style="padding:16px;${i===0 ? "border-color:var(--accent-b);background:var(--accent-w)" : ""}">
+        <p class="eyebrow" style="margin:0">${i===0 ? `지금 ${clock} · 근무 중` : "같은 시간대"}</p>
+        <p style="margin:2px 0 0;font-size:17px;font-weight:700">${esc(sh.name)}
+          <span style="font-family:var(--mono);font-size:13px;font-weight:400;color:var(--ink-3)">${sh.start}–${sh.end}</span></p>
+        <p style="margin:3px 0 0;font-size:13px;color:var(--ink-2)">${esc(sh.note)}</p>
+        <div class="stack" style="margin-top:12px"></div></div>`);
+      const box = card.querySelector(".stack");
+      sh.focus.forEach((f, fi) => {
+        const primary = i === 0 && fi === 0;
+        const b = el(`<button type="button" class="nav-row ${primary ? "btn-primary" : ""}">
+          <b>${esc(f.label)}</b><span class="chev">›</span></button>`);
+        b.onclick = () => go(f.kind === "recipes" ? "#/recipes" : f.kind === "prep" ? `#/prep/${f.slug}` : `#/study/${f.slug}`);
+        box.appendChild(b);
+      });
+      panel.appendChild(card);
+    });
+  }
+  v.appendChild(panel);
+
+  /* 프렙 */
+  const sec1 = el(`<section class="sec"><h2>프렙</h2><p class="hint">오늘 해야 내일 쓸 수 있는 것들입니다.</p><div class="rows"></div></section>`);
+  DATA.prepLists.forEach(l => {
+    const keep = l.tasks.filter(t => !t.recoverable).length;
+    const b = el(`<button type="button" class="nav-row"><span><b>${esc(l.name)}</b>
+      <span class="meta">${l.tasks.length}개${keep ? ` · <b style="color:var(--danger)">까먹지 말 것 ${keep}개</b>` : ""}</span></span>
+      <span class="chev">›</span></button>`);
+    b.onclick = () => go(`#/prep/${l.slug}`);
+    sec1.querySelector(".rows").appendChild(b);
+  });
+  v.appendChild(sec1);
+
+  /* 레시피 · 근무표 */
+  const sec2 = el(`<section class="sec"><h2>바로 가기</h2><div class="rows"></div></section>`);
+  [
+    { label: "레시피 찾기", meta: `${DATA.recipes.length}개 · 이름으로 찾고 배수 계산`, to: "#/recipes" },
+    { label: "이번 주 근무표", meta: "짜서 전 직원에게 메일 발송", to: "#/roster" }
+  ].forEach(x => {
+    const b = el(`<button type="button" class="nav-row"><span><b>${esc(x.label)}</b><span class="meta">${esc(x.meta)}</span></span><span class="chev">›</span></button>`);
+    b.onclick = () => go(x.to);
+    sec2.querySelector(".rows").appendChild(b);
+  });
+  v.appendChild(sec2);
+
+  /* 포지션 */
+  const sec3 = el(`<section class="sec"><h2>포지션별</h2><p class="hint">첫날은 교육 모드로 한 장씩, 그 뒤엔 체크리스트로.</p><div class="rows"></div></section>`);
+  DATA.positions.forEach(p => {
+    const n = p.sections.reduce((a,s) => a + s.steps.length, 0);
+    const c = p.sections.reduce((a,s) => a + s.steps.filter(x => x.critical).length, 0);
+    const card = el(`<div class="card" style="padding:14px 16px">
+      <b style="font-size:15px">${esc(p.name)} <span style="font-weight:400;font-size:13px;color:var(--ink-3)">${esc(p.subtitle)}</span></b>
+      <p class="meta" style="margin:2px 0 10px;font-size:12px;color:var(--ink-3)">${n}개 항목 · 꼭 지키기 ${c}개</p>
+      <div class="grid2"></div></div>`);
+    const g = card.querySelector(".grid2");
+    const a = el(`<button type="button" class="btn-primary">교육 모드</button>`);
+    a.onclick = () => go(`#/study/${p.slug}`);
+    const b = el(`<button type="button">체크리스트</button>`);
+    b.onclick = () => go(`#/list/${p.slug}`);
+    g.append(a, b);
+    sec3.querySelector(".rows").appendChild(card);
+  });
+  v.appendChild(sec3);
+}
+
+/* ------------------------------------------------------------------ *
+   프렙
+ * ------------------------------------------------------------------ */
+function renderPrep(slug) {
+  const list = DATA.prepLists.find(l => l.slug === slug) || DATA.prepLists[0];
+  const key = `prep:${list.slug}:${today()}`;
+  let done = new Set(store.get(key, []));
+  const scales = {};
+
+  const right = el(`<span class="count"></span>`);
+  topbar({ title: list.name, sub: DATA.store.name, back: true, right });
+  const v = document.getElementById("view");
+
+  const barWrap = el(`<div class="bar" style="margin:14px 0 0"><i></i></div>`);
+  v.appendChild(barWrap);
+
+  const keepAll = list.tasks.filter(t => !t.recoverable);
+  const notice = keepAll.length ? el(`<div class="notice red" style="margin-top:14px"></div>`) : null;
+  if (notice) v.appendChild(notice);
+
+  if (list.note) v.appendChild(el(`<p class="muted" style="margin:10px 2px 0">${esc(list.note)}</p>`));
+
+  const rows = el(`<div class="rows" style="margin-top:14px"></div>`);
+  v.appendChild(rows);
+
+  function refresh() {
+    right.textContent = `${done.size}/${list.tasks.length}`;
+    barWrap.querySelector("i").style.width = `${Math.round(done.size / list.tasks.length * 100)}%`;
+    if (notice) {
+      const left = keepAll.filter(t => !done.has(t.id)).length;
+      notice.className = `notice ${left ? "red" : "green"}`;
+      notice.innerHTML = left
+        ? `<b>까먹지 말고 해야 할 것 ${left}개</b><p>빨간 테두리로 표시된 것들입니다. 오늘 안 하면 내일 아침에 되돌릴 방법이 없습니다.</p>`
+        : `<b>오늘 꼭 해야 할 건 다 했습니다</b>`;
+    }
+  }
+
+  list.tasks.forEach(t => {
+    const card = el(`<div class="task ${t.recoverable ? "" : "keep"}"></div>`);
+    const hit = el(`<button type="button" class="task-hit"></button>`);
+    const tick = el(`<span class="tick" aria-hidden="true">${CHECK}</span>`);
+    const body = el(`<div style="min-width:0;flex:1"></div>`);
+
+    const tags = [`<span class="pill mono">${esc(t.trigger)}</span>`];
+    if (t.critical) tags.unshift(`<span class="pill crit">꼭 지키기</span>`);
+    if (t.varies) tags.push(`<span class="pill warn">수량 매일 다름</span>`);
+    body.appendChild(el(`<div class="tags">${tags.join("")}</div>`));
+    body.appendChild(el(`<h3>${esc(t.title)}</h3>`));
+    body.appendChild(el(`<p class="desc">${esc(t.desc)}</p>`));
+
+    if (t.hours != null) {
+      body.appendChild(el(`<p class="slot">지금 걸면 → <b>${readyAt(t.hours)}</b>부터 사용 가능 <span class="dim">(${t.hours}시간)</span></p>`));
+    }
+    if (t.days != null) {
+      const a = arrivesIn(t.days);
+      body.appendChild(el(`<p class="slot">오늘 주문 → <b>${a.label}</b> 도착${a.overWeekend ? ` <span class="dim">(주말 배송 없음)</span>` : ""}</p>`));
+    }
+    body.appendChild(el(`<p class="conseq">안 하면 — ${esc(t.conseq)}</p>`));
+
+    hit.append(tick, body);
+    hit.onclick = () => {
+      done.has(t.id) ? done.delete(t.id) : done.add(t.id);
+      store.set(key, [...done]);
+      card.classList.toggle("done", done.has(t.id));
+      hit.setAttribute("aria-pressed", String(done.has(t.id)));
+      refresh();
+    };
+    hit.setAttribute("aria-pressed", String(done.has(t.id)));
+    if (done.has(t.id)) card.classList.add("done");
+    card.appendChild(hit);
+
+    const rec = t.recipe && recipeBy(t.recipe);
+    if (rec) {
+      scales[t.id] = 1;
+      const sc = el(`<div class="scaler">
+        <span class="eyebrow">오늘 몇 배?</span>
+        <div class="scale-grid"></div>
+        <p class="yield"></p>
+        <ul class="ing"></ul></div>`);
+      const grid = sc.querySelector(".scale-grid");
+      const draw = () => {
+        const s = scales[t.id];
+        [...grid.children].forEach((b, i) => b.setAttribute("aria-pressed", String(SCALES[i] === s)));
+        sc.querySelector(".yield").innerHTML =
+          `${esc(rec.name)} · 1배합 ${rec.yield.amount}${rec.yield.unit} → <b>${fmt(rec.yield.amount, s)}${rec.yield.unit}</b>`;
+        sc.querySelector(".ing").innerHTML = rec.ingredients.map(i =>
+          `<li><span class="nm">${esc(i.name)}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ""}</span>
+           <span class="amt ${s !== 1 ? "on" : ""}">${fmt(i.amount, s)}${i.unit}</span></li>`).join("");
+      };
+      SCALES.forEach(s => {
+        const b = el(`<button type="button">${s}배</button>`);
+        b.onclick = () => { scales[t.id] = s; draw(); };
+        grid.appendChild(b);
+      });
+      draw();
+      card.appendChild(sc);
+    }
+    rows.appendChild(card);
+  });
+
+  refresh();
+}
+
+/* ------------------------------------------------------------------ *
+   레시피
+ * ------------------------------------------------------------------ */
+function myRecipes() { return store.get("recipes:mine", []); }
+
+function renderRecipes() {
+  topbar({ title: "레시피", sub: DATA.store.name });
+  const v = document.getElementById("view");
+  const all = () => [...DATA.recipes, ...myRecipes()];
+
+  const q = el(`<input type="search" placeholder="메뉴 이름 (예: 라떼)" aria-label="레시피 검색" style="margin-top:16px">`);
+  const add = el(`<button type="button" class="btn-primary" style="width:100%;margin-top:8px;padding:13px">+ 레시피 추가</button>`);
+  add.onclick = openForm;
+  const cats = el(`<div class="row-in" style="margin-top:12px"></div>`);
+  const rows = el(`<div class="rows" style="margin-top:14px"></div>`);
+  v.append(q, add, cats, rows);
+
+  function draw() {
+    const k = q.value.trim().toLowerCase();
+    const hit = all().filter(r => !k || r.name.toLowerCase().includes(k) || r.category.toLowerCase().includes(k));
+
+    cats.innerHTML = "";
+    [["전체", ""], ...[...new Set(all().map(r => r.category))].map(c => [c, c])].forEach(([lab, val]) => {
+      const b = el(`<button type="button" style="padding:6px 12px;font-size:13px;font-weight:600;${q.value === val ? "background:var(--accent);border-color:var(--accent);color:#fff" : ""}">${esc(lab)}</button>`);
+      b.onclick = () => { q.value = val; draw(); };
+      cats.appendChild(b);
+    });
+
+    rows.innerHTML = "";
+    if (!hit.length) {
+      rows.appendChild(el(`<p class="muted" style="text-align:center;padding:24px 0">“${esc(q.value)}” 에 해당하는 레시피가 없습니다.</p>`));
+      return;
+    }
+    hit.forEach(r => {
+      const mine = !!r.mine;
+      const b = el(`<button type="button" class="nav-row"><span>
+        <b>${esc(r.name)}</b>
+        ${r.forNewbie ? ' <span class="pill new">첫 주</span>' : ""}
+        ${mine ? ' <span class="pill">직접 추가</span>' : ""}
+        <span class="meta">${esc(r.category)} · 1배합 ${r.yield.amount}${r.yield.unit} · 재료 ${r.ingredients.length}개</span>
+        </span><span class="chev">›</span></button>`);
+      b.onclick = () => go(`#/recipe/${r.slug}`);
+      rows.appendChild(b);
+    });
+  }
+  q.oninput = draw;
+  draw();
+
+  function openForm() {
+    const box = el(`<div class="card" style="padding:16px;margin-top:16px">
+      <b style="font-size:15px">레시피 추가</b>
+      <p class="muted" style="margin:2px 0 12px">이름과 재료 한 줄이면 저장됩니다.</p>
+      <div class="stack">
+        <div class="field"><label for="rn">메뉴 이름</label><input id="rn" placeholder="예: 바닐라라떼"></div>
+        <div class="row-in">
+          <div class="field" style="flex:1"><label for="rc">분류</label><input id="rc" value="음료"></div>
+          <div class="field" style="width:96px"><label for="ry">1배합</label><input id="ry" type="number" value="1"></div>
+          <div class="field" style="width:88px"><label for="ru">단위</label><input id="ru" value="잔"></div>
+        </div>
+        <div class="field"><label>재료</label><div class="stack" id="ings"></div></div>
+        <button type="button" id="more" style="border-style:dashed">+ 재료 추가</button>
+        <button type="button" class="btn-primary" id="save" style="padding:13px">저장</button>
+      </div></div>`);
+    const ings = box.querySelector("#ings");
+    const addRow = () => ings.appendChild(el(`<div class="row-in">
+      <input placeholder="재료" style="flex:2;min-width:110px" class="i-n">
+      <input placeholder="양" type="number" style="flex:1;min-width:70px" class="i-a">
+      <input placeholder="단위" value="g" style="width:76px" class="i-u"></div>`));
+    addRow(); addRow();
+    box.querySelector("#more").onclick = addRow;
+    box.querySelector("#save").onclick = () => {
+      const name = box.querySelector("#rn").value.trim();
+      const list = [...ings.children].map(r => ({
+        name: r.querySelector(".i-n").value.trim(),
+        amount: +r.querySelector(".i-a").value || 0,
+        unit: r.querySelector(".i-u").value.trim() || "g", note: null
+      })).filter(i => i.name && i.amount);
+      if (!name || !list.length) { alert("메뉴 이름과 재료 한 줄은 있어야 저장됩니다."); return; }
+      const slug = "my-" + Math.random().toString(36).slice(2, 9);
+      const mine = myRecipes();
+      mine.push({ slug, name, mine: true, forNewbie: false,
+        category: box.querySelector("#rc").value.trim() || "기타",
+        yield: { amount: +box.querySelector("#ry").value || 1, unit: box.querySelector("#ru").value.trim() || "개" },
+        ingredients: list, steps: [], note: null });
+      store.set("recipes:mine", mine);
+      go(`#/recipe/${slug}`);
+    };
+    add.replaceWith(box);
+  }
+}
+
+function renderRecipe(slug) {
+  const r = [...DATA.recipes, ...myRecipes()].find(x => x.slug === slug);
+  if (!r) { topbar({ title: "레시피", back: true }); document.getElementById("view").appendChild(el(`<p class="muted" style="padding:32px 0;text-align:center">레시피를 찾을 수 없습니다.</p>`)); return; }
+
+  topbar({ title: r.name, sub: `${DATA.store.name} · ${r.category}`, back: true });
+  const v = document.getElementById("view");
+  let s = 1;
+
+  const box = el(`<div class="card" style="padding:16px;margin-top:16px;background:var(--accent-w);border-color:var(--accent-b)">
+    <span class="eyebrow" style="color:var(--accent)">몇 배로 만드나요?</span>
+    <div class="scale-grid" style="margin-top:8px"></div>
+    <p style="margin:12px 0 0;font-weight:700;font-size:15px" id="y"></p></div>`);
+  const grid = box.querySelector(".scale-grid");
+  const ing = el(`<section class="sec"><h2>재료</h2><div class="card" style="padding:6px 16px"><ul class="ing"></ul></div>
+    <p class="muted" id="pc" style="margin-top:8px"></p></section>`);
+
+  const draw = () => {
+    [...grid.children].forEach((b, i) => b.setAttribute("aria-pressed", String(SCALES[i] === s)));
+    box.querySelector("#y").innerHTML = `${r.yield.amount}${r.yield.unit} → <span style="font-family:var(--mono);color:var(--accent)">${fmt(r.yield.amount, s)}${r.yield.unit}</span> 나옵니다`;
+    ing.querySelector(".ing").innerHTML = r.ingredients.map(i =>
+      `<li><span class="nm">${esc(i.name)}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ""}</span>
+       <span class="amt ${s !== 1 ? "on" : ""}">${fmt(i.amount, s)}${i.unit}</span></li>`).join("");
+    ing.querySelector("#pc").textContent = s === 1 ? (r.note || "") : `${s}배로 계산된 값입니다. 퍼센트는 배수와 상관없이 그대로입니다.`;
+  };
+  SCALES.forEach(x => { const b = el(`<button type="button">${x}배</button>`); b.onclick = () => { s = x; draw(); }; grid.appendChild(b); });
+  v.append(box, ing);
+  draw();
+
+  if (r.steps && r.steps.length) {
+    const sec = el(`<section class="sec"><h2>만드는 순서</h2><div class="rows"></div></section>`);
+    r.steps.forEach((st, i) => sec.querySelector(".rows").appendChild(el(`<div class="card" style="padding:14px 16px">
+      ${st.critical ? '<span class="pill crit">꼭 지키기</span>' : ""}
+      <b style="display:block;margin-top:${st.critical ? "6px" : "0"}"><span style="font-family:var(--mono);color:var(--ink-3)">${i+1}</span> &nbsp;${esc(st.title)}</b>
+      <p class="desc" style="margin:4px 0 0">${esc(st.desc)}</p>
+      <div class="grid2" style="margin-top:10px"><div class="ph">좋은 예<br>촬영 후 여기</div><div class="ph">나쁜 예<br>촬영 후 여기</div></div>
+      </div>`)));
+    v.appendChild(sec);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+   근무표
+ * ------------------------------------------------------------------ */
+function renderRoster() {
+  topbar({ title: "근무표", sub: DATA.store.name });
+  const v = document.getElementById("view");
+  let data = store.get("roster", { staff: [], assign: {} });
+  let monday = mondayOf(new Date());
+  const days = () => Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+  const save = () => store.set("roster", data);
+
+  const weekBar = el(`<div class="card" style="padding:9px 12px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <button type="button" id="pw">‹ 지난주</button><b id="wl" style="font-family:var(--mono);font-size:13px"></b><button type="button" id="nw">다음주 ›</button></div>`);
+  weekBar.querySelector("#pw").onclick = () => { monday.setDate(monday.getDate() - 7); paint(); };
+  weekBar.querySelector("#nw").onclick = () => { monday.setDate(monday.getDate() + 7); paint(); };
+
+  const form = el(`<section class="sec"><h2>직원 추가</h2>
+    <div class="card" style="padding:14px 16px"><div class="row-in">
+      <input class="f-sec" placeholder="섹션 (예: 제빵)" style="width:130px">
+      <input class="f-name" placeholder="이름" style="width:110px">
+      <input class="f-mail" type="email" placeholder="이메일" style="flex:1;min-width:170px">
+      <input class="f-tel" type="tel" placeholder="전화번호" style="width:150px">
+      <button type="button" class="btn-primary f-add">추가</button>
+    </div></div></section>`);
+  form.querySelector(".f-add").onclick = () => {
+    const name = form.querySelector(".f-name").value.trim();
+    if (!name) return;
+    data.staff.push({ id: "s" + Date.now().toString(36), name,
+      section: form.querySelector(".f-sec").value.trim(),
+      email: form.querySelector(".f-mail").value.trim(),
+      phone: form.querySelector(".f-tel").value.trim() });
+    form.querySelector(".f-name").value = ""; form.querySelector(".f-mail").value = ""; form.querySelector(".f-tel").value = "";
+    save(); paint();
+  };
+
+  const listSec = el(`<section class="sec"></section>`);
+  const gridSec = el(`<section class="sec"></section>`);
+  const sendSec = el(`<section class="sec"></section>`);
+  v.append(weekBar, form, listSec, gridSec, sendSec);
+
+  function body() {
+    const D = days();
+    const out = [`${DATA.store.name} 근무표`, `${dayLabel(D[0])} ~ ${dayLabel(D[6])}`, "", "[ 직원 명단 ]",
+      "섹션      이름        이메일                    전화번호", "-".repeat(64)];
+    const p = (t, w) => { let n = 0; for (const c of t) n += c.charCodeAt(0) > 0x2000 ? 2 : 1; return t + " ".repeat(Math.max(1, w - n)); };
+    data.staff.forEach(s => out.push(p(s.section || "-", 10) + p(s.name, 12) + p(s.email || "-", 26) + (s.phone || "-")));
+    out.push("", "[ 이번 주 근무 ]", "");
+    const groups = {};
+    data.staff.forEach(s => (groups[s.section || "미지정"] ||= []).push(s));
+    for (const [sec, mem] of Object.entries(groups)) {
+      out.push(`● ${sec}`);
+      mem.forEach(s => {
+        out.push(`  - ${s.name}`);
+        out.push("    " + D.map(d => `${dayLabel(d)} ${(data.assign[s.id] || {})[`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`] || "휴무"}`).join("  /  "));
+      });
+      out.push("");
+    }
+    out.push("변경 사항이 있으면 알려주세요.");
+    return out.join("\n");
+  }
+
+  function paint() {
+    const D = days();
+    weekBar.querySelector("#wl").textContent = `${dayLabel(D[0])} ~ ${dayLabel(D[6])}`;
+
+    listSec.innerHTML = ""; gridSec.innerHTML = ""; sendSec.innerHTML = "";
+    if (!data.staff.length) {
+      gridSec.appendChild(el(`<p class="muted" style="text-align:center;padding:24px 0">직원을 추가하면 근무표가 만들어집니다.</p>`));
+      return;
+    }
+
+    listSec.appendChild(el(`<h2>직원 명단</h2><p class="hint">메일에 이 표가 그대로 들어갑니다.</p>`));
+    listSec.appendChild(el(`<div class="tbl-wrap"><table>
+      <thead><tr><th>섹션</th><th>이름</th><th>이메일</th><th class="num">전화번호</th><th></th></tr></thead>
+      <tbody>${data.staff.map(s => `<tr>
+        <td>${esc(s.section || "—")}</td><td><b>${esc(s.name)}</b></td>
+        <td style="${s.email ? "" : "color:var(--ink-3)"}">${esc(s.email || "없음")}</td>
+        <td class="num" style="${s.phone ? "" : "color:var(--ink-3)"}">${esc(s.phone || "없음")}</td>
+        <td><button type="button" data-del="${s.id}" aria-label="${esc(s.name)} 삭제" style="padding:2px 8px;border:0;background:none;color:var(--ink-3)">×</button></td>
+      </tr>`).join("")}</tbody></table></div>`));
+    listSec.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+      const id = b.dataset.del;
+      if (!confirm("명단에서 뺄까요?")) return;
+      data.staff = data.staff.filter(s => s.id !== id); delete data.assign[id]; save(); paint();
+    });
+
+    gridSec.appendChild(el(`<h2>근무 배정</h2>`));
+    const tb = el(`<div class="tbl-wrap" style="margin-top:10px"><table>
+      <thead><tr><th class="sticky-col">직원</th>${D.map(d => `<th class="num" style="min-width:104px;${d.getDay()===0 ? "color:var(--danger)" : d.getDay()===6 ? "color:#2563EB" : ""}">${dayLabel(d)}</th>`).join("")}</tr></thead>
+      <tbody></tbody></table></div>`);
+    const tbody = tb.querySelector("tbody");
+    data.staff.forEach(s => {
+      const tr = el(`<tr><th class="sticky-col"><b>${esc(s.name)}</b><br><span class="muted" style="font-size:11px">${esc(s.section || "—")}</span></th></tr>`);
+      D.forEach(d => {
+        const dk = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+        const cur = (data.assign[s.id] || {})[dk] || "";
+        const td = el(`<td><select aria-label="${esc(s.name)} ${dayLabel(d)} 근무" style="padding:7px;font-size:12px;font-weight:600;${cur ? "background:var(--accent-w);border-color:var(--accent-b);color:var(--accent)" : "color:var(--ink-3)"}">
+          <option value="">휴무</option>${DATA.shifts.map(sh => `<option ${cur === sh.name ? "selected" : ""}>${sh.name}</option>`).join("")}</select></td>`);
+        td.querySelector("select").onchange = e => {
+          (data.assign[s.id] ||= {})[dk] = e.target.value; save(); paint();
+        };
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    gridSec.appendChild(tb);
+
+    const withMail = data.staff.filter(s => s.email);
+    sendSec.appendChild(el(`<h2>보내기</h2><p class="hint">메일 한 통에 직원 명단과 이번 주 근무가 함께 들어가고, 전 직원에게 한꺼번에 나갑니다. 보내기는 직접 누르셔야 합니다.</p>`));
+    const btns = el(`<div class="row-in"></div>`);
+    const m = el(`<button type="button" class="btn-primary" style="padding:12px 18px" ${withMail.length ? "" : "disabled style=opacity:.5"}>메일로 보내기 (${withMail.length}명)</button>`);
+    m.onclick = () => {
+      if (!withMail.length) return;
+      const D2 = days();
+      location.href = `mailto:?bcc=${encodeURIComponent(withMail.map(s => s.email).join(","))}` +
+        `&subject=${encodeURIComponent(`[${DATA.store.name}] 근무표 ${dayLabel(D2[0])}~${dayLabel(D2[6])}`)}` +
+        `&body=${encodeURIComponent(body())}`;
+    };
+    const c = el(`<button type="button" style="padding:12px 18px;font-weight:700">복사 (카톡용)</button>`);
+    c.onclick = () => {
+      const t = body();
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject())
+        .then(() => alert("근무표를 복사했습니다.")).catch(() => prompt("아래 내용을 복사하세요", t));
+    };
+    btns.append(m, c);
+    sendSec.appendChild(btns);
+  }
+  paint();
+}
+
+/* ------------------------------------------------------------------ *
+   교육 모드
+ * ------------------------------------------------------------------ */
+function renderStudy(slug) {
+  const v = document.getElementById("view");
+  if (!slug) {
+    topbar({ title: "교육 모드", sub: DATA.store.name });
+    const rows = el(`<div class="rows" style="margin-top:16px"></div>`);
+    DATA.positions.forEach(p => {
+      const b = el(`<button type="button" class="nav-row"><span><b>${esc(p.name)}</b><span class="meta">${esc(p.subtitle)}</span></span><span class="chev">›</span></button>`);
+      b.onclick = () => go(`#/study/${p.slug}`);
+      rows.appendChild(b);
+    });
+    v.appendChild(rows);
+    return;
+  }
+
+  const pos = DATA.positions.find(p => p.slug === slug) || DATA.positions[0];
+  const flat = pos.sections.flatMap(s => s.steps.map(t => ({ ...t, sec: s.title })));
+  let idx = -1, ok = false;
+
+  function paint() {
+    v.innerHTML = ""; document.getElementById("top").innerHTML = "";
+
+    if (idx < 0) {
+      topbar({ title: pos.name, sub: DATA.store.name, back: true });
+      const est = Math.max(3, Math.round(flat.length * 0.7));
+      const c = el(`<div class="center">
+        <p class="eyebrow">${esc(pos.subtitle)}</p>
+        <h2>${esc(pos.name)}</h2>
+        <p style="max-width:34em;color:var(--ink-2);margin:6px 0 0">${esc(pos.summary)}</p>
+        <p class="muted" style="font-family:var(--mono)">${flat.length}개 항목 · 약 ${est}분</p>
+        <button type="button" class="btn-primary" style="margin-top:18px;padding:16px 52px;font-size:19px">시작하기</button>
+        <p class="muted" style="margin-top:10px">다 보고 나면 처음으로 돌아갑니다. 다음 사람은 여기서 다시 시작하면 됩니다.</p></div>`);
+      c.querySelector("button").onclick = () => { idx = 0; ok = false; paint(); };
+      v.appendChild(c);
+      return;
+    }
+    if (idx >= flat.length) {
+      topbar({ title: "완료", sub: pos.name, back: true });
+      const c = el(`<div class="center"><h2>수고하셨습니다</h2>
+        <p style="color:var(--ink-2)">${esc(pos.name)} 교육을 모두 마쳤습니다.</p>
+        <button type="button" style="margin-top:20px;padding:14px 40px;font-weight:700">처음으로</button></div>`);
+      c.querySelector("button").onclick = () => { idx = -1; paint(); };
+      v.appendChild(c);
+      return;
+    }
+
+    const t = flat[idx];
+    topbar({ title: pos.name, sub: t.sec, back: true, right: el(`<span class="count">${idx + 1} / ${flat.length}</span>`) });
+    v.appendChild(el(`<div class="bar" style="margin-top:14px"><i style="width:${Math.round((idx+1)/flat.length*100)}%"></i></div>`));
+
+    const s = el(`<div class="study" style="margin-top:22px">
+      ${t.critical ? '<span class="pill crit" style="align-self:start">꼭 지키기</span>' : ""}
+      <p class="big">${esc(t.title)}</p>
+      <p class="body">${esc(t.desc)}</p>
+      ${t.tip ? `<p class="tip"><b>선배 한마디</b> ${esc(t.tip)}</p>` : ""}
+      <div class="grid2"><div class="ph">좋은 예<br>촬영 후 여기</div><div class="ph">나쁜 예<br>촬영 후 여기</div></div>
+      <div style="flex:1"></div></div>`);
+
+    if (t.critical) {
+      const g = el(`<button type="button" class="btn-primary" style="padding:15px;font-weight:700">읽었습니다</button>`);
+      g.onclick = () => { ok = true; nx.disabled = false; nx.style.opacity = 1; g.replaceWith(el(`<p class="muted" style="text-align:center">확인했습니다</p>`)); };
+      s.appendChild(g);
+    } else ok = true;
+
+    const nav = el(`<div class="study-nav"></div>`);
+    const pv = el(`<button type="button">이전</button>`);
+    pv.onclick = () => { idx--; ok = false; paint(); };
+    const nx = el(`<button type="button" class="btn-primary">${idx === flat.length - 1 ? "완료" : "다음"}</button>`);
+    nx.onclick = () => { idx++; ok = false; paint(); };
+    if (t.critical && !ok) { nx.disabled = true; nx.style.opacity = .5; }
+    nav.append(pv, nx);
+    s.appendChild(nav);
+    if (t.critical) s.appendChild(el(`<p class="muted" style="text-align:center;margin:0">위의 [읽었습니다]를 눌러야 넘어갑니다</p>`));
+    v.appendChild(s);
+  }
+  paint();
+}
+
+/* ------------------------------------------------------------------ *
+   체크리스트
+ * ------------------------------------------------------------------ */
+function renderChecklist(slug) {
+  const pos = DATA.positions.find(p => p.slug === slug) || DATA.positions[0];
+  const flat = pos.sections.flatMap(s => s.steps.map((t, i) => ({ ...t, key: `${s.title}-${i}` })));
+  const key = `list:${pos.slug}:${today()}`;
+  let done = new Set(store.get(key, []));
+
+  const right = el(`<span class="count"></span>`);
+  topbar({ title: pos.name, sub: `${DATA.store.name} · ${pos.subtitle}`, back: true, right });
+  const v = document.getElementById("view");
+  const bar = el(`<div class="bar" style="margin-top:14px"><i></i></div>`);
+  v.appendChild(bar);
+  v.appendChild(el(`<p class="notice" style="margin-top:14px;background:var(--accent-w);border-color:var(--accent-b);color:var(--accent)"><b style="font-weight:600;font-size:13.5px">${esc(pos.summary)}</b></p>`));
+
+  const refresh = () => {
+    right.textContent = `${done.size}/${flat.length}`;
+    bar.querySelector("i").style.width = `${Math.round(done.size / flat.length * 100)}%`;
+  };
+
+  pos.sections.forEach(sec => {
+    const s = el(`<section class="sec"><h2>${esc(sec.title)}</h2>${sec.note ? `<p class="hint">${esc(sec.note)}</p>` : ""}<div class="rows"></div></section>`);
+    sec.steps.forEach((t, i) => {
+      const k = `${sec.title}-${i}`;
+      const card = el(`<div class="task ${t.critical ? "keep" : ""} ${done.has(k) ? "done" : ""}"></div>`);
+      const hit = el(`<button type="button" class="task-hit" aria-pressed="${done.has(k)}"></button>`);
+      hit.append(el(`<span class="tick" aria-hidden="true">${CHECK}</span>`), el(`<div style="min-width:0;flex:1">
+        ${t.critical ? '<div class="tags"><span class="pill crit">꼭 지키기</span></div>' : ""}
+        <h3>${esc(t.title)}</h3><p class="desc">${esc(t.desc)}</p>
+        ${t.tip ? `<p class="slot" style="font-weight:400;color:var(--ink-2)"><b style="font-family:var(--sans)">선배 한마디</b> ${esc(t.tip)}</p>` : ""}</div>`));
+      hit.onclick = () => {
+        done.has(k) ? done.delete(k) : done.add(k);
+        store.set(key, [...done]);
+        card.classList.toggle("done", done.has(k));
+        hit.setAttribute("aria-pressed", String(done.has(k)));
+        refresh();
+      };
+      card.appendChild(hit);
+      s.querySelector(".rows").appendChild(card);
+    });
+    v.appendChild(s);
+  });
+  refresh();
+}
+
+render();
+</script>
+
+</body>
+</html>
