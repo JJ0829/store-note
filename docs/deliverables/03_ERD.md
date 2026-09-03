@@ -5,10 +5,14 @@
 | 작성일 | 2026-09-03 |
 | 상태 | **초안** |
 | 대상 | 프렙노트(가칭, 미확정) |
-| 기준 커밋 | `93307a4` (master) |
-| 근거 | `src/lib/types.ts`, `src/lib/repo.ts`, `src/lib/roster.ts`, `src/lib/localRecipes.ts`, `data/seed.json`, `src/app/api/log/route.ts`, `src/app/api/media/route.ts`, `src/lib/mediaProbe.ts` |
+| 기준 커밋 | `92d17c1` (master, HEAD) |
+| 근거 | `src/lib/types.ts`, `src/lib/repo.ts`, `src/lib/roster.ts`, `src/lib/localRecipes.ts`, `data/seed.json`, `src/app/api/log/route.ts`, `src/app/api/media/route.ts`, `src/lib/mediaProbe.ts`, `src/app/shoot/page.tsx`, `src/components/RecipeForm.tsx`, `src/components/NowPanel.tsx`, `src/components/RosterView.tsx`, `public/app.html` |
 
-이 문서는 **현재 코드가 실제로 다루는 데이터**를 그대로 옮긴 것이다. 설계 제안이 아니라 역설계 기록에 가깝다. 향후 DDL 절(8절)만 아직 코드에 없는 것이고, 그 사실을 절 제목에 표시했다.
+이 문서는 **현재 코드가 실제로 다루는 데이터**를 그대로 옮긴 것이다. 설계 제안이 아니라 역설계 기록에 가깝다.
+
+**코드에 없는 것이 섞여 있는 구간은 둘이다.** 8절 DDL은 통째로 신설 제안이고(절 제목에 표시), **2절 ERD에도 8절에서 신설할 칸이 함께 그려져 있다** — `sort_order`(9개 테이블), `SECTION.parent`, `INGREDIENT.id`, `SHIFT_FOCUS.id`는 현재 `types.ts`에 없다. 3절 속성 표는 그런 칸을 **"DDL에서 신설"**로 일일이 표시했으므로, 다툼이 생기면 3절과 8절을 기준으로 본다.
+
+**기준 커밋 주의:** 이전 초안이 적어둔 `93307a4`는 틀린 값이다. 그 커밋에는 `src/lib/mediaProbe.ts`·`src/app/api/media/route.ts`·`public/media/`가 아직 없고 PrepTask도 10개다(이 문서는 19개). 대조하려면 `92d17c1`을 받아야 한다.
 
 **제품명 주의:** 앱 코드의 title은 `주방 체크리스트`(`src/app/layout.tsx`), `package.json` name은 `kitchen-sop`이다. "프렙노트"는 `presentation/` 폴더의 파일명·문서에만 쓰인다. ❓ 확인 필요 — 명칭 확정 여부.
 
@@ -40,6 +44,11 @@ function load(): SeedData {
 | 직원 명단 · 근무 배정 | 브라우저 localStorage `sop:roster` | `src/lib/roster.ts:29` |
 | 이벤트 로그 | `data/events.jsonl` (append) | `src/app/api/log/route.ts:27` |
 | 사진·영상 | `public/media/` 파일명 규약 | `src/lib/mediaProbe.ts` |
+| **발표용 정적 사본** | **`public/app.html`** — 시드 전체(매장·포지션·레시피·프렙·근무조)가 인라인된 단일 파일 HTML. `presentation/프렙노트.html`과 **바이트 단위로 동일**(76,749B). git에 추적되고 `.gitignore` 대상이 아니다 | `public/app.html:313` (`const DATA = {`), `git ls-files public/` |
+
+⚠️ **`public/app.html`은 `data/seed.json`의 두 번째 사본이고, 동기화되지 않는다.** 시드에 있는 `t-open-5`가 이 파일에는 없고(`grep t-open-5 public/app.html` → 0건), 프렙 업무 id도 시드는 `p-1`인데 이 파일은 `p1`이다. 저장 키도 다르다(6-4절). 즉 **같은 데이터의 두 판본이 서로 모르는 채로 저장소에 들어 있다.**
+
+⚠️ **Next는 `public/`을 사이트 루트로 서빙한다.** 배포하면 이 파일이 `/app.html`로 열린다. 레시피(영업비밀)와 근무표 화면이 그 안에 통째로 들어 있고 `noindex`가 없다(`grep -c noindex public/app.html` → 0). 6-4절·10-5절 참조. **배포 전 조치가 필요하다** → 8-2절 #8.
 
 ### 1-2. 이 구조의 한계 — 실측된 것만
 
@@ -173,9 +182,9 @@ erDiagram
         int leadTimeDays "nullable kind=order"
         boolean recoverable "가장 중요한 한 칸"
         string consequence "안 하면 생기는 일"
-        boolean quantityVaries "배수 버튼 노출 조건"
+        boolean quantityVaries "수량 매일 다름 배지 조건"
         boolean critical
-        string recipeSlug "nullable"
+        string recipeSlug "nullable. 배수 계산기 노출 조건"
         int sort_order
     }
 
@@ -185,6 +194,7 @@ erDiagram
         string start_at "TS 필드명은 start. HH:MM 문자열"
         string end_at "TS 필드명은 end. HH:MM 문자열"
         string note "nullable"
+        int sort_order "겹치는 조 중 대표 판정"
     }
 
     SHIFT_FOCUS {
@@ -211,9 +221,9 @@ erDiagram
 
     MEDIA_KEY {
         string key PK "항목 id 그 자체"
-        string good_file "id-good.jpg"
-        string bad_file "id-bad.jpg"
-        string video_file "id.mp4"
+        string store_id FK
+        string owner_kind "step 또는 prep_task"
+        string created_at
     }
 
     EVENT {
@@ -236,6 +246,8 @@ erDiagram
     }
 ```
 
+**`MEDIA_KEY`에는 파일 경로 칸이 없다.** `key`(= 항목 id) 하나로 `{id}-good.jpg` · `{id}-bad.jpg` · `{id}.mp4`를 **유도할 뿐 저장하지 않는다**(`mediaProbe.ts:23-29`, `47-53`). 파일명 3종은 파생값이다. 이 표는 8절 DDL의 `media_key` 테이블과 컬럼이 같다 — ERD만 보고 경로 컬럼을 만들면 안 된다. 3-13절 참조.
+
 ### 2-1. 실측 개수 (`data/seed.json`, Node 집계)
 
 | 엔티티 | 개수 | 세부 |
@@ -243,7 +255,7 @@ erDiagram
 | Store | 1 | `store-1` / `○○ 베이커리 카페` / `our-cafe` |
 | Position | 3 | `cafe-open` / `cafe-close` / `bakery-morning` |
 | Section | 13 | 포지션 9 + 레시피 4. id 13개 전부 유일 |
-| Step | 38 | 포지션 26 (critical 11) + 레시피 12 |
+| Step | 38 | **시드 기준.** 포지션 26 (critical 11) + 레시피 12. 매장이 레시피를 직접 추가하면 **브라우저가 Section·Step을 런타임에 더 만든다** → 3-4절 |
 | Recipe | 4 | `americano` `cafe-latte` `cold-brew` `shokupan`. **4개 모두 `forNewbie: true`** |
 | Ingredient | 13 | 단위는 `g`, `ml` 두 종류만 |
 | PrepList | 2 | `afternoon`(6) / `cycle`(13) |
@@ -259,7 +271,7 @@ erDiagram
 |---|---|---|
 | 1 | **조회 키는 `id`가 아니라 `shareSlug`/`slug`다.** `Position.id`·`PrepList.id`·`Shift.id`는 React key로만 쓰인다 | `repo.ts:41,64,72` |
 | 2 | **`PrepList`에는 `Section` 계층이 없다.** 포지션·레시피는 2단(Section→Step), 프렙은 1단(List→Task) | `types.ts:151-158` |
-| 3 | **Step 38 + PrepTask 19 = 57개 id가 전역 유일해야 한다.** 미디어 파일명이 `public/media/{id}-good.jpg`로 컨테이너 구분 없이 평면에 놓이기 때문이다. 측정 확인: 57개 전부 유일 | `mediaProbe.ts:53-59` |
+| 3 | **Step 38 + PrepTask 19 = 57개 id가 전역 유일해야 한다.** 소비처가 둘이다. ① 미디어 파일명이 `public/media/{id}-good.jpg`로 컨테이너 구분 없이 평면에 놓인다. ② `/shoot`의 `PRIORITY` 맵이 step id와 prep_task id를 **한 네임스페이스로 섞어 조회한다**(4절). 측정 확인: 57개 전부 유일 | `mediaProbe.ts:53-59`, `shoot/page.tsx:14-19` |
 | 4 | **`goodImage`/`badImage`/`videoUrl`은 필드로 존재하나 읽는 코드가 0개다.** grep 결과 출현은 `types.ts` 정의와 `RecipeForm.tsx:92-94`(항상 `null` 채움)뿐. 시드에 `goodImage` 3건이 `/photos/*.svg`를 가리키지만 화면에 안 나온다 | grep 확인 |
 | 5 | **`Store.slug`와 `Store.id`는 어디서도 읽지 않는다.** 읽히는 건 `store.name`뿐이다 | grep 확인 |
 
@@ -308,7 +320,7 @@ erDiagram
 
 | 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
 |---|---|---|---|---|---|
-| `id` | string / `text` | X | — | `t-open-1` 등. **전역 유일 필수** (미디어 파일명 base) | |
+| `id` | string / `text` | X | — | `t-open-1` 등. **전역 유일 필수** (미디어 파일명 base). **시드만이 아니다 — 로컬 레시피의 step id는 브라우저가 발급한다** (아래) | |
 | `section_id` | (계층) / `text` | X | — | 부모 섹션 | |
 | `title` | string / `text` | X | — | 항목 제목 | |
 | `desc` | string / `text` | X | — | 설명 | |
@@ -318,6 +330,16 @@ erDiagram
 | `bad_image` | string \| null / `text` | O | `null` | **미사용** | |
 | `video_url` | string \| null / `text` | O | `null` | **미사용.** `README.md:78`의 유튜브 안내는 현재 코드에서 동작하지 않는다 | |
 | `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+**⚠️ `step.id`는 시드에만 있는 것이 아니다 — 브라우저가 런타임에 발급한다.** 매장이 `/r/new`에서 레시피를 추가하면 `RecipeForm.tsx:68-99`가 이렇게 만든다.
+
+| 만들어지는 것 | 값 | 근거 |
+|---|---|---|
+| `recipe.id` = `recipe.slug` | `my-` + 랜덤 8자 (`newLocalId()`) | `RecipeForm.tsx:68,72-73` |
+| `section.id` | `` `${id}-sec` `` | `RecipeForm.tsx:83` |
+| `step.id` | `` `${id}-s0` ``, `-s1`, … (`my-xxxxxxxx-s0`) | `RecipeForm.tsx:87` |
+
+그리고 **그 step id가 그대로 미디어 조회 키가 된다** — `RecipeDetail.tsx:203`이 `<MediaSlot base={step.id} />`를 그리고, 로컬 레시피도 같은 `RecipeDetail`로 그려진다(`LocalRecipeView.tsx:43`). 즉 미디어 파일명 네임스페이스는 시드 57개로 닫혀 있지 않다. 8절 DDL이 `step.id`에 `references media_key(key)`를 걸었으므로, **이관 시 로컬 레시피의 step 행을 넣기 전에 `media_key` 행을 먼저 넣어야 한다**(9절 단계 6).
 
 ### 3-5. `recipe` — `types.ts:69-82`
 
@@ -333,7 +355,7 @@ erDiagram
 | `origin` | (없음) / `text` | X | `'seed'` | `seed` / `store`. 로컬 레시피 통합용. **DDL에서 신설** | |
 | `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
 
-`sections`가 **빈 배열이어도 저장된다** (`RecipeForm.tsx:96` — 만드는 순서를 안 채워도 저장 가능).
+`sections`가 **빈 배열이어도 저장된다** (`RecipeForm.tsx:80,98` — 만드는 순서를 안 채워도 저장 가능).
 
 ### 3-6. `ingredient` — `types.ts:60-67`
 
@@ -377,13 +399,15 @@ erDiagram
 | `lead_time_days` | number \| null / `int` | O | `null` | `kind=order`. `arrivesIn()`이 토·일을 배송일로 세지 않는다 (`PrepView.tsx:87`) | |
 | `recoverable` | boolean / `boolean` | X | `true` | **이 프로젝트에서 가장 중요한 한 칸** (`types.ts:127`). false = 돈으로 못 되돌린다. `irreversibleTasks()`가 이것만 필터 (`repo.ts:82`) | |
 | `consequence` | string / `text` | X | — | 안 하면 생기는 일. 화면에 "안 하면 —"으로 그대로 출력 | |
-| `quantity_varies` | boolean / `boolean` | X | `false` | 배수 버튼 노출 조건 (`PrepView.tsx:329`) | |
+| `quantity_varies` | boolean / `boolean` | X | `false` | **`수량 매일 다름` 배지 노출 조건.** 읽는 곳이 여기 하나뿐이고 배수 계산기와는 무관하다 (`PrepView.tsx:329`) | |
 | `critical` | boolean / `boolean` | X | `false` | 위생·안전 | |
 | `good_image` | string \| null / `text` | O | `null` | **미사용** | |
 | `bad_image` | string \| null / `text` | O | `null` | **미사용** | |
 | `video_url` | string \| null / `text` | O | `null` | **미사용** | |
-| `recipe_slug` | string \| null / `text` | O | `null` | 배수 계산기 연결. 실측 2건 (`p-1`→`cold-brew`, `p-2`→`shokupan`) | |
+| `recipe_slug` | string \| null / `text` | O | `null` | **배수 계산기 노출 조건.** 이 slug가 실존 레시피로 풀릴 때만 "오늘 몇 배?" 블록이 붙는다 (`PrepView.tsx:270-272` → `405`). 실측 2건 (`p-1`→`cold-brew`, `p-2`→`shokupan`) | |
 | `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+**⚠️ `quantity_varies`와 배수 계산기는 무관하다.** 화면을 다시 만들 때 가장 틀리기 쉬운 곳이다. 실측: `quantityVaries: true` 5건(`p-1` `p-2` `p-4` `p-5` `p-6`) 중 배수 버튼이 실제로 뜨는 것은 `recipeSlug`가 있는 `p-1`·`p-2` **2건뿐**이다. `p-4`·`p-5`·`p-6`은 배지만 뜨고 계산기는 없다.
 
 **`PrepTask`는 `Step`을 상속하지 않고 필드를 중복 정의한다.** 겹치는 것 7개: `id`, `title`, `desc`, `critical`, `goodImage`, `badImage`, `videoUrl`.
 
@@ -400,7 +424,9 @@ erDiagram
 | `start_at` | string / `time` | X | — | `"05:00"`. `toMinutes()`가 `split(":")`으로 파싱 — 형식 검증 없음 (`NowPanel.tsx:15`) | |
 | `end_at` | string / `time` | X | — | `"13:00"` | |
 | `note` | string \| null / `text` | O | `null` | NowPanel 비고 | |
-| `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **JSON 배열 순서가 겹치는 조 중 대표를 정한다.** `shifts.filter()`가 순서를 보존하고(`NowPanel.tsx:48-50`) 그 결과의 `i === 0`만 주황 강조를 받는다(`NowPanel.tsx:116`). 근무 시간 밖 fallback도 배열 첫 원소다(`NowPanel.tsx:61` `?? shifts[0]`). **DDL에서 신설** | |
+
+**⚠️ 시드 4개 조는 시간이 겹친다.** 측정 확인 — 제빵 05:00–13:00 ∩ 오픈조 07:30–15:30 ∩ 미들 11:00–19:00, 오픈조 ∩ 마감조 14:30–22:30, 미들 ∩ 마감조. 겹치는 5쌍이 나온다. 예컨대 11:00–13:00에는 제빵·오픈조·미들 3개가 동시에 `active`다. **그중 어느 카드가 대표(주황)인지는 배열 순서가 정한다.** 그래서 `shift`의 배열 순서는 표시 순서가 아니라 동작이다 — 8-1절 #1이 `sort_order`를 넣어야 하는 이유가 `shift_focus`뿐이 아니다.
 
 **자정을 넘기는 조를 `toMinutes()` 비교가 처리하지 못한다.** 현재 시드 4개는 전부 같은 날 안에서 끝나므로 드러나지 않는다. ❓ 확인 필요 — 심야 조가 실제로 있는지.
 
@@ -413,7 +439,7 @@ erDiagram
 | `kind` | ShiftFocus.kind / `text` | X | — | `position`(3) / `prep`(2) / `recipes`(2) | |
 | `slug` | string / `text` | O | `null` | **`recipes` 분기에는 없다** — 이 유니온의 존재 이유 | |
 | `label` | string / `text` | X | — | 버튼에 뜨는 글자 | |
-| `sort_order` | (배열 순서) / `int` | X | `0` | **`0`번이 대표.** `NowPanel.tsx:112`가 `fi === 0`으로 강조 스타일을 준다 → **DDL에서 필수** | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **`0`번이 대표.** 단 조건이 `fi === 0`이 아니라 **`i === 0 && fi === 0`**이다(`NowPanel.tsx:116`) — **대표 조의 0번 focus 하나만** 주황이 된다. 겹치는 시간대의 2·3번째 조는 focus[0]도 회색이다 → **DDL에서 필수** | |
 
 `focusHref()` 라우팅 (`NowPanel.tsx:19-28`): `position → /t/{slug}`(교육 모드) / `prep → /prep/{slug}` / `recipes → /r` 고정.
 
@@ -458,6 +484,8 @@ ERD에서 가장 오해를 사기 쉬운 부분이다. 데이터에 경로를 �
 
 동작: `GET /api/media`가 `public/media/` 파일명 목록을 반환(dotfile·`.md` 제외) → `mediaProbe`가 프로세스당 **한 번만** 받아 `Set`에 담음(`manifest ??=`) → `MediaSlot base={id}`가 그 안에서 이름을 찾는다. 없으면 `hasAny()`가 막아 **아무것도 그리지 않는다** (`MediaSlot.tsx:31`).
 
+**키 발급 주체가 둘이다.** 시드(`data/seed.json`)의 57개 id와, **브라우저가 로컬 레시피를 만들 때 발급하는 `my-xxxxxxxx-s0` 형태의 step id**(`RecipeForm.tsx:87`, 3-4절)다. 후자도 `MediaSlot base={step.id}`로 같은 네임스페이스를 쓴다(`RecipeDetail.tsx:203`). 즉 **이 레지스트리는 시드만 채워서는 완성되지 않는다.**
+
 **현재 상태:** `public/media/`에 `t-open-5-good.png`, `t-open-5-bad.png` 2개(둘 다 70바이트 1×1 투명 PNG)와 `촬영목록.md`. 즉 57개 항목 중 **1개만** 미디어가 잡히고, 그 1개는 실사가 아니라 투명 픽셀이다. 배관은 완성돼 있고 콘텐츠가 사실상 0건이다.
 
 `public/photos/`의 SVG 8개는 어느 화면에서도 쓰이지 않는다(버거집 시절 플레이스홀더).
@@ -483,14 +511,29 @@ ERD에서 가장 오해를 사기 쉬운 부분이다. 데이터에 경로를 �
 | **ShiftFocus → PrepList** | 0..1 : 1 | `slug` 문자열 | **없음** | 2건 |
 | **Assign → Shift** | N:1 | `Shift.name` 문자열 | **없음** | 0건 |
 | Staff → Assign | 1:N | 중첩 객체 | 없음 | 0건 |
+| **PRIORITY → Step / PrepTask** | N:1 | **코드에 하드코딩된 id 문자열** | **없음** | 4건 |
 
-**느슨한 참조 4곳 전부 검증 코드가 없다.** 깨졌을 때의 결과:
+**느슨한 참조 5곳 전부 검증 코드가 없다.** 넷은 `seed.json` 안에 있고, 다섯 번째는 **소스 코드 안에 있다.** 깨졌을 때의 결과:
 
 | 참조 | 깨지면 | 근거 |
 |---|---|---|
 | `prep_task.recipe_slug` | `recipeBySlug.get()`이 `undefined` → 배수 계산기가 조용히 안 붙는다 | `PrepView.tsx:270-271` |
-| `shift_focus.slug` | 404 링크가 된다 | `NowPanel.tsx:19-28` |
+| `shift_focus.slug` (→ position) | 404 링크가 된다 | `NowPanel.tsx:19-28` |
+| `shift_focus.slug` (→ prep_list) | 동일 | 동일 |
 | `assign` 값 | 조 이름을 고치면 기존 배정이 전부 고아 | `roster.ts:21` |
+| **`/shoot`의 `PRIORITY` 4건** | **`먼저` 배지가 조용히 사라진다.** `PRIORITY[st.id]`가 `undefined`가 될 뿐 에러가 없다 | `shoot/page.tsx:14-19`, 사용처 `32`·`43`·`53` |
+
+**`PRIORITY`가 특이한 이유:** 이 맵은 **step id와 prep_task id를 한 네임스페이스로 섞어 조회한다.** 실측 — `t-open-5`(포지션 step), `s-lt-2`(레시피 step), `t-bake-1`(포지션 step), `p-1`(prep_task). 네 id 모두 시드에 실존한다(측정 확인). 2-2절 #3의 "57개 id 전역 유일"이 미디어 파일명 말고도 필요한 두 번째 이유가 여기다.
+
+```ts
+// src/app/shoot/page.tsx:14-19 — 시드가 아니라 코드에 박혀 있다
+const PRIORITY: Record<string, string> = {
+  "t-open-5": "추출 테스트 합격 기준",
+  "s-lt-2": "스팀 밀크 온도·거품",
+  "t-bake-1": "르방·발효 완료 판단",
+  "p-1": "콜드브루 거는 장면",
+};
+```
 
 **Section의 다중 부모가 이 모델의 가장 큰 설계 결정이다.** 선택지 셋:
 
@@ -612,7 +655,7 @@ CONSTRAINT shift_focus_shape CHECK (
 
 ## 6. 브라우저 저장소 스키마 (현재 구현. 전수)
 
-`grep -rn "localStorage\|sessionStorage" src/`로 전수 확인. **키는 6종이다.**
+`grep -rn "localStorage\|sessionStorage" src/`로 전수 확인. **`src/`(Next 앱)의 키는 6종이다.** 단 같은 오리진에 `public/app.html`이 함께 서빙되고 그쪽은 키가 다르다 → 6-4절.
 
 | # | 키 형식 | 저장소 | 값 구조 | 만료 / 초기화 규칙 | 정의 위치 |
 |---|---|---|---|---|---|
@@ -637,20 +680,31 @@ CONSTRAINT shift_focus_shape CHECK (
 
 `todayKey()`가 `ChecklistView.tsx:13-18`과 `PrepView.tsx:19-24`에 **동일한 코드로** 중복 정의돼 있고, `roster.ts:70-74`의 `ymd(d: Date)`가 같은 일을 한다. 셋 다 `YYYY-MM-DD`, **로컬 타임존 기준**이다.
 
-### 6-4. 단일 파일 HTML은 키가 다르다 — 데이터가 섞이지 않는다
+### 6-4. 단일 파일 HTML — 키가 대부분 다르지만 프렙 키 하나가 충돌한다
 
-`presentation/프렙노트.html`(발표용 단일 파일)은 별개 키를 쓴다.
+발표용 단일 파일 HTML은 저장소에 **두 벌** 있다.
 
-| 용도 | Next 앱 | 단일 HTML |
+| 파일 | 크기 | 서빙 여부 |
 |---|---|---|
-| 체크리스트 | `sop:{slug}:{날짜}` | `list:{slug}:{날짜}` |
-| 프렙 | `prep:{slug}:{날짜}` | `prep:{slug}:{날짜}` (같음) |
+| `presentation/프렙노트.html` | 76,749 B | 안 됨. `file://`로만 연다 |
+| **`public/app.html`** | **76,749 B — 위와 바이트 단위로 동일**(`cmp` 무출력) | **된다.** Next가 `public/`을 루트로 서빙하므로 배포하면 `/app.html` |
+
+키 비교:
+
+| 용도 | Next 앱 | 단일 HTML (`public/app.html` = `presentation/프렙노트.html`) |
+|---|---|---|
+| 체크리스트 | `sop:{shareSlug}:{날짜}` | `list:{slug}:{날짜}` (`public/app.html:1299`) |
+| 프렙 | `prep:{slug}:{날짜}` | **`prep:{slug}:{날짜}` — 같다** (`public/app.html:716`) |
 | 교육 진도 | `sop:run:{slug}` (sessionStorage) | **저장 안 함** |
-| 로컬 레시피 | `sop:recipes` | `recipes:mine` |
-| 근무표 | `sop:roster` | `roster` + `roster:mode` |
+| 로컬 레시피 | `sop:recipes` | `recipes:mine` (`public/app.html:817`) |
+| 근무표 | `sop:roster` | `roster` + `roster:mode` (`public/app.html:951-952`) |
 | 세션 id | `sop:sid` | **없음** |
 
-두 버전은 같은 브라우저에서도 데이터를 공유하지 않는다.
+**결론을 정정한다.** `file://`로 열면 오리진이 달라 분리되지만, **배포된 `/app.html`은 Next 앱과 같은 오리진이므로 프렙 키가 실제로 충돌한다.** 프렙 목록 slug도 양쪽 다 `afternoon`·`cycle`로 같아서(측정 확인) `prep:afternoon:2026-09-04` 한 키를 두 앱이 함께 쓴다. 값은 체크한 id의 `string[]`인데 항목 id가 서로 다르므로(`p-1` vs `p1`) 체크가 섞여 보이진 않고, **나중에 쓴 쪽이 앞선 쪽의 배열을 통째로 덮는다.** 오픈조가 `/prep/afternoon`에서 체크한 것이 누군가 `/app.html`을 열어 체크하면 사라진다.
+
+나머지 4종(체크리스트·로컬 레시피·근무표·세션 id)은 키가 달라 섞이지 않는다.
+
+**이건 저장 키만의 문제가 아니다.** `public/app.html:313`의 `const DATA = {`에 레시피 전량(영업비밀)과 근무표 화면이 인라인돼 있고 `noindex`가 없다 → 10-5절. **배포 전에 이 파일을 `public/` 밖으로 빼는 것이 8-2절 #8이다.**
 
 ### 6-5. 서버 이전 시 각 키의 행선지
 
@@ -751,6 +805,8 @@ body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
 | `positionSlug` | `position` |
 | `prepSlug` | `prep` |
 | `recipeSlug` | `recipe` |
+
+**⚠️ `subject_slug`에 FK를 걸면 안 된다.** 로컬 레시피는 `slug`가 `my-xxxxxxxx`(브라우저 발급, 3-4절)이고, `RecipeDetail`이 로컬 레시피에도 그대로 쓰이므로 **`recipe_view`·`recipe_scale`이 서버에 존재하지 않는 slug를 `recipeSlug`로 싣는다**(`RecipeDetail.tsx:54`, `90`). 9절 단계 6(레시피 통합)을 마치기 전까지는 매칭되지 않는 `subject_slug` 행이 정상적으로 쌓인다. `task_id`에 FK를 걸지 않은 것과 같은 이유다.
 
 ---
 
@@ -1113,7 +1169,13 @@ create index step_section_idx     on step       (section_id,  sort_order);
 create index ingredient_recipe_idx on ingredient(recipe_id,   sort_order);
 create index prep_task_list_idx   on prep_task  (prep_list_id, sort_order);
 create index shift_focus_shift_idx on shift_focus(shift_id,    sort_order);
-create index shift_store_idx      on shift      (store_id,     start_at);
+
+-- shift 는 인덱스가 둘 필요하다.
+--   start_at : "지금 근무 중인 조" 조회용
+--   sort_order: 겹치는 조 중 대표 판정 (NowPanel.tsx:116 의 i === 0).
+--               start_at 순 정렬은 JSON 배열 순서를 재현하지 못한다.
+create index shift_store_idx       on shift      (store_id,     start_at);
+create index shift_store_order_idx on shift      (store_id,     sort_order);
 
 -- 첫 화면의 "까먹지 말 것 N개" (repo.ts:82 irreversibleTasks)
 create index prep_task_irreversible_idx
@@ -1145,7 +1207,7 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 
 | # | 변경 | 이유 |
 |---|---|---|
-| 1 | `sort_order`를 6개 테이블에 신설 | JSON 배열 순서가 의미를 가지지만 SQL은 순서를 보장하지 않는다. `shift_focus`는 0번이 대표라 특히 필수 |
+| 1 | `sort_order`를 **9개 테이블**에 신설 — `position`·`recipe`·`section`·`step`·`ingredient`·`prep_list`·`prep_task`·**`shift`**·`shift_focus` | JSON 배열 순서가 의미를 가지지만 SQL은 순서를 보장하지 않는다. **순서가 표시가 아니라 동작인 곳이 둘이다** — `shift_focus`는 0번이 대표 화면이고(`NowPanel.tsx:116`), **`shift`는 겹치는 조 중 어느 조가 대표 카드인지를 배열 순서가 정한다**(3-9절. 시드 4개 조가 실제로 겹친다) |
 | 2 | `desc` → `descr` | `desc`가 SQL 예약어다 |
 | 3 | `prep_task.recipe_slug` → `recipe_id` FK | 느슨한 문자열 참조를 없앤다 |
 | 4 | `shift_focus.slug` → `position_id`/`prep_list_id` FK | "404 링크"를 DB에서 막는다 |
@@ -1169,6 +1231,7 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 | 5 | 로컬 레시피와 시드 레시피의 **id 충돌 검사가 현재 없다** (`RecipeSearch.tsx:25`가 단순 concat). 이전 시 충돌 처리 규칙 | `recipe` |
 | 6 | 거래처별 발주 요일·마감 시각·입고 소요일 — 현재 시드는 우유 1일·원두 4일로 넣어둔 **초안**이다 | `prep_task.lead_time_days` |
 | 7 | 배포 대상 호스팅. Vercel이면 `/api/log`의 파일 append가 무동작이라 이벤트가 이 테이블로 들어오지 않는다 | `event` |
+| 8 | **`public/app.html`을 배포에 포함할지.** 포함하면 ⓐ 레시피 전량이 `/app.html` 한 장으로 공개되고 ⓑ `prep:{slug}:{날짜}` 키가 Next 앱과 충돌하며 ⓒ `noindex`가 없어 색인 대상이 된다. **삭제하거나 `public/` 밖(예: `presentation/`)으로 옮기는 것이 기본안.** 발표 시연에 정적 URL이 필요하면 별도 호스팅으로 분리한다 | 6-4절 · 10-5절 |
 
 ---
 
@@ -1186,14 +1249,14 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 | **3** | 로그 조인 결함 수정 | `TrainingMode`의 survey에 `runId` 추가 (7-3절). 한 줄 | 없음 | 되돌릴 이유 없음 |
 | **4** | 프렙 체크 서버화 | `prep_check` 쓰기. localStorage는 오프라인 캐시로 남긴다 | **교대 인계가 성립한다.** 주기 점검 매일 리셋도 이때 풀린다 | localStorage 단독으로 복귀 |
 | **5** | 체크리스트 서버화 | `checklist_check` 쓰기 | **사장님이 신입 진도를 본다** | 동일 |
-| **6** | 레시피 통합 | `sop:recipes` → `recipe(origin='store')`. `/r/my?id=`를 `/r/{slug}`로 통합 | 기기 밖에서도 보인다 | 로컬 배열 유지 |
+| **6** | 레시피 통합 | `sop:recipes` → **`media_key` + `recipe(origin='store')` + `section` + `step` + `ingredient` 5개 테이블.** 로컬 레시피 1건이 5개 테이블에 흩어진다. `/r/my?id=`를 `/r/{slug}`로 통합 | 기기 밖에서도 보인다 | 로컬 배열 유지 |
 | **7** | 근무표 이관 | `sop:roster` → `staff` + `assign`(`shift_id` FK). **⚠️ 개인정보가 서버로 넘어가는 유일한 단계.** 10절 조치를 이 단계 전에 마쳐야 한다 | 기기 교체에도 안 날아간다 | localStorage 단독 |
 | **8** | 편집 화면 | `repo.ts`에 write 함수. 사장님이 JSON을 안 고쳐도 되게 | 신규 화면 | — |
 | **9** | PIN 잠금 | 레시피·근무표 접근 제어 | 신규 | — |
 
 ### 단계별로 지켜야 할 것
 
-**단계 1 — 시드 이관 스크립트가 검사할 것 5가지.** 지금 검증 코드가 없어서 조용히 넘어가는 것들이다.
+**단계 1 — 시드 이관 스크립트가 검사할 것 6가지.** 지금 검증 코드가 없어서 조용히 넘어가는 것들이다.
 
 | # | 검사 | 실측 상태 |
 |---|---|---|
@@ -1202,12 +1265,15 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 | 3 | `shift_focus.slug` 5건이 실존 포지션·프렙을 가리키는가 | 통과 (position 3, prep 2) |
 | 4 | `trigger` 4분기의 키 조합이 유니온과 일치하는가 | 통과 |
 | 5 | `kind`와 리드타임 컬럼이 일치하는가 (`time`↔hours, `order`↔days, `cycle`↔둘 다 null) | 통과 |
+| **6** | **`shoot/page.tsx:14-19`의 `PRIORITY` 4건이 실존 id를 가리키는가** (`t-open-5`·`s-lt-2`·`t-bake-1`·`p-1`). 시드가 아니라 **코드**에 박혀 있어 id를 고치면 아무 경고 없이 `먼저` 배지만 사라진다 | 통과 (step 3 + prep_task 1) |
 
 **단계 1에서 이관하지 않는 것:** `step.good_image` 3건(`/photos/handwash.svg`, `/photos/fridge-temp.svg` ×2). 버거집 시절 SVG 플레이스홀더를 가리키고 읽는 코드도 없다. 컬럼은 만들되 값은 비운다.
 
 **단계 2 주의:** `/api/log`가 파일 append인 채로 배포하면 이벤트가 0건이 된다. 실패해도 `{ok:true}`를 반환하므로 **클라이언트는 성공으로 안다.** 순서를 뒤집으면 안 되는 이유가 이것이다.
 
 **단계 4의 되돌리기 경계:** 교육 모드의 `sop:run:{shareSlug}`는 **서버로 옮기지 않는다.** 공용 태블릿에서 앞사람 진도가 다음 신입에게 보이면 안 되고, 그게 sessionStorage를 쓴 이유다(`TrainingMode.tsx:8-15`).
+
+**단계 6의 순서 제약 — `media_key`가 먼저다.** 로컬 레시피는 `Recipe` 한 덩어리로 보이지만 브라우저가 만든 하위 id를 달고 있다(3-4절): `recipe.id = recipe.slug = my-xxxxxxxx`, `section.id = my-xxxxxxxx-sec`, `step.id = my-xxxxxxxx-s0…`. 8절 DDL이 `step.id text primary key references media_key(key)`이므로 **`media_key` 행을 먼저 넣지 않으면 step insert가 FK로 막힌다.** 넣는 순서는 `media_key` → `recipe` → `section` → `step` → `ingredient`다. `sections`가 빈 배열인 레시피도 저장되므로(`RecipeForm.tsx:80,98`) section·step이 0건인 경우를 정상으로 처리해야 한다. 그리고 이 단계를 마치기 전까지 `event.subject_slug`에는 서버에 없는 `my-…` slug가 들어 있다(7-5절) — 이관 후 매칭할지 버릴지 정해야 한다.
 
 **단계 7 전에 반드시:** 10절의 조치 3가지(메일 본문에서 이메일·전화 제거 / 보관 기간 / 접근 제어)를 마친다. 지금은 개인정보가 기기 안에만 있어서 위험 범위가 좁다. 서버로 올리는 순간 수집·처리 주체가 된다.
 
@@ -1223,16 +1289,18 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 
 ### 10-1. 수집·보관 항목 전량
 
-| 항목 | 유형 | 필수/선택 | 수집 시점 | 현재 저장 위치 | 서버 이전 후 | 보관 기간 |
-|---|---|---|---|---|---|---|
-| 직원 이름 | 개인정보 | **필수** | 근무표에 직원 추가 | 브라우저 localStorage `sop:roster` | `staff.name` | ❓ 확인 필요 |
-| 직원 이메일 | 개인정보 | 선택 (없으면 메일 발송 제외) | 동일 | 동일 | `staff.email` | ❓ 확인 필요 |
-| 직원 전화번호 | 개인정보 | 선택 | 동일 | 동일 | `staff.phone` | ❓ 확인 필요 |
-| 직원 소속 섹션 | 개인정보 | 선택 (빈 값이면 '미지정') | 동일 | 동일 | `staff.section` | ❓ 확인 필요 |
-| 근무 배정 이력 (누가 언제 일했는지) | 개인정보 | 필수 | 근무표 칸 선택 | 동일 | `assign` | ❓ 확인 필요 |
-| 기기 세션 식별자 `sop:sid` | 의사 식별자 | 자동 | 체크리스트·프렙·레시피 화면 첫 방문 | localStorage, **영구** | `event.session_id` | ❓ 확인 필요 |
-| 교육 회차 식별자 `runId` | 의사 식별자 | 자동 | 교육 모드 시작 | sessionStorage, 1회성 | `event.run_id` | ❓ 확인 필요 |
-| 선배 질문 횟수 응답 `askedSenior` | 설문 응답 | 선택 | 교육·체크리스트 완료 후 | `data/events.jsonl`, **영구** | `event.payload` | ❓ 확인 필요 |
+| 항목 | 유형 | 필수/선택 | 수집 시점 | 현재 저장 위치 | 기기 밖으로 나가는 경로 | 서버 이전 후 | 보관 기간 |
+|---|---|---|---|---|---|---|---|
+| 직원 이름 | 개인정보 | **필수** | 근무표에 직원 추가 | 브라우저 localStorage `sop:roster` | **① 메일 본문 ② 클립보드 → 단톡방** (10-3절) | `staff.name` | ❓ 확인 필요 |
+| 직원 이메일 | 개인정보 | 선택 (없으면 메일 발송 제외) | 동일 | 동일 | **① 메일 본문 + bcc ② 클립보드 → 단톡방** | `staff.email` | ❓ 확인 필요 |
+| 직원 전화번호 | 개인정보 | 선택 | 동일 | 동일 | **① 메일 본문 ② 클립보드 → 단톡방** | `staff.phone` | ❓ 확인 필요 |
+| 직원 소속 섹션 | 개인정보 | 선택 (빈 값이면 '미지정') | 동일 | 동일 | **① 메일 본문 ② 클립보드 → 단톡방** | `staff.section` | ❓ 확인 필요 |
+| 근무 배정 이력 (누가 언제 일했는지) | 개인정보 | 필수 | 근무표 칸 선택 | 동일 | **① 메일 본문 ② 클립보드 → 단톡방** | `assign` | ❓ 확인 필요 |
+| 기기 세션 식별자 `sop:sid` | 의사 식별자 | 자동 | 체크리스트·프렙·레시피 화면 첫 방문 | localStorage, **영구** | `/api/log` → `data/events.jsonl` | `event.session_id` | ❓ 확인 필요 |
+| 교육 회차 식별자 `runId` | 의사 식별자 | 자동 | 교육 모드 시작 | sessionStorage, 1회성 | 동일 | `event.run_id` | ❓ 확인 필요 |
+| 선배 질문 횟수 응답 `askedSenior` | 설문 응답 | 선택 | 교육·체크리스트 완료 후 | `data/events.jsonl`, **영구** | 동일 | `event.payload` | ❓ 확인 필요 |
+
+**기기 밖으로 나가는 경로는 둘 다 `buildEmailBody()` 한 함수를 쓴다** (`roster.ts:125`). 메일은 `sendMail()`(`RosterView.tsx:99-109`), 클립보드는 `copyText()`(`RosterView.tsx:111-118`)다. 두 경로가 내보내는 내용은 **완전히 같다.**
 
 **법정 근거·보유 기간은 이 문서가 정할 수 없다.** ❓ 확인 필요 — 노무 기록으로서의 근무표 보관 의무 기간과 이 앱의 보관 기간을 맞출지.
 
@@ -1242,32 +1310,44 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 
 `event` 테이블은 개인정보가 아니지만 **의사 식별자**를 담는다. `session_id`는 랜덤 문자열이고 이름·이메일과 이어 붙이는 코드가 없다(grep 확인). 다만 영구 보관되므로 기기 단위 추적은 가능하다.
 
-### 10-3. ⚠️ 현재 구현의 개인정보 결함 1건 — 실측
+### 10-3. ⚠️ 현재 구현의 개인정보 결함 — 유출 경로 2건, 원인 1곳
 
-**메일 본문에 전 직원의 이메일과 전화번호가 평문으로 들어간다.**
+**전 직원의 이름·이메일·전화번호가 평문 블록으로 나간다.** 그 블록을 만드는 코드는 하나다.
 
 ```
-// src/lib/roster.ts:129-134 (buildEmailBody)
+// src/lib/roster.ts:136-148 (buildEmailBody)
 out.push("[ 직원 명단 ]");
 out.push(pad("섹션", 8) + pad("이름", 12) + pad("이메일", 26) + "전화번호");
+out.push("-".repeat(64));
 for (const s of data.staff) {
   out.push(pad(s.section || "-", 8) + pad(s.name, 12) + pad(s.email || "-", 26) + (s.phone || "-"));
 }
 ```
 
-수신자는 **숨은참조(bcc)**로 넣는다 — "직원끼리 서로의 주소가 노출되지 않게"라는 의도가 `RosterView.tsx:103-107`에 적혀 있다. 그런데 **bcc로 가린 것이 본문에서 다시 드러난다.** 직원 A가 받은 메일에 직원 B·C의 이메일과 전화번호가 전부 있다.
+이 결과물이 **두 경로로 나간다.**
 
-개인정보 처리에 관한 지적이 나온다면 여기가 첫 대상이다. **조치:** 근무표 발송 본문에서 `[ 직원 명단 ]` 블록의 이메일·전화 열을 빼고, 명단은 관리자 화면에서만 본다. 코드 변경은 `roster.ts:129-134` 한 곳이다.
+| # | 경로 | 코드 | 나가는 곳 | bcc 보호 |
+|---|---|---|---|---|
+| 1 | **메일 본문** | `sendMail()` — `mailto:...&body=` (`RosterView.tsx:99-109`) | 수신자 전원의 메일함 | 수신자 주소만. **본문은 안 가려진다** |
+| 2 | **클립보드 → 단톡방** | `copyText()` — `navigator.clipboard.writeText(body)` (`RosterView.tsx:111-118`) | 붙여넣는 곳 아무 데나 | **없음.** bcc가 애초에 개입하지 않는다 |
+
+경로 1의 문제: 수신자는 **숨은참조(bcc)**로 넣는다 — "직원끼리 서로의 주소가 노출되지 않게"라는 의도가 `RosterView.tsx:103-107`에 적혀 있다. 그런데 **bcc로 가린 것이 본문에서 다시 드러난다.** 직원 A가 받은 메일에 직원 B·C의 이메일과 전화번호가 전부 있다.
+
+경로 2의 문제: 성공하면 **"근무표를 복사했습니다. 단톡방에 붙여넣으세요."**라고 안내한다(`RosterView.tsx:116`). 즉 전 직원의 연락처를 단체 대화방에 붙이도록 **화면이 유도한다.** 실패하면 `window.prompt`로 본문 전체를 화면에 펼친다(`RosterView.tsx:117`). 이쪽에는 bcc 같은 완화 장치가 없다.
+
+개인정보 처리에 관한 지적이 나온다면 여기가 첫 대상이다.
+
+**조치:** `[ 직원 명단 ]` 블록에서 이메일·전화 열을 빼고, 명단은 관리자 화면에서만 본다. **코드 변경은 `roster.ts:136-148` 한 곳이고, 두 경로가 이 함수를 공유하므로 한 번 고치면 둘 다 막힌다.** 경로가 둘인 것이 조치를 어렵게 만들지 않는다 — 오히려 한 곳에 모여 있다는 것이 근거다. 추가로 `copyText()`의 안내 문구("단톡방에 붙여넣으세요")도 같이 손봐야 한다.
 
 ### 10-4. 설계상 이미 되어 있는 완화 장치 (실측 확인)
 
 | 장치 | 내용 | 근거 |
 |---|---|---|
 | 발송을 대행하지 않는다 | `mailto:`로 사용자의 메일 앱을 열 뿐이다. **서버에 개인정보가 남지 않는다** | `RosterView.tsx:108` |
-| 수신자는 bcc | 직원끼리 주소가 안 보인다 (단 10-3절 참조) | `RosterView.tsx:103-107` |
+| 수신자는 bcc — **⚠️ 메일 경로에 한함** | 직원끼리 주소가 안 보인다. 단 ⓐ 본문에서 다시 드러나고 ⓑ **클립보드 경로(`copyText()`)에는 이 장치가 아예 없다.** 10-3절 | `RosterView.tsx:103-107` |
 | 세션 식별자와 개인 식별자를 잇지 않는다 | `sop:sid`를 이름·이메일과 붙이는 코드가 없다 | grep 확인 |
 | 서버 저장이 없다 | 현재 개인정보는 기기 안에만 있다. 위험 범위가 좁다 | `roster.ts:29` |
-| 일부 화면 `noindex` | `/r`, `/r/[slug]`, `/r/new`, `/r/my`, `/roster`, `/shoot` | 각 `page.tsx`의 `robots: { index: false, follow: false }` |
+| 일부 화면 `noindex` | `/r`, `/r/[slug]`, `/r/new`, `/r/my`, `/roster`, `/shoot`. **`/app.html`은 해당 없음** — 정적 파일이라 Next의 `metadata.robots`가 적용될 수 없다 | 각 `page.tsx`의 `robots: { index: false, follow: false }` |
 
 ### 10-5. 미구현 — 배포 전에 필요한 것
 
@@ -1275,10 +1355,13 @@ for (const s of data.staff) {
 |---|---|---|---|
 | 1 | **매장 PIN 잠금** | **미구현.** src 전체에 인증 코드 0건. `/roster`는 주소를 아는 누구나 열 수 있다. 화면에 "매장 PIN 잠금은 배포 전에 붙입니다"라고 표시만 해둔 상태 | `src/app/r/page.tsx:38-40` |
 | 2 | `robots.txt` | **없다.** `public/robots.txt`도 `src/app/robots.ts`도 존재하지 않는다 | 파일 확인 |
-| 3 | `/`, `/t/[slug]`, `/p/[slug]`, `/prep/[slug]`의 noindex | **없다.** 지금 배포하면 홈·교육·체크리스트·프렙 목록이 색인 대상 | 각 `page.tsx` |
+| 3 | `/`, `/t/[slug]`, `/p/[slug]`, `/prep/[slug]`, **`/app.html`**의 noindex | **없다.** 지금 배포하면 홈·교육·체크리스트·프렙 목록, 그리고 **`/app.html`**이 색인 대상. 아래 참조 | 각 `page.tsx`, `grep -c noindex public/app.html` → 0 |
 | 4 | 삭제 요청 처리 | **미구현.** 직원 삭제는 배열에서 즉시 제거(confirm 1회)이고 이력이 남지 않는다. DDL의 `staff.deleted_at`이 이걸 위한 칸이다 | `RosterView.tsx` |
 | 5 | 사용자 인증·로그인 | **없다.** 코드 0건 | grep 확인 |
 | 6 | 보관 기간에 따른 자동 파기 | **미구현** | — |
+| 7 | **`public/app.html`을 `public/` 밖으로 빼기** | **미조치.** #3 목록에서 노출이 가장 큰 경로다. 아래 참조 | 8-2절 #8 |
+
+**#3 목록에서 `/app.html`이 가장 큰 이유.** `public/app.html`은 git에 추적돼 있고(`git ls-files public/`) Next가 `public/`을 사이트 루트로 서빙한다. 한 장 안에 **레시피 전량(영업비밀)·근무표 화면·시드 전체**가 인라인돼 있는데(`public/app.html:313` `const DATA = {`) `noindex` 메타가 0건이다. 그리고 **정적 파일이라 Next의 `metadata.robots`를 붙일 방법이 없다** — 다른 라우트처럼 `page.tsx`에 한 줄 넣어서 막을 수 없다. `robots.txt`도 없다(#2). 남은 수단은 **파일을 `public/`에서 빼는 것**뿐이다(#7). 6-4·8-2절 참조.
 
 ---
 
@@ -1293,3 +1376,5 @@ for (const s of data.staff) {
 | 5 | **`data/events.jsonl` 58줄은 실사용 데이터가 아니다.** 전부 개발 중 본인 조작이고 버거집 slug가 섞여 있다. "수집된 지표"로 제시하면 안 된다 |
 | 6 | **`README.md:86-100`의 SQL 초안은 낡았다.** 이 문서의 8절이 그것을 대체한다 |
 | 7 | **주기 점검을 "관리된다"고 쓰면 안 된다.** 라벨은 뜨지만 마지막 수행일 저장이 없어 매일 리셋된다. 8절의 `prep_check` + `prep_task_last_done` 뷰가 그걸 고치는 제안이고, 아직 구현이 아니다 |
+| 8 | **2절 ERD에는 코드에 없는 칸이 섞여 있다.** `sort_order`(9곳), `SECTION.parent`, `INGREDIENT.id`, `SHIFT_FOCUS.id`는 8절에서 신설하는 것이다. 구현 근거로는 3절 속성 표(“DDL에서 신설” 표시)를 봐야 한다 |
+| 9 | **`data/seed.json`의 사본이 하나 더 있다.** `public/app.html`(= `presentation/프렙노트.html`)에 시드 전체가 인라인돼 있고 **동기화되지 않는다.** 개수·id를 인용할 때는 `seed.json`만 근거로 쓴다. 배포 시 `/app.html`로 공개된다는 별개 문제는 6-4·8-2·10-5절 |
