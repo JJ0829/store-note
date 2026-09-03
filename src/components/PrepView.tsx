@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
+import MediaSlot from "@/components/MediaSlot";
 import { SCALES, scaled } from "@/lib/scale";
 import type { PrepList, PrepTask, Recipe, Trigger } from "@/lib/types";
 
@@ -394,6 +395,11 @@ export default function PrepView({
                   </p>
                 </div>
               </button>
+
+              {/* 사진·영상 — 판단이 갈리는 항목일수록 이쪽이 본체다 */}
+              <div className="px-4 pb-4 pl-[3.75rem]">
+                <MediaSlot base={task.id} />
+              </div>
 
               {/* 배수 계산기 (버튼 밖에 둔다) */}
               {recipe && (

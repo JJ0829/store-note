@@ -362,12 +362,30 @@
       "slug": "americano",
       "name": "아메리카노",
       "category": "음료",
-      "yield": { "amount": 1, "unit": "잔" },
+      "yield": {
+        "amount": 1,
+        "unit": "잔"
+      },
       "forNewbie": true,
       "ingredients": [
-        { "name": "원두 (도징)", "amount": 18, "unit": "g", "note": "더블 바스켓 18~22g" },
-        { "name": "추출량", "amount": 36, "unit": "g", "note": "원두의 2배 (1:2)" },
-        { "name": "물", "amount": 200, "unit": "ml", "note": "아이스는 150ml + 얼음" }
+        {
+          "name": "원두 (도징)",
+          "amount": 18,
+          "unit": "g",
+          "note": "더블 바스켓 18~22g"
+        },
+        {
+          "name": "추출량",
+          "amount": 36,
+          "unit": "g",
+          "note": "원두의 2배 (1:2)"
+        },
+        {
+          "name": "물",
+          "amount": 200,
+          "unit": "ml",
+          "note": "아이스는 150ml + 얼음"
+        }
       ],
       "sections": [
         {
@@ -414,11 +432,24 @@
       "slug": "cafe-latte",
       "name": "카페라떼",
       "category": "음료",
-      "yield": { "amount": 1, "unit": "잔" },
+      "yield": {
+        "amount": 1,
+        "unit": "잔"
+      },
       "forNewbie": true,
       "ingredients": [
-        { "name": "원두 (도징)", "amount": 18, "unit": "g", "note": "추출 36g" },
-        { "name": "우유", "amount": 150, "unit": "ml", "note": "스팀 후 부피가 늘어납니다" }
+        {
+          "name": "원두 (도징)",
+          "amount": 18,
+          "unit": "g",
+          "note": "추출 36g"
+        },
+        {
+          "name": "우유",
+          "amount": 150,
+          "unit": "ml",
+          "note": "스팀 후 부피가 늘어납니다"
+        }
       ],
       "sections": [
         {
@@ -465,11 +496,24 @@
       "slug": "cold-brew",
       "name": "콜드브루 (1배치)",
       "category": "음료",
-      "yield": { "amount": 2000, "unit": "ml" },
+      "yield": {
+        "amount": 2000,
+        "unit": "ml"
+      },
       "forNewbie": true,
       "ingredients": [
-        { "name": "원두 (굵게 분쇄)", "amount": 200, "unit": "g", "note": "물 대비 1:10" },
-        { "name": "정수", "amount": 2000, "unit": "ml", "note": null }
+        {
+          "name": "원두 (굵게 분쇄)",
+          "amount": 200,
+          "unit": "g",
+          "note": "물 대비 1:10"
+        },
+        {
+          "name": "정수",
+          "amount": 2000,
+          "unit": "ml",
+          "note": null
+        }
       ],
       "sections": [
         {
@@ -516,15 +560,48 @@
       "slug": "shokupan",
       "name": "식빵 (1배합)",
       "category": "베이커리",
-      "yield": { "amount": 6, "unit": "개" },
+      "yield": {
+        "amount": 6,
+        "unit": "개"
+      },
       "forNewbie": true,
       "ingredients": [
-        { "name": "강력분", "amount": 2000, "unit": "g", "note": "100% (기준)" },
-        { "name": "물", "amount": 1200, "unit": "g", "note": "60%" },
-        { "name": "설탕", "amount": 120, "unit": "g", "note": "6%" },
-        { "name": "소금", "amount": 40, "unit": "g", "note": "2% · 이스트와 직접 닿지 않게" },
-        { "name": "이스트", "amount": 40, "unit": "g", "note": "2% · 인스턴트 드라이 기준" },
-        { "name": "버터", "amount": 120, "unit": "g", "note": "6% · 실온 상태로" }
+        {
+          "name": "강력분",
+          "amount": 2000,
+          "unit": "g",
+          "note": "100% (기준)"
+        },
+        {
+          "name": "물",
+          "amount": 1200,
+          "unit": "g",
+          "note": "60%"
+        },
+        {
+          "name": "설탕",
+          "amount": 120,
+          "unit": "g",
+          "note": "6%"
+        },
+        {
+          "name": "소금",
+          "amount": 40,
+          "unit": "g",
+          "note": "2% · 이스트와 직접 닿지 않게"
+        },
+        {
+          "name": "이스트",
+          "amount": 40,
+          "unit": "g",
+          "note": "2% · 인스턴트 드라이 기준"
+        },
+        {
+          "name": "버터",
+          "amount": 120,
+          "unit": "g",
+          "note": "6% · 실온 상태로"
+        }
       ],
       "sections": [
         {
@@ -579,7 +656,10 @@
           "title": "내일용 콜드브루 걸기",
           "desc": "원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.",
           "kind": "time",
-          "trigger": { "type": "daily", "at": "14:00" },
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
           "leadTimeHours": 16,
           "leadTimeDays": null,
           "recoverable": false,
@@ -596,7 +676,10 @@
           "title": "내일용 반죽 제조 후 냉장",
           "desc": "내일 아침 구울 분량만큼. 판매량 보고 배수를 정합니다.",
           "kind": "time",
-          "trigger": { "type": "daily", "at": "14:00" },
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
           "leadTimeHours": 15,
           "leadTimeDays": null,
           "recoverable": false,
@@ -613,7 +696,10 @@
           "title": "르방 갱신",
           "desc": "매일 같은 시간에. 거르면 되살리는 데 2~3일 걸립니다.",
           "kind": "time",
-          "trigger": { "type": "daily", "at": "14:00" },
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
           "leadTimeHours": 24,
           "leadTimeDays": null,
           "recoverable": false,
@@ -630,7 +716,10 @@
           "title": "시럽 제조",
           "desc": "잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
           "kind": "time",
-          "trigger": { "type": "condition", "when": "시럽 잔량이 1/3 이하일 때" },
+          "trigger": {
+            "type": "condition",
+            "when": "시럽 잔량이 1/3 이하일 때"
+          },
           "leadTimeHours": 4,
           "leadTimeDays": null,
           "recoverable": true,
@@ -647,7 +736,17 @@
           "title": "우유·식자재 발주",
           "desc": "재고 확인하고 주문합니다. 금요일에는 주말치까지 함께 넣습니다.",
           "kind": "order",
-          "trigger": { "type": "weekday", "days": [1, 2, 3, 4, 5], "at": "15:00" },
+          "trigger": {
+            "type": "weekday",
+            "days": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "at": "15:00"
+          },
           "leadTimeHours": null,
           "leadTimeDays": 1,
           "recoverable": true,
@@ -664,7 +763,10 @@
           "title": "원두 발주",
           "desc": "볶은 뒤 며칠 두어야 쓸 수 있으므로 넉넉히 앞서 주문합니다.",
           "kind": "order",
-          "trigger": { "type": "condition", "when": "원두 재고가 3일치 이하일 때" },
+          "trigger": {
+            "type": "condition",
+            "when": "원두 재고가 3일치 이하일 때"
+          },
           "leadTimeHours": null,
           "leadTimeDays": 4,
           "recoverable": false,
@@ -689,7 +791,10 @@
           "title": "정수 필터 교체",
           "desc": "커피 맛의 절반은 물입니다. 교체일을 적어두지 않으면 아무도 모릅니다.",
           "kind": "cycle",
-          "trigger": { "type": "cycle", "everyDays": 120 },
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 120
+          },
           "leadTimeHours": null,
           "leadTimeDays": null,
           "recoverable": true,
@@ -706,7 +811,10 @@
           "title": "그룹헤드 개스킷·샤워스크린 점검",
           "desc": "추출 중 옆으로 물이 새면 교체 시기입니다.",
           "kind": "cycle",
-          "trigger": { "type": "cycle", "everyDays": 180 },
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 180
+          },
           "leadTimeHours": null,
           "leadTimeDays": null,
           "recoverable": true,
@@ -723,7 +831,10 @@
           "title": "제빙기 청소",
           "desc": "안 보이는 곳이라 제일 잘 잊습니다. 위생 점검에서 자주 걸리는 항목입니다.",
           "kind": "cycle",
-          "trigger": { "type": "cycle", "everyDays": 30 },
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 30
+          },
           "leadTimeHours": null,
           "leadTimeDays": null,
           "recoverable": true,
@@ -740,13 +851,196 @@
           "title": "보건증 갱신 확인",
           "desc": "직원 전원. 만료되면 과태료 대상입니다.",
           "kind": "cycle",
-          "trigger": { "type": "cycle", "everyDays": 365 },
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 365
+          },
           "leadTimeHours": null,
           "leadTimeDays": null,
           "recoverable": true,
           "consequence": "법정 의무입니다. 적발되면 과태료가 나옵니다.",
           "quantityVaries": false,
           "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-5",
+          "title": "저울 영점 확인",
+          "desc": "베이킹은 g 단위입니다. 저울이 틀어지면 배합이 전부 어긋나는데 아무도 모릅니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 7
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "빵 상태가 이유 없이 흔들립니다. 원인 찾기가 제일 어려운 종류입니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-6",
+          "title": "배수구·트렌치 청소",
+          "desc": "주방 냄새의 대부분이 여기서 납니다. 눈에 안 보이니 미룹니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 7
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "냄새와 벌레. 위생 점검에서도 걸립니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-7",
+          "title": "냉장·냉동고 고무 가스켓 점검",
+          "desc": "문에 붙은 고무가 헐거워지면 찬 기운이 새고 전기료가 오릅니다. 종이 한 장 끼워서 당겨보면 압니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 180
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "온도가 서서히 안 맞고, 결국 재료가 상합니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-8",
+          "title": "그라인더 날 마모 점검",
+          "desc": "날이 닳으면 입자가 고르지 않게 갈립니다. 원두를 바꿔도 맛이 안 잡히면 날을 의심합니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 180
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "추출이 계속 흔들립니다. 원인을 원두에서만 찾다가 시간을 버립니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-9",
+          "title": "후드·덕트 청소",
+          "desc": "기름이 쌓이는 곳입니다. 업체를 불러야 하므로 미리 예약해야 합니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 90
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "화재 위험입니다. 보험에서도 관리 이력을 봅니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-10",
+          "title": "소화기·소방시설 점검",
+          "desc": "압력계 바늘이 초록 범위에 있는지 봅니다. 축압식은 바늘이 내려가면 교체입니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 365
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "법정 의무입니다. 그리고 정작 필요한 순간에 안 나갑니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-11",
+          "title": "위생교육 이수",
+          "desc": "영업주는 매년 받아야 합니다. 온라인으로 됩니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 365
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "법정 의무입니다. 미이수 시 과태료입니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-12",
+          "title": "방충·방역",
+          "desc": "업체 정기 방문. 여름 전에 한 번 더 하는 게 좋습니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 30
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "한 번 들어오면 빼는 데 몇 배로 듭니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "c-13",
+          "title": "에스프레소 머신 정기 점검",
+          "desc": "보일러·펌프·밸브. 업체 점검을 받는 항목입니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 365
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "고장은 항상 피크 시간에 납니다. 그날 장사를 못 합니다.",
+          "quantityVaries": false,
+          "critical": false,
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
@@ -763,8 +1057,15 @@
       "end": "13:00",
       "note": "어제 걸어둔 것 받고, 내일 것 다시 걸어두기",
       "focus": [
-        { "kind": "position", "slug": "bakery-morning", "label": "제빵 순서 보기" },
-        { "kind": "recipes", "label": "레시피 찾기" }
+        {
+          "kind": "position",
+          "slug": "bakery-morning",
+          "label": "제빵 순서 보기"
+        },
+        {
+          "kind": "recipes",
+          "label": "레시피 찾기"
+        }
       ]
     },
     {
@@ -774,8 +1075,16 @@
       "end": "15:30",
       "note": "오픈 준비 → 오전 영업 → 오후 프렙",
       "focus": [
-        { "kind": "position", "slug": "cafe-open", "label": "오픈 체크리스트" },
-        { "kind": "prep", "slug": "afternoon", "label": "오후 프렙" }
+        {
+          "kind": "position",
+          "slug": "cafe-open",
+          "label": "오픈 체크리스트"
+        },
+        {
+          "kind": "prep",
+          "slug": "afternoon",
+          "label": "오후 프렙"
+        }
       ]
     },
     {
@@ -784,7 +1093,12 @@
       "start": "11:00",
       "end": "19:00",
       "note": "피크 커버",
-      "focus": [{ "kind": "recipes", "label": "레시피 찾기" }]
+      "focus": [
+        {
+          "kind": "recipes",
+          "label": "레시피 찾기"
+        }
+      ]
     },
     {
       "id": "sh-close",
@@ -793,8 +1107,16 @@
       "end": "22:30",
       "note": "오후 프렙부터 마감까지",
       "focus": [
-        { "kind": "prep", "slug": "afternoon", "label": "오후 프렙 (내일 것 걸기)" },
-        { "kind": "position", "slug": "cafe-close", "label": "마감 체크리스트" }
+        {
+          "kind": "prep",
+          "slug": "afternoon",
+          "label": "오후 프렙 (내일 것 걸기)"
+        },
+        {
+          "kind": "position",
+          "slug": "cafe-close",
+          "label": "마감 체크리스트"
+        }
       ]
     }
   ]

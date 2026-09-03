@@ -461,7 +461,34 @@ const DATA = {
         conseq:"위생 사고로 이어질 수 있습니다.", recipe:null },
       { id:"c4", title:"보건증 갱신 확인", desc:"직원 전원. 만료되면 과태료 대상입니다.",
         trigger:"1년마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
-        conseq:"법정 의무입니다. 적발되면 과태료가 나옵니다.", recipe:null }
+        conseq:"법정 의무입니다. 적발되면 과태료가 나옵니다.", recipe:null },
+      { id:"c5", title:"저울 영점 확인", desc:"베이킹은 g 단위입니다. 저울이 틀어지면 배합이 전부 어긋나는데 아무도 모릅니다.",
+        trigger:"7일마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        conseq:"빵 상태가 이유 없이 흔들립니다. 원인 찾기가 제일 어려운 종류입니다.", recipe:null },
+      { id:"c6", title:"배수구·트렌치 청소", desc:"주방 냄새의 대부분이 여기서 납니다. 눈에 안 보이니 미룹니다.",
+        trigger:"7일마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        conseq:"냄새와 벌레. 위생 점검에서도 걸립니다.", recipe:null },
+      { id:"c7", title:"냉장·냉동고 고무 가스켓 점검", desc:"문에 붙은 고무가 헐거워지면 찬 기운이 새고 전기료가 오릅니다. 종이 한 장 끼워서 당겨보면 압니다.",
+        trigger:"6개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        conseq:"온도가 서서히 안 맞고, 결국 재료가 상합니다.", recipe:null },
+      { id:"c8", title:"그라인더 날 마모 점검", desc:"날이 닳으면 입자가 고르지 않게 갈립니다. 원두를 바꿔도 맛이 안 잡히면 날을 의심합니다.",
+        trigger:"6개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        conseq:"추출이 계속 흔들립니다. 원인을 원두에서만 찾다가 시간을 버립니다.", recipe:null },
+      { id:"c9", title:"후드·덕트 청소", desc:"기름이 쌓이는 곳입니다. 업체를 불러야 하므로 미리 예약해야 합니다.",
+        trigger:"3개월마다", hours:null, days:null, recoverable:false, critical:true, varies:false,
+        conseq:"화재 위험입니다. 보험에서도 관리 이력을 봅니다.", recipe:null },
+      { id:"c10", title:"소화기·소방시설 점검", desc:"압력계 바늘이 초록 범위에 있는지 봅니다. 축압식은 바늘이 내려가면 교체입니다.",
+        trigger:"1년마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        conseq:"법정 의무입니다. 그리고 정작 필요한 순간에 안 나갑니다.", recipe:null },
+      { id:"c11", title:"위생교육 이수", desc:"영업주는 매년 받아야 합니다. 온라인으로 됩니다.",
+        trigger:"1년마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        conseq:"법정 의무입니다. 미이수 시 과태료입니다.", recipe:null },
+      { id:"c12", title:"방충·방역", desc:"업체 정기 방문. 여름 전에 한 번 더 하는 게 좋습니다.",
+        trigger:"1개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        conseq:"한 번 들어오면 빼는 데 몇 배로 듭니다.", recipe:null },
+      { id:"c13", title:"에스프레소 머신 정기 점검", desc:"보일러·펌프·밸브. 업체 점검을 받는 항목입니다.",
+        trigger:"1년마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        conseq:"고장은 항상 피크 시간에 납니다. 그날 장사를 못 합니다.", recipe:null }
     ]}
   ]
 };
@@ -556,6 +583,8 @@ window.addEventListener("hashchange", render);
 
 function topbar({ title, sub, back, right }) {
   const t = document.getElementById("top");
+  // 홈을 뺀 모든 화면에는 뒤로가기가 있어야 한다. 화면마다 챙기면 빠뜨린다.
+  if (back === undefined) back = parseHash().name !== "";
   if (back) {
     const b = el(`<button class="back" type="button">‹ 뒤로</button>`);
     b.onclick = () => history.length > 1 ? history.back() : go("#/");
@@ -779,7 +808,7 @@ function renderPrep(slug) {
 function myRecipes() { return store.get("recipes:mine", []); }
 
 function renderRecipes() {
-  topbar({ title: "레시피", sub: DATA.store.name });
+  topbar({ title: "레시피", sub: DATA.store.name, back: true });
   const v = document.getElementById("view");
   const all = () => [...DATA.recipes, ...myRecipes()];
 
@@ -908,19 +937,46 @@ function renderRecipe(slug) {
    근무표
  * ------------------------------------------------------------------ */
 function renderRoster() {
-  topbar({ title: "근무표", sub: DATA.store.name });
+  topbar({ title: "근무표", sub: DATA.store.name, back: true });
   const v = document.getElementById("view");
   let data = store.get("roster", { staff: [], assign: {} });
-  let monday = mondayOf(new Date());
-  const days = () => Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+  let mode = store.get("roster:mode", "month");   // 달력이 기본. 한 달을 보는 게 근무표의 목적이다
+  let cursor = new Date();                        // 주 보기는 이 날이 속한 주, 달 보기는 이 달
   const save = () => store.set("roster", data);
+  const dk = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const shiftOf = (id, d) => (data.assign[id] || {})[dk(d)] || "";
 
-  const weekBar = el(`<div class="card" style="padding:9px 12px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:8px">
-    <button type="button" id="pw">‹ 지난주</button><b id="wl" style="font-family:var(--mono);font-size:13px"></b><button type="button" id="nw">다음주 ›</button></div>`);
-  weekBar.querySelector("#pw").onclick = () => { monday.setDate(monday.getDate() - 7); paint(); };
-  weekBar.querySelector("#nw").onclick = () => { monday.setDate(monday.getDate() + 7); paint(); };
+  /* 섹션마다 색을 준다. 달력에서 누가 나오는지 색으로 먼저 읽히게. */
+  const SEC_COLORS = ["#D9480F", "#1F7A44", "#2563EB", "#7C3AED", "#B4232A", "#0E7490"];
+  const sections = () => [...new Set(data.staff.map(s => s.section.trim() || "미지정"))];
+  const colorOf = sec => SEC_COLORS[sections().indexOf(sec) % SEC_COLORS.length];
+  const secOf = s => s.section.trim() || "미지정";
 
-  const form = el(`<section class="sec"><h2>직원 추가</h2>
+  /* ---------- 상단: 보기 전환 + 이동 ---------- */
+  const bar = el(`<div class="card" style="padding:9px 12px;margin-top:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:4px">
+      <button type="button" id="mw" style="padding:7px 14px;font-size:13px;font-weight:700">주</button>
+      <button type="button" id="mm" style="padding:7px 14px;font-size:13px;font-weight:700">월</button>
+    </div>
+    <div style="flex:1"></div>
+    <button type="button" id="prev" style="padding:7px 11px">‹</button>
+    <b id="lbl" style="font-family:var(--mono);font-size:13px;min-width:132px;text-align:center"></b>
+    <button type="button" id="next" style="padding:7px 11px">›</button>
+    <button type="button" id="tod" style="padding:7px 11px;font-size:12px">오늘</button>
+  </div>`);
+  bar.querySelector("#mw").onclick = () => { mode = "week"; store.set("roster:mode", mode); paint(); };
+  bar.querySelector("#mm").onclick = () => { mode = "month"; store.set("roster:mode", mode); paint(); };
+  bar.querySelector("#prev").onclick = () => { move(-1); };
+  bar.querySelector("#next").onclick = () => { move(1); };
+  bar.querySelector("#tod").onclick = () => { cursor = new Date(); paint(); };
+  function move(dir) {
+    if (mode === "week") cursor.setDate(cursor.getDate() + dir * 7);
+    else cursor.setMonth(cursor.getMonth() + dir, 1);
+    paint();
+  }
+
+  /* ---------- 직원 추가 ---------- */
+  const form = el(`<section class="sec"><h2>직원</h2>
     <div class="card" style="padding:14px 16px"><div class="row-in">
       <input class="f-sec" placeholder="섹션 (예: 제빵)" style="width:130px">
       <input class="f-name" placeholder="이름" style="width:110px">
@@ -931,33 +987,136 @@ function renderRoster() {
   form.querySelector(".f-add").onclick = () => {
     const name = form.querySelector(".f-name").value.trim();
     if (!name) return;
-    data.staff.push({ id: "s" + Date.now().toString(36), name,
+    data.staff.push({
+      id: "s" + Date.now().toString(36), name,
       section: form.querySelector(".f-sec").value.trim(),
       email: form.querySelector(".f-mail").value.trim(),
-      phone: form.querySelector(".f-tel").value.trim() });
-    form.querySelector(".f-name").value = ""; form.querySelector(".f-mail").value = ""; form.querySelector(".f-tel").value = "";
+      phone: form.querySelector(".f-tel").value.trim()
+    });
+    form.querySelector(".f-name").value = "";
+    form.querySelector(".f-mail").value = "";
+    form.querySelector(".f-tel").value = "";
     save(); paint();
   };
 
+  const calSec = el(`<section class="sec"></section>`);
   const listSec = el(`<section class="sec"></section>`);
-  const gridSec = el(`<section class="sec"></section>`);
   const sendSec = el(`<section class="sec"></section>`);
-  v.append(weekBar, form, listSec, gridSec, sendSec);
+  v.append(bar, calSec, form, listSec, sendSec);
 
-  function body() {
-    const D = days();
-    const out = [`${DATA.store.name} 근무표`, `${dayLabel(D[0])} ~ ${dayLabel(D[6])}`, "", "[ 직원 명단 ]",
+  /* ---------- 하루 배정 편집 ---------- */
+  function editDay(d) {
+    const wrap = el(`<div class="card" style="padding:16px;margin-top:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <b style="font-size:15px">${dayLabel(d)} 근무 배정</b>
+        <div style="flex:1"></div>
+        <button type="button" id="close" style="padding:6px 12px;font-size:12px">닫기</button>
+      </div>
+      <div class="stack" style="margin-top:12px"></div></div>`);
+    const box = wrap.querySelector(".stack");
+    data.staff.forEach(s => {
+      const cur = shiftOf(s.id, d);
+      const row = el(`<div style="display:flex;align-items:center;gap:10px">
+        <span style="width:9px;height:9px;border-radius:50%;background:${colorOf(secOf(s))};flex:none"></span>
+        <span style="flex:1;min-width:0"><b style="font-size:14px">${esc(s.name)}</b>
+          <span class="muted" style="margin-left:6px">${esc(s.section || "—")}</span></span>
+        <select style="width:150px;padding:8px;font-size:13px;font-weight:600">
+          <option value="">휴무</option>
+          ${DATA.shifts.map(sh => `<option ${cur === sh.name ? "selected" : ""}>${sh.name}</option>`).join("")}
+        </select></div>`);
+      row.querySelector("select").onchange = e => {
+        (data.assign[s.id] ||= {})[dk(d)] = e.target.value;
+        save(); paint(dk(d));
+      };
+      box.appendChild(row);
+    });
+    wrap.querySelector("#close").onclick = () => paint();
+    return wrap;
+  }
+
+  /* ---------- 달력 ---------- */
+  function monthGrid(openKey) {
+    const y = cursor.getFullYear(), m = cursor.getMonth();
+    const first = new Date(y, m, 1);
+    const start = mondayOf(first);
+    const cells = [];
+    const d = new Date(start);
+    // 6주면 어떤 달이든 덮인다
+    for (let i = 0; i < 42; i++) { cells.push(new Date(d)); d.setDate(d.getDate() + 1); }
+    // 마지막 주가 통째로 다음 달이면 뺀다
+    while (cells.length > 35 && cells[35].getMonth() !== m && cells[34].getMonth() !== m) cells.length = 35;
+
+    const todayK = dk(new Date());
+    const wrap = el(`<div class="card" style="overflow:hidden">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)">
+        ${[1, 2, 3, 4, 5, 6, 0].map(dow => `<div style="padding:8px 0;text-align:center;font-size:12px;font-weight:600;color:${dow === 0 ? "var(--danger)" : dow === 6 ? "#2563EB" : "var(--ink-3)"}">${WD[dow]}</div>`).join("")}
+      </div>
+      <div id="cells" style="display:grid;grid-template-columns:repeat(7,1fr)"></div></div>`);
+    const grid = wrap.querySelector("#cells");
+
+    cells.forEach((day, i) => {
+      const key = dk(day);
+      const other = day.getMonth() !== m;
+      const on = data.staff.filter(s => shiftOf(s.id, day));
+      const cell = el(`<button type="button" style="
+        min-height:82px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+        border-radius:0;background:${key === todayK ? "var(--accent-w)" : "var(--surface)"};
+        padding:6px;text-align:left;display:flex;flex-direction:column;gap:3px;align-items:stretch;
+        ${other ? "opacity:.38" : ""}${(i % 7 === 6) ? ";border-right:0" : ""}">
+        <span style="font-family:var(--mono);font-size:12px;font-weight:${key === todayK ? 700 : 500};
+          color:${day.getDay() === 0 ? "var(--danger)" : day.getDay() === 6 ? "#2563EB" : "var(--ink-2)"}">${day.getDate()}</span>
+      </button>`);
+
+      on.slice(0, 3).forEach(s => cell.appendChild(el(`<span style="
+        display:block;font-size:10.5px;font-weight:600;line-height:1.35;white-space:nowrap;overflow:hidden;
+        text-overflow:ellipsis;border-radius:4px;padding:1px 4px;
+        background:${colorOf(secOf(s))}1a;color:${colorOf(secOf(s))}">${esc(s.name)}</span>`)));
+      if (on.length > 3) cell.appendChild(el(`<span class="muted" style="font-size:10px">+${on.length - 3}</span>`));
+
+      cell.onclick = () => paint(key);
+      grid.appendChild(cell);
+    });
+    return wrap;
+  }
+
+  /* ---------- 주 표 ---------- */
+  function weekTable() {
+    const D = weekDays(mondayOf(cursor));
+    const tb = el(`<div class="tbl-wrap"><table>
+      <thead><tr><th class="sticky-col">직원</th>${D.map(d => `<th class="num" style="min-width:104px;${d.getDay() === 0 ? "color:var(--danger)" : d.getDay() === 6 ? "color:#2563EB" : ""}">${dayLabel(d)}</th>`).join("")}</tr></thead>
+      <tbody></tbody></table></div>`);
+    const tbody = tb.querySelector("tbody");
+    data.staff.forEach(s => {
+      const tr = el(`<tr><th class="sticky-col">
+        <b>${esc(s.name)}</b><br><span class="muted" style="font-size:11px">${esc(s.section || "—")}</span></th></tr>`);
+      D.forEach(d => {
+        const cur = shiftOf(s.id, d);
+        const td = el(`<td><select aria-label="${esc(s.name)} ${dayLabel(d)} 근무" style="padding:7px;font-size:12px;font-weight:600;${cur ? `background:${colorOf(secOf(s))}14;border-color:${colorOf(secOf(s))}55;color:${colorOf(secOf(s))}` : "color:var(--ink-3)"}">
+          <option value="">휴무</option>${DATA.shifts.map(sh => `<option ${cur === sh.name ? "selected" : ""}>${sh.name}</option>`).join("")}</select></td>`);
+        td.querySelector("select").onchange = e => {
+          (data.assign[s.id] ||= {})[dk(d)] = e.target.value; save(); paint();
+        };
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    return tb;
+  }
+
+  /* ---------- 메일 본문 ---------- */
+  function body(D) {
+    const out = [`${DATA.store.name} 근무표`, `${dayLabel(D[0])} ~ ${dayLabel(D[D.length - 1])}`, "", "[ 직원 명단 ]",
       "섹션      이름        이메일                    전화번호", "-".repeat(64)];
     const p = (t, w) => { let n = 0; for (const c of t) n += c.charCodeAt(0) > 0x2000 ? 2 : 1; return t + " ".repeat(Math.max(1, w - n)); };
     data.staff.forEach(s => out.push(p(s.section || "-", 10) + p(s.name, 12) + p(s.email || "-", 26) + (s.phone || "-")));
-    out.push("", "[ 이번 주 근무 ]", "");
+    out.push("", "[ 근무 ]", "");
     const groups = {};
-    data.staff.forEach(s => (groups[s.section || "미지정"] ||= []).push(s));
+    data.staff.forEach(s => (groups[secOf(s)] ||= []).push(s));
     for (const [sec, mem] of Object.entries(groups)) {
       out.push(`● ${sec}`);
       mem.forEach(s => {
         out.push(`  - ${s.name}`);
-        out.push("    " + D.map(d => `${dayLabel(d)} ${(data.assign[s.id] || {})[`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`] || "휴무"}`).join("  /  "));
+        out.push("    " + D.map(d => `${dayLabel(d)} ${shiftOf(s.id, d) || "휴무"}`).join("  /  "));
       });
       out.push("");
     }
@@ -965,66 +1124,74 @@ function renderRoster() {
     return out.join("\n");
   }
 
-  function paint() {
-    const D = days();
-    weekBar.querySelector("#wl").textContent = `${dayLabel(D[0])} ~ ${dayLabel(D[6])}`;
+  /* ---------- 그리기 ---------- */
+  function paint(openKey) {
+    const week = mode === "week";
+    bar.querySelector("#mw").className = week ? "btn-primary" : "";
+    bar.querySelector("#mm").className = week ? "" : "btn-primary";
+    bar.querySelector("#lbl").textContent = week
+      ? `${dayLabel(weekDays(mondayOf(cursor))[0])} ~ ${dayLabel(weekDays(mondayOf(cursor))[6])}`
+      : `${cursor.getFullYear()}년 ${cursor.getMonth() + 1}월`;
 
-    listSec.innerHTML = ""; gridSec.innerHTML = ""; sendSec.innerHTML = "";
+    calSec.innerHTML = ""; listSec.innerHTML = ""; sendSec.innerHTML = "";
+
     if (!data.staff.length) {
-      gridSec.appendChild(el(`<p class="muted" style="text-align:center;padding:24px 0">직원을 추가하면 근무표가 만들어집니다.</p>`));
+      calSec.appendChild(el(`<p class="muted" style="text-align:center;padding:26px 0">직원을 추가하면 근무표가 만들어집니다.</p>`));
       return;
     }
 
-    listSec.appendChild(el(`<h2>직원 명단</h2><p class="hint">메일에 이 표가 그대로 들어갑니다.</p>`));
+    calSec.appendChild(week ? weekTable() : monthGrid(openKey));
+
+    if (!week && openKey) {
+      const [yy, mm, dd] = openKey.split("-").map(Number);
+      calSec.appendChild(editDay(new Date(yy, mm - 1, dd)));
+    }
+
+    if (!week) {
+      const legend = el(`<div class="row-in" style="margin-top:10px"></div>`);
+      sections().forEach(sec => legend.appendChild(el(`<span class="pill" style="background:${colorOf(sec)}1a;color:${colorOf(sec)}">${esc(sec)}</span>`)));
+      legend.appendChild(el(`<span class="muted" style="align-self:center">날짜를 누르면 그날 배정을 고칩니다</span>`));
+      calSec.appendChild(legend);
+    }
+
+    /* 명단 */
+    listSec.appendChild(el(`<h2>직원 명단</h2>`));
+    listSec.appendChild(el(`<p class="hint">메일에 이 표가 그대로 들어갑니다.</p>`));
     listSec.appendChild(el(`<div class="tbl-wrap"><table>
       <thead><tr><th>섹션</th><th>이름</th><th>이메일</th><th class="num">전화번호</th><th></th></tr></thead>
       <tbody>${data.staff.map(s => `<tr>
-        <td>${esc(s.section || "—")}</td><td><b>${esc(s.name)}</b></td>
+        <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colorOf(secOf(s))};margin-right:6px"></span>${esc(s.section || "—")}</td>
+        <td><b>${esc(s.name)}</b></td>
         <td style="${s.email ? "" : "color:var(--ink-3)"}">${esc(s.email || "없음")}</td>
         <td class="num" style="${s.phone ? "" : "color:var(--ink-3)"}">${esc(s.phone || "없음")}</td>
         <td><button type="button" data-del="${s.id}" aria-label="${esc(s.name)} 삭제" style="padding:2px 8px;border:0;background:none;color:var(--ink-3)">×</button></td>
       </tr>`).join("")}</tbody></table></div>`));
     listSec.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
-      const id = b.dataset.del;
       if (!confirm("명단에서 뺄까요?")) return;
-      data.staff = data.staff.filter(s => s.id !== id); delete data.assign[id]; save(); paint();
+      data.assign[b.dataset.del] && delete data.assign[b.dataset.del];
+      data.staff = data.staff.filter(s => s.id !== b.dataset.del);
+      save(); paint();
     });
 
-    gridSec.appendChild(el(`<h2>근무 배정</h2>`));
-    const tb = el(`<div class="tbl-wrap" style="margin-top:10px"><table>
-      <thead><tr><th class="sticky-col">직원</th>${D.map(d => `<th class="num" style="min-width:104px;${d.getDay()===0 ? "color:var(--danger)" : d.getDay()===6 ? "color:#2563EB" : ""}">${dayLabel(d)}</th>`).join("")}</tr></thead>
-      <tbody></tbody></table></div>`);
-    const tbody = tb.querySelector("tbody");
-    data.staff.forEach(s => {
-      const tr = el(`<tr><th class="sticky-col"><b>${esc(s.name)}</b><br><span class="muted" style="font-size:11px">${esc(s.section || "—")}</span></th></tr>`);
-      D.forEach(d => {
-        const dk = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-        const cur = (data.assign[s.id] || {})[dk] || "";
-        const td = el(`<td><select aria-label="${esc(s.name)} ${dayLabel(d)} 근무" style="padding:7px;font-size:12px;font-weight:600;${cur ? "background:var(--accent-w);border-color:var(--accent-b);color:var(--accent)" : "color:var(--ink-3)"}">
-          <option value="">휴무</option>${DATA.shifts.map(sh => `<option ${cur === sh.name ? "selected" : ""}>${sh.name}</option>`).join("")}</select></td>`);
-        td.querySelector("select").onchange = e => {
-          (data.assign[s.id] ||= {})[dk] = e.target.value; save(); paint();
-        };
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    gridSec.appendChild(tb);
-
+    /* 발송 */
+    const D = week ? weekDays(mondayOf(cursor))
+                   : (() => { const a = []; const n = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+                              for (let i = 1; i <= n; i++) a.push(new Date(cursor.getFullYear(), cursor.getMonth(), i)); return a; })();
     const withMail = data.staff.filter(s => s.email);
-    sendSec.appendChild(el(`<h2>보내기</h2><p class="hint">메일 한 통에 직원 명단과 이번 주 근무가 함께 들어가고, 전 직원에게 한꺼번에 나갑니다. 보내기는 직접 누르셔야 합니다.</p>`));
+    sendSec.appendChild(el(`<h2>보내기</h2>`));
+    sendSec.appendChild(el(`<p class="hint">메일 한 통에 <b>직원 명단</b>과 <b>${week ? "이번 주" : cursor.getMonth() + 1 + "월"} 근무</b>가 함께 들어가고, 전 직원에게 한꺼번에 나갑니다. 보내기는 직접 누르셔야 합니다.</p>`));
     const btns = el(`<div class="row-in"></div>`);
-    const m = el(`<button type="button" class="btn-primary" style="padding:12px 18px" ${withMail.length ? "" : "disabled style=opacity:.5"}>메일로 보내기 (${withMail.length}명)</button>`);
+    const m = el(`<button type="button" class="btn-primary" style="padding:12px 18px">메일로 보내기 (${withMail.length}명)</button>`);
+    if (!withMail.length) { m.disabled = true; m.style.opacity = .5; }
     m.onclick = () => {
       if (!withMail.length) return;
-      const D2 = days();
       location.href = `mailto:?bcc=${encodeURIComponent(withMail.map(s => s.email).join(","))}` +
-        `&subject=${encodeURIComponent(`[${DATA.store.name}] 근무표 ${dayLabel(D2[0])}~${dayLabel(D2[6])}`)}` +
-        `&body=${encodeURIComponent(body())}`;
+        `&subject=${encodeURIComponent(`[${DATA.store.name}] 근무표 ${dayLabel(D[0])}~${dayLabel(D[D.length - 1])}`)}` +
+        `&body=${encodeURIComponent(body(D))}`;
     };
     const c = el(`<button type="button" style="padding:12px 18px;font-weight:700">복사 (카톡용)</button>`);
     c.onclick = () => {
-      const t = body();
+      const t = body(D);
       (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject())
         .then(() => alert("근무표를 복사했습니다.")).catch(() => prompt("아래 내용을 복사하세요", t));
     };
@@ -1040,7 +1207,7 @@ function renderRoster() {
 function renderStudy(slug) {
   const v = document.getElementById("view");
   if (!slug) {
-    topbar({ title: "교육 모드", sub: DATA.store.name });
+    topbar({ title: "교육 모드", sub: DATA.store.name, back: true });
     const rows = el(`<div class="rows" style="margin-top:16px"></div>`);
     DATA.positions.forEach(p => {
       const b = el(`<button type="button" class="nav-row"><span><b>${esc(p.name)}</b><span class="meta">${esc(p.subtitle)}</span></span><span class="chev">›</span></button>`);

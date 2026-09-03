@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import BackButton from "@/components/BackButton";
+import MediaSlot from "@/components/MediaSlot";
 import type { Position, Step } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -37,13 +38,6 @@ function log(event: string, payload: Record<string, unknown>) {
   } catch {
     /* 로깅 실패가 교육을 막으면 안 된다 */
   }
-}
-
-function youtubeId(url: string): string | null {
-  const m = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
-  );
-  return m ? m[1] : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -258,8 +252,6 @@ export default function TrainingMode({
   /* ---------------- 항목 화면 ---------------- */
   if (!task || !run) return null;
 
-  const ytId = task.videoUrl ? youtubeId(task.videoUrl) : null;
-  const hasMedia = Boolean(task.goodImage || ytId);
   const pct = Math.round(((run.idx + 1) / total) * 100);
 
   return (
@@ -288,35 +280,9 @@ export default function TrainingMode({
 
       {/* 본문: 가로 화면이면 사진 | 설명, 세로면 위아래로 */}
       <main className="min-h-0 flex-1 overflow-y-auto p-6">
-        <div
-          className={[
-            "mx-auto grid h-full max-w-6xl gap-6",
-            hasMedia ? "lg:grid-cols-[1.1fr_1fr]" : "max-w-3xl",
-          ].join(" ")}
-        >
-          {hasMedia && (
-            <div className="flex items-center justify-center">
-              {ytId ? (
-                <div className="aspect-video w-full overflow-hidden rounded-2xl border border-zinc-200 bg-black dark:border-zinc-800">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${ytId}`}
-                    title={`${task.title} 영상 가이드`}
-                    allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    className="h-full w-full"
-                  />
-                </div>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={task.goodImage ?? ""}
-                  alt={task.title}
-                  className="max-h-full w-full rounded-2xl border border-zinc-200 object-contain dark:border-zinc-800"
-                />
-              )}
-            </div>
-          )}
-
+        {/* 사진·영상이 있는 항목만 미디어가 붙는다. 없으면 글이 화면을 다 쓴다.
+            빈 칸을 남겨두면 미완성으로 보여서 시연에서 손해다. */}
+        <div className="mx-auto flex h-full max-w-3xl flex-col justify-center gap-6">
           <div className="flex flex-col justify-center">
             {task.critical && (
               <span className="mb-3 inline-block w-fit rounded-lg bg-red-100 px-3 py-1.5 text-base font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -353,6 +319,8 @@ export default function TrainingMode({
               </button>
             )}
           </div>
+
+          <MediaSlot base={task.id} />
         </div>
       </main>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
+import MediaSlot from "@/components/MediaSlot";
 import { SCALES, scaled } from "@/lib/scale";
 import type { Recipe } from "@/lib/types";
 
@@ -38,13 +39,6 @@ function log(event: string, payload: Record<string, unknown>) {
   } catch {
     /* 로깅 실패가 사용을 막으면 안 된다 */
   }
-}
-
-function youtubeId(url: string): string | null {
-  const m = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
-  );
-  return m ? m[1] : null;
 }
 
 export default function RecipeDetail({
@@ -166,7 +160,6 @@ export default function RecipeDetail({
 
           <ol className="flex flex-col gap-2">
             {section.steps.map((step, i) => {
-              const ytId = step.videoUrl ? youtubeId(step.videoUrl) : null;
               return (
                 <li
                   key={step.id}
@@ -206,53 +199,9 @@ export default function RecipeDetail({
                   </div>
 
                   {/* 좋은 예 / 나쁜 예 — 주방 판단 기준은 대부분 이 이분법이다 */}
-                  {(step.goodImage || step.badImage || ytId) && (
-                    <div className="px-4 pb-4 pl-[3.75rem]">
-                      {(step.goodImage || step.badImage) && (
-                        <div className="grid grid-cols-2 gap-2">
-                          {step.goodImage && (
-                            <figure>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={step.goodImage}
-                                alt={`${step.title} 좋은 예`}
-                                loading="lazy"
-                                className="w-full rounded-xl border-2 border-emerald-300 dark:border-emerald-800"
-                              />
-                              <figcaption className="mt-1 text-center text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                                이렇게
-                              </figcaption>
-                            </figure>
-                          )}
-                          {step.badImage && (
-                            <figure>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={step.badImage}
-                                alt={`${step.title} 나쁜 예`}
-                                loading="lazy"
-                                className="w-full rounded-xl border-2 border-red-300 dark:border-red-900"
-                              />
-                              <figcaption className="mt-1 text-center text-[11px] font-bold text-red-700 dark:text-red-400">
-                                이러면 안 됨
-                              </figcaption>
-                            </figure>
-                          )}
-                        </div>
-                      )}
-                      {ytId && (
-                        <div className="mt-2 aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-                          <iframe
-                            src={`https://www.youtube.com/embed/${ytId}`}
-                            title={`${step.title} 영상`}
-                            allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
-                            allowFullScreen
-                            className="h-full w-full"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="px-4 pb-4 pl-[3.75rem]">
+                    <MediaSlot base={step.id} />
+                  </div>
                 </li>
               );
             })}

@@ -143,6 +143,21 @@ export default function Home() {
         </ul>
       </section>
 
+      {/* ---------- 촬영 ---------- */}
+      <section className="mt-8">
+        <h2 className="text-[15px] font-bold">촬영</h2>
+        <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
+          사진·영상이 붙은 항목만 화면에 보입니다. 뭘 더 찍어야 하는지 여기서 봅니다.
+        </p>
+        <Link
+          href="/shoot"
+          className="mt-3 flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:active:bg-zinc-800"
+        >
+          <span className="text-[15px] font-bold">촬영 진행 보기</span>
+          <span aria-hidden className="text-lg text-zinc-400">›</span>
+        </Link>
+      </section>
+
       {/* ---------- 레시피 ---------- */}
       <section id="recipes" className="mt-8">
         <h2 className="text-[15px] font-bold">레시피</h2>

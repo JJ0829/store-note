@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import BackButton from "@/components/BackButton";
+import MediaSlot from "@/components/MediaSlot";
 import type { Position, Step } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -41,13 +42,6 @@ function log(event: string, payload: Record<string, unknown>) {
   } catch {
     /* 로깅 실패가 체크리스트 사용을 막으면 안 된다 */
   }
-}
-
-function youtubeId(url: string): string | null {
-  const m = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/,
-  );
-  return m ? m[1] : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -171,7 +165,6 @@ export default function ChecklistView({
           <ul className="flex flex-col gap-2">
             {section.steps.map((task) => {
               const checked = done.has(task.id);
-              const ytId = task.videoUrl ? youtubeId(task.videoUrl) : null;
 
               return (
                 <li
@@ -242,31 +235,10 @@ export default function ChecklistView({
                     </div>
                   </button>
 
-                  {/* 사진·영상은 버튼 밖에 둔다 (버튼 안에 iframe을 넣지 않기 위해) */}
-                  {(task.goodImage || ytId) && (
-                    <div className="px-4 pb-4 pl-[3.75rem]">
-                      {task.goodImage && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={task.goodImage}
-                          alt={task.title}
-                          loading="lazy"
-                          className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800"
-                        />
-                      )}
-                      {ytId && (
-                        <div className="mt-2 aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-                          <iframe
-                            src={`https://www.youtube.com/embed/${ytId}`}
-                            title={`${task.title} 영상 가이드`}
-                            allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
-                            allowFullScreen
-                            className="h-full w-full"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* 사진·영상은 버튼 밖에 둔다 (버튼 안에 미디어를 넣지 않기 위해) */}
+                  <div className="px-4 pb-4 pl-[3.75rem]">
+                    <MediaSlot base={task.id} />
+                  </div>
                 </li>
               );
             })}
