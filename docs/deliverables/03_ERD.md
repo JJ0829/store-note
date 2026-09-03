@@ -1,0 +1,1295 @@
+# 03. 데이터 모델 / ERD
+
+| | |
+|---|---|
+| 작성일 | 2026-09-03 |
+| 상태 | **초안** |
+| 대상 | 프렙노트(가칭, 미확정) |
+| 기준 커밋 | `93307a4` (master) |
+| 근거 | `src/lib/types.ts`, `src/lib/repo.ts`, `src/lib/roster.ts`, `src/lib/localRecipes.ts`, `data/seed.json`, `src/app/api/log/route.ts`, `src/app/api/media/route.ts`, `src/lib/mediaProbe.ts` |
+
+이 문서는 **현재 코드가 실제로 다루는 데이터**를 그대로 옮긴 것이다. 설계 제안이 아니라 역설계 기록에 가깝다. 향후 DDL 절(8절)만 아직 코드에 없는 것이고, 그 사실을 절 제목에 표시했다.
+
+**제품명 주의:** 앱 코드의 title은 `주방 체크리스트`(`src/app/layout.tsx`), `package.json` name은 `kitchen-sop`이다. "프렙노트"는 `presentation/` 폴더의 파일명·문서에만 쓰인다. ❓ 확인 필요 — 명칭 확정 여부.
+
+---
+
+## 1. 현재 구조 — RDB가 아니다
+
+### 1-1. 실제 저장 위치
+
+DB는 **`data/seed.json` 파일 하나**다. 접근은 전부 `src/lib/repo.ts`의 12개 함수를 통한다.
+
+```ts
+// src/lib/repo.ts:22-30
+function load(): SeedData {
+  // 개발 중에는 seed.json을 고칠 때마다 바로 반영되도록 캐시하지 않는다.
+  if (cache && process.env.NODE_ENV === "production") return cache;
+  const file = path.join(process.cwd(), "data", "seed.json");
+  const parsed = JSON.parse(fs.readFileSync(file, "utf-8")) as SeedData;
+  cache = parsed;
+  return parsed;
+}
+```
+
+| 데이터 종류 | 저장 위치 | 근거 |
+|---|---|---|
+| 매장·포지션·레시피·프렙·근무조 | `data/seed.json` (읽기 전용) | `src/lib/repo.ts:26` |
+| 체크 상태 / 교육 진도 | 브라우저 localStorage / sessionStorage | 6절 |
+| 직접 추가한 레시피 | 브라우저 localStorage `sop:recipes` | `src/lib/localRecipes.ts:14` |
+| 직원 명단 · 근무 배정 | 브라우저 localStorage `sop:roster` | `src/lib/roster.ts:29` |
+| 이벤트 로그 | `data/events.jsonl` (append) | `src/app/api/log/route.ts:27` |
+| 사진·영상 | `public/media/` 파일명 규약 | `src/lib/mediaProbe.ts` |
+
+### 1-2. 이 구조의 한계 — 실측된 것만
+
+| # | 한계 | 근거 |
+|---|---|---|
+| 1 | **쓰기 경로가 없다.** `repo.ts`에 write 함수가 0개다. 내용 수정은 JSON 파일 직접 편집 | `src/lib/repo.ts` 전량 |
+| 2 | **조회가 전부 선형 탐색.** `getPositionBySlug`·`getRecipeBySlug`·`getPrepListBySlug`가 `Array.find()` | `repo.ts:41,64,72` |
+| 3 | **참조 무결성이 없다.** slug 문자열 매칭이고 검증 코드가 없다. 없는 slug를 써도 `undefined`로 조용히 넘어간다 | `PrepView.tsx:271` |
+| 4 | **교대 인계가 안 된다.** 오픈조가 태블릿에서 체크한 오후 프렙을 마감조가 다른 기기로 열면 0/6이다. 리드타임이 이 제품의 핵심 주장인데 "어제 콜드브루를 걸었나"를 기기 밖에서 확인할 방법이 없다 | 6절 |
+| 5 | **주기 점검이 매일 리셋된다.** 저장 키에 날짜가 박혀 있어(`prep:{slug}:{YYYY-MM-DD}`) 120일 주기 정수 필터 체크가 매일 0으로 돌아간다. 마지막 수행일을 저장하는 곳이 없다 | `PrepView.tsx:133` |
+| 6 | **사장님이 신입 진도를 볼 수 없다.** 체크는 신입 기기에만 쌓이고 돌아오지 않는다 | 6절 |
+| 7 | **근무표 전체가 태블릿 한 대에 있다.** 직원 이름·이메일·전화번호가 `sop:roster` 하나에 들어 있어 기기 초기화 = 전부 유실 | `src/lib/roster.ts:29` |
+| 8 | **저장 실패가 조용하다.** 6종 전부 try/catch로 삼킨다. 사파리 사생활 보호 모드에서 앱은 정상으로 보이는데 아무것도 저장되지 않는다 | `roster.ts:62`, `localRecipes.ts:31` 등 |
+| 9 | **배포하면 이벤트가 0건이 된다.** `/api/log`가 서버 파일 append이고, 실패해도 `{ok:true}`를 반환한다 | `api/log/route.ts:27-32` (코드 주석이 직접 인정) |
+| 10 | **단일 매장 전제가 타입에 박혀 있다.** `SeedData.store`가 배열이 아니라 객체 하나고 `getStore()`는 인자를 받지 않는다 | `types.ts:196`, `repo.ts:32` |
+| 11 | `data/events.jsonl` 58줄은 **전부 개발 중 본인 조작 기록**이다. 교체 전 버거집 slug(`grill-day1` 등)가 섞여 있다 | `data/events.jsonl` |
+
+### 1-3. 참고 — `README.md`의 SQL 초안은 근거로 쓸 수 없다
+
+`README.md:86-100`의 스키마는 데이터 모델 v2(2026-08-31) **이전** 것이다.
+
+| README 초안 | 현재 `types.ts` |
+|---|---|
+| `task.image_url text` 1개 | `goodImage` + `badImage` 2개 |
+| 테이블 5개 (store/position/section/task/event) | 필요 엔티티 11개 이상 |
+| — | `recipe`, `ingredient`, `prep_list`, `prep_task`, `shift`, `shift_focus`, `staff`, `assign` 8개가 빠져 있다 |
+| `event(position_id, ...)` | 이벤트 10종. `prepSlug`·`recipeSlug`·`runId`·`taskId`를 담을 칸이 없다 |
+
+이 문서의 8절 DDL이 그 초안을 대체한다.
+
+---
+
+## 2. 전체 ERD
+
+점선 박스로 표시할 수 없으므로, **서버 데이터가 아닌 것은 엔티티 주석과 아래 표에 명시했다.**
+
+```mermaid
+erDiagram
+    STORE ||--|{ POSITION : "1:N"
+    STORE ||--|{ RECIPE : "1:N"
+    STORE ||--|{ PREP_LIST : "1:N"
+    STORE ||--|{ SHIFT : "1:N"
+    STORE ||--o{ STAFF : "1:N 브라우저저장"
+
+    POSITION ||--|{ SECTION : "1:N"
+    RECIPE   ||--|{ SECTION : "1:N 배타"
+    SECTION  ||--|{ STEP : "1:N"
+
+    RECIPE ||--|{ INGREDIENT : "1:N"
+
+    PREP_LIST ||--|{ PREP_TASK : "1:N"
+    PREP_TASK }o--o| RECIPE : "0..1 recipeSlug 느슨한참조"
+
+    SHIFT ||--|{ SHIFT_FOCUS : "1:N 순서있음"
+    SHIFT_FOCUS }o--o| POSITION : "0..1 slug 느슨한참조"
+    SHIFT_FOCUS }o--o| PREP_LIST : "0..1 slug 느슨한참조"
+
+    STAFF ||--o{ ASSIGN : "1:N 브라우저저장"
+    SHIFT ||--o{ ASSIGN : "이름문자열로만 연결"
+
+    STEP      ||--o| MEDIA_KEY : "id가 파일명 base"
+    PREP_TASK ||--o| MEDIA_KEY : "id가 파일명 base"
+
+    STORE {
+        string id PK "store-1"
+        string name "화면에 쓰이는 유일한 필드"
+        string slug "읽는 코드 없음"
+    }
+
+    POSITION {
+        string id PK "React key 전용"
+        string shareSlug UK "실제 조회키. /p/ /t/ 주소"
+        string name
+        string subtitle
+        string summary
+    }
+
+    SECTION {
+        string id PK
+        string title
+        string note "nullable"
+        int sort_order "JSON 배열 순서"
+        string parent "position 또는 recipe 배타"
+    }
+
+    STEP {
+        string id PK "전역 유일. 미디어 파일명 base"
+        string title
+        string desc
+        string tip "nullable"
+        boolean critical "교육모드 확인 게이트"
+        string goodImage "nullable 미사용"
+        string badImage "nullable 미사용"
+        string videoUrl "nullable 미사용"
+        int sort_order
+    }
+
+    RECIPE {
+        string id PK "my- 접두사면 직접추가분"
+        string slug UK "조회키"
+        string name "검색 대상"
+        string category "검색 대상"
+        int yield_amount "1배합 산출량"
+        string yield_unit
+        boolean forNewbie "첫 주 배지"
+    }
+
+    INGREDIENT {
+        int id PK
+        string name
+        number amount "배수 계산 대상"
+        string unit "g ml 개 잔 스쿱 장"
+        string note "nullable"
+        int sort_order
+    }
+
+    PREP_LIST {
+        string id PK
+        string slug UK "조회키. Section 계층 없음"
+        string name
+        string note "nullable"
+    }
+
+    PREP_TASK {
+        string id PK "전역 유일. 미디어 파일명 base"
+        string title
+        string desc
+        string kind "time order cycle"
+        string trigger_type "daily weekday condition cycle"
+        int leadTimeHours "nullable kind=time"
+        int leadTimeDays "nullable kind=order"
+        boolean recoverable "가장 중요한 한 칸"
+        string consequence "안 하면 생기는 일"
+        boolean quantityVaries "배수 버튼 노출 조건"
+        boolean critical
+        string recipeSlug "nullable"
+        int sort_order
+    }
+
+    SHIFT {
+        string id PK
+        string name "근무표 배정값으로 그대로 쓰임"
+        string start_at "TS 필드명은 start. HH:MM 문자열"
+        string end_at "TS 필드명은 end. HH:MM 문자열"
+        string note "nullable"
+    }
+
+    SHIFT_FOCUS {
+        int id PK
+        string kind "position prep recipes"
+        string slug "nullable. recipes 분기는 없음"
+        string label
+        int sort_order "0번이 대표"
+    }
+
+    STAFF {
+        string id PK "st- 접두사 랜덤7자"
+        string section "제빵 바 홀 주방"
+        string name "개인정보"
+        string email "개인정보"
+        string phone "개인정보"
+    }
+
+    ASSIGN {
+        string staff_id PK "복합키"
+        string work_date PK "YYYY-MM-DD"
+        string shift_name "Shift.name 문자열. id 아님"
+    }
+
+    MEDIA_KEY {
+        string key PK "항목 id 그 자체"
+        string good_file "id-good.jpg"
+        string bad_file "id-bad.jpg"
+        string video_file "id.mp4"
+    }
+
+    EVENT {
+        int id PK
+        string event "10종"
+        string at "ISO 8601 서버 생성"
+        string sessionId "nullable. 교육모드 4종에 없음"
+        string runId "nullable. 교육모드만"
+        string positionSlug "nullable"
+        string prepSlug "nullable"
+        string recipeSlug "nullable"
+        string taskId "nullable"
+        int durationSec "nullable"
+        int confirmedCount "nullable"
+        int totalTasks "nullable"
+        number scale "nullable"
+        boolean recoverable "nullable"
+        string askedSenior "nullable"
+        string mode "nullable"
+    }
+```
+
+### 2-1. 실측 개수 (`data/seed.json`, Node 집계)
+
+| 엔티티 | 개수 | 세부 |
+|---|---|---|
+| Store | 1 | `store-1` / `○○ 베이커리 카페` / `our-cafe` |
+| Position | 3 | `cafe-open` / `cafe-close` / `bakery-morning` |
+| Section | 13 | 포지션 9 + 레시피 4. id 13개 전부 유일 |
+| Step | 38 | 포지션 26 (critical 11) + 레시피 12 |
+| Recipe | 4 | `americano` `cafe-latte` `cold-brew` `shokupan`. **4개 모두 `forNewbie: true`** |
+| Ingredient | 13 | 단위는 `g`, `ml` 두 종류만 |
+| PrepList | 2 | `afternoon`(6) / `cycle`(13) |
+| PrepTask | 19 | `recoverable: false` **5개** (`p-1` `p-2` `p-3` `p-6` `c-9`) |
+| Shift | 4 | 제빵 05:00–13:00 / 오픈조 07:30–15:30 / 미들 11:00–19:00 / 마감조 14:30–22:30 |
+| ShiftFocus | 7 | position 3 / prep 2 / recipes 2 |
+| Staff · Assign | 0 | 서버에 없다. 브라우저 저장 |
+| 미디어 파일 | **1항목분** | `public/media/`에 `t-open-5-good.png`, `t-open-5-bad.png` 2개. 둘 다 70바이트 1×1 투명 PNG |
+
+### 2-2. ERD를 읽을 때 반드시 알아야 하는 것 5가지
+
+| # | 사실 | 근거 |
+|---|---|---|
+| 1 | **조회 키는 `id`가 아니라 `shareSlug`/`slug`다.** `Position.id`·`PrepList.id`·`Shift.id`는 React key로만 쓰인다 | `repo.ts:41,64,72` |
+| 2 | **`PrepList`에는 `Section` 계층이 없다.** 포지션·레시피는 2단(Section→Step), 프렙은 1단(List→Task) | `types.ts:151-158` |
+| 3 | **Step 38 + PrepTask 19 = 57개 id가 전역 유일해야 한다.** 미디어 파일명이 `public/media/{id}-good.jpg`로 컨테이너 구분 없이 평면에 놓이기 때문이다. 측정 확인: 57개 전부 유일 | `mediaProbe.ts:53-59` |
+| 4 | **`goodImage`/`badImage`/`videoUrl`은 필드로 존재하나 읽는 코드가 0개다.** grep 결과 출현은 `types.ts` 정의와 `RecipeForm.tsx:92-94`(항상 `null` 채움)뿐. 시드에 `goodImage` 3건이 `/photos/*.svg`를 가리키지만 화면에 안 나온다 | grep 확인 |
+| 5 | **`Store.slug`와 `Store.id`는 어디서도 읽지 않는다.** 읽히는 건 `store.name`뿐이다 | grep 확인 |
+
+---
+
+## 3. 엔티티별 속성 표
+
+타입은 왼쪽이 현재 TypeScript, 오른쪽이 8절 DDL에서 쓸 PostgreSQL 타입이다.
+개인정보 열: **●** = 개인정보, **△** = 의사 식별자(개인 특정은 안 되지만 기기·회차 추적), 빈칸 = 아님.
+
+### 3-1. `store` — `src/lib/types.ts:189-193`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `store-1`. **읽는 코드 없음** | |
+| `name` | string / `text` | X | — | 화면 상단 매장명. **실제로 쓰이는 유일한 필드** | |
+| `slug` | string / `text` | X | — | `our-cafe`. **읽는 코드 없음** | |
+
+### 3-2. `position` — `types.ts:46-54`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `pos-open` 등. React key 전용 | |
+| `share_slug` | string / `text` | X | — | **실제 조회 키.** `/p/{slug}`, `/t/{slug}` 주소. localStorage 키의 일부 | |
+| `name` | string / `text` | X | — | 오픈조 / 마감조 / 제빵 | |
+| `subtitle` | string / `text` | X | — | 교육 모드 시작화면 부제 | |
+| `summary` | string / `text` | X | — | 교육 모드 시작화면 안내문 | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | JSON 배열 순서. **DDL에서 신설** | |
+
+### 3-3. `section` — `types.ts:35-40`
+
+`Position`과 `Recipe`가 **같은 타입을 공유한다.** 부모가 둘이다.
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | React key | |
+| `position_id` | (없음) / `text` | O | `null` | 부모가 포지션일 때. **DDL에서 신설** | |
+| `recipe_id` | (없음) / `text` | O | `null` | 부모가 레시피일 때. **DDL에서 신설** | |
+| `title` | string / `text` | X | — | 섹션 제목. 교육 모드에서 `sectionTitle`로 평탄화 (`TrainingMode.tsx:52-57`) | |
+| `note` | string \| null / `text` | O | `null` | 체크리스트 헤더 안내문. 시드 13개 중 7개 채워짐 | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+`position_id`와 `recipe_id`는 **정확히 하나만 non-null**이어야 한다 → CHECK 제약 (8절).
+
+### 3-4. `step` — `types.ts:19-33`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `t-open-1` 등. **전역 유일 필수** (미디어 파일명 base) | |
+| `section_id` | (계층) / `text` | X | — | 부모 섹션 | |
+| `title` | string / `text` | X | — | 항목 제목 | |
+| `desc` | string / `text` | X | — | 설명 | |
+| `tip` | string \| null / `text` | O | `null` | "선배 한마디" | |
+| `critical` | boolean / `boolean` | X | `false` | 위생·안전. 교육 모드 확인 게이트(`TrainingMode.tsx:111`), `꼭 지키기` 배지 | |
+| `good_image` | string \| null / `text` | O | `null` | **미사용.** 읽는 코드 0개 | |
+| `bad_image` | string \| null / `text` | O | `null` | **미사용** | |
+| `video_url` | string \| null / `text` | O | `null` | **미사용.** `README.md:78`의 유튜브 안내는 현재 코드에서 동작하지 않는다 | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+### 3-5. `recipe` — `types.ts:69-82`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `rec-americano` 등. `my-` 접두사면 직접 추가분 (`localRecipes.ts:49`) | |
+| `slug` | string / `text` | X | — | `/r/{slug}` 조회 키. `prep_task.recipe_slug`의 참조 대상 | |
+| `name` | string / `text` | X | — | 메뉴명. 검색 대상 | |
+| `category` | string / `text` | X | — | 음료 / 베이커리 / 브런치. 검색 대상 + 분류 칩 | |
+| `yield_amount` | number / `numeric` | X | — | 1배합 산출량. 인라인 객체 `yield.amount`였다 | |
+| `yield_unit` | string / `text` | X | — | `잔` `ml` `개` | |
+| `for_newbie` | boolean / `boolean` | X | `false` | `첫 주` 배지. 시드 4개 모두 true | |
+| `origin` | (없음) / `text` | X | `'seed'` | `seed` / `store`. 로컬 레시피 통합용. **DDL에서 신설** | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+`sections`가 **빈 배열이어도 저장된다** (`RecipeForm.tsx:96` — 만드는 순서를 안 채워도 저장 가능).
+
+### 3-6. `ingredient` — `types.ts:60-67`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | (없음) / `bigserial` | X | 자동 | 현재 식별자가 없다. 배열 원소다 | |
+| `recipe_id` | (계층) / `text` | X | — | 부모 레시피 | |
+| `name` | string / `text` | X | — | 재료명 | |
+| `amount` | number / `numeric` | X | — | **배수 계산 대상.** `scaled(amount, scale)` (`scale.ts:12`) | |
+| `unit` | string / `text` | X | — | 폼의 단위 목록은 `g, ml, 개, 잔, 스쿱, 장` (`RecipeForm.tsx:23`). 시드 실측은 `g`, `ml` 둘뿐 | |
+| `note` | string \| null / `text` | O | `null` | `60%`, `1:10` 등. 배수와 무관하게 그대로 표시. 13개 중 12개 채워짐 | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+`amount`가 `number`라서 "적당히"를 넣을 수 없다 — `types.ts:62`에 의도된 제약으로 주석이 있다.
+
+### 3-7. `prep_list` — `types.ts:151-158`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `prep-afternoon` 등 | |
+| `slug` | string / `text` | X | — | `/prep/{slug}` 조회 키. localStorage 키의 일부. `shift_focus.slug` 참조 대상 | |
+| `name` | string / `text` | X | — | 오후 프렙 / 주기 점검 | |
+| `note` | string \| null / `text` | O | `null` | "14:00~15:30. 대부분 내일을 위한 일입니다." | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+### 3-8. `prep_task` — `types.ts:114-149` (필드 15개, 이 모델의 중심)
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `p-1` … `c-13`. **전역 유일 필수** | |
+| `prep_list_id` | (계층) / `text` | X | — | 부모 목록 | |
+| `title` | string / `text` | X | — | 업무명 | |
+| `desc` | string / `text` | X | — | 설명 | |
+| `kind` | LeadTimeKind / `text` | X | — | `time`(4) / `order`(2) / `cycle`(13). CHECK 제약 | |
+| `trigger_type` | Trigger.type / `text` | X | — | `daily`(3) / `weekday`(1) / `condition`(2) / `cycle`(13). 판별 컬럼 → 5절 | |
+| `trigger_at` | string / `time` | O | `null` | `daily`·`weekday`만. `"14:00"` | |
+| `trigger_days` | number[] / `smallint[]` | O | `null` | `weekday`만. 0=일 … 6=토 | |
+| `trigger_when` | string / `text` | O | `null` | `condition`만. 사람이 읽는 문장 | |
+| `trigger_every_days` | number / `int` | O | `null` | `cycle`만. 7~365 | |
+| `lead_time_hours` | number \| null / `int` | O | `null` | `kind=time`. `readyAt()`이 "내일 07:43부터 사용 가능" 계산 (`PrepView.tsx:63`) | |
+| `lead_time_days` | number \| null / `int` | O | `null` | `kind=order`. `arrivesIn()`이 토·일을 배송일로 세지 않는다 (`PrepView.tsx:87`) | |
+| `recoverable` | boolean / `boolean` | X | `true` | **이 프로젝트에서 가장 중요한 한 칸** (`types.ts:127`). false = 돈으로 못 되돌린다. `irreversibleTasks()`가 이것만 필터 (`repo.ts:82`) | |
+| `consequence` | string / `text` | X | — | 안 하면 생기는 일. 화면에 "안 하면 —"으로 그대로 출력 | |
+| `quantity_varies` | boolean / `boolean` | X | `false` | 배수 버튼 노출 조건 (`PrepView.tsx:329`) | |
+| `critical` | boolean / `boolean` | X | `false` | 위생·안전 | |
+| `good_image` | string \| null / `text` | O | `null` | **미사용** | |
+| `bad_image` | string \| null / `text` | O | `null` | **미사용** | |
+| `video_url` | string \| null / `text` | O | `null` | **미사용** | |
+| `recipe_slug` | string \| null / `text` | O | `null` | 배수 계산기 연결. 실측 2건 (`p-1`→`cold-brew`, `p-2`→`shokupan`) | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+**`PrepTask`는 `Step`을 상속하지 않고 필드를 중복 정의한다.** 겹치는 것 7개: `id`, `title`, `desc`, `critical`, `goodImage`, `badImage`, `videoUrl`.
+
+**`kind`와 `trigger_type`은 직교하지 않는다.** `cycle`이 양쪽에서 똑같이 13건이고, `kind:"cycle"` 항목이 전부 `trigger.type:"cycle"`이다. 현재 데이터에서는 중복 정보다. ❓ 확인 필요 — 두 칸을 유지할지, `kind`를 파생으로 볼지.
+
+**`recoverable`과 `kind`도 1:1이 아니다.** `p-6`(원두 발주)은 `kind:order`인데 `recoverable:false`다. 거래 로스터리 원두는 쿠팡으로 대체할 수 없기 때문이다. 즉 **경고의 기준은 축이 아니라 `recoverable` 한 칸이다.** "A축=위험, B축=안전"으로 단순화하면 코드와 어긋난다.
+
+### 3-9. `shift` — `types.ts:174-185`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `sh-bakery` 등 | |
+| `name` | string / `text` | X | — | 제빵 / 오픈조 / 미들 / 마감조. **근무표 배정값으로 그대로 저장된다** (`RosterView.tsx:346-350`) | |
+| `start_at` | string / `time` | X | — | `"05:00"`. `toMinutes()`가 `split(":")`으로 파싱 — 형식 검증 없음 (`NowPanel.tsx:15`) | |
+| `end_at` | string / `time` | X | — | `"13:00"` | |
+| `note` | string \| null / `text` | O | `null` | NowPanel 비고 | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **DDL에서 신설** | |
+
+**자정을 넘기는 조를 `toMinutes()` 비교가 처리하지 못한다.** 현재 시드 4개는 전부 같은 날 안에서 끝나므로 드러나지 않는다. ❓ 확인 필요 — 심야 조가 실제로 있는지.
+
+### 3-10. `shift_focus` — `types.ts:169-172`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | (없음) / `bigserial` | X | 자동 | 현재 인라인 배열 원소 | |
+| `shift_id` | (계층) / `text` | X | — | 부모 조 | |
+| `kind` | ShiftFocus.kind / `text` | X | — | `position`(3) / `prep`(2) / `recipes`(2) | |
+| `slug` | string / `text` | O | `null` | **`recipes` 분기에는 없다** — 이 유니온의 존재 이유 | |
+| `label` | string / `text` | X | — | 버튼에 뜨는 글자 | |
+| `sort_order` | (배열 순서) / `int` | X | `0` | **`0`번이 대표.** `NowPanel.tsx:112`가 `fi === 0`으로 강조 스타일을 준다 → **DDL에서 필수** | |
+
+`focusHref()` 라우팅 (`NowPanel.tsx:19-28`): `position → /t/{slug}`(교육 모드) / `prep → /prep/{slug}` / `recipes → /r` 고정.
+
+**주의:** 시드의 오픈조 focus[0] 라벨은 `오픈 체크리스트`인데 목적지는 `/t/cafe-open`(**교육 모드**)이다. `/p/`(체크리스트)로 보내는 `ShiftFocus`는 시드에 하나도 없다.
+
+### 3-11. `staff` — `src/lib/roster.ts:11-18` **(서버 데이터 아님. localStorage)**
+
+**이 표가 유일한 개인정보 테이블이다.** 10절 참조.
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `newStaffId()` = `"st-" + 랜덤7자` (`roster.ts:66`) | |
+| `section` | string / `text` | X | `''` | 제빵 / 바 / 홀 / 주방. 빈 문자열이면 `bySection()`에서 "미지정"으로 모인다 | ● |
+| `name` | string / `text` | X | — | 직원 이름. **추가 시 유일한 필수 입력** | ● |
+| `email` | string / `text` | X | `''` | 빈 문자열이면 메일 발송 대상에서 제외 (`RosterView.tsx:97`) | ● |
+| `phone` | string / `text` | X | `''` | 전화번호 | ● |
+
+`loadRoster()`에 **하위 호환 코드가 있다** — 구버전의 `role` 필드를 `section`으로 읽는다 (`roster.ts:46`). 필드명이 `role` → `section`으로 바뀐 이력이 있다.
+
+### 3-12. `assign` — `roster.ts:21` **(서버 데이터 아님. localStorage)**
+
+현재 형태: `Record<staffId, Record<"YYYY-MM-DD", string>>`.
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `staff_id` | (객체 키) / `text` | X | — | 복합 PK 1 | ● |
+| `work_date` | (객체 키) / `date` | X | — | 복합 PK 2. `"YYYY-MM-DD"` | ● |
+| `shift_name` | string / — | X | `''` | **현재는 `Shift.name` 문자열.** `""`(`OFF` 상수)가 휴무 | ● |
+| `shift_id` | (없음) / `text` | X | — | **DDL에서 이것으로 교체.** 휴무는 행을 만들지 않는다 | ● |
+
+**가장 명백한 정규화 대상이다.** 지금은 조 이름을 고치면 기존 배정이 전부 고아가 된다.
+
+### 3-13. `media_key` — 필드가 아니라 파일명 규약 (`src/lib/mediaProbe.ts`)
+
+ERD에서 가장 오해를 사기 쉬운 부분이다. 데이터에 경로를 적지 않기로 했고(`mediaProbe.ts:2-8`), **미디어의 조회 키는 `step.id` / `prep_task.id` 그 자체**다.
+
+| 슬롯 | 파일명 | 허용 확장자 | 근거 |
+|---|---|---|---|
+| 좋은 예 | `{id}-good.{ext}` | jpg, jpeg, png, webp | `mediaProbe.ts:13,53` |
+| 나쁜 예 | `{id}-bad.{ext}` | jpg, jpeg, png, webp | 동일 |
+| 영상 | `{id}.{ext}` | mp4, mov, webm | `mediaProbe.ts:14` |
+
+동작: `GET /api/media`가 `public/media/` 파일명 목록을 반환(dotfile·`.md` 제외) → `mediaProbe`가 프로세스당 **한 번만** 받아 `Set`에 담음(`manifest ??=`) → `MediaSlot base={id}`가 그 안에서 이름을 찾는다. 없으면 `hasAny()`가 막아 **아무것도 그리지 않는다** (`MediaSlot.tsx:31`).
+
+**현재 상태:** `public/media/`에 `t-open-5-good.png`, `t-open-5-bad.png` 2개(둘 다 70바이트 1×1 투명 PNG)와 `촬영목록.md`. 즉 57개 항목 중 **1개만** 미디어가 잡히고, 그 1개는 실사가 아니라 투명 픽셀이다. 배관은 완성돼 있고 콘텐츠가 사실상 0건이다.
+
+`public/photos/`의 SVG 8개는 어느 화면에서도 쓰이지 않는다(버거집 시절 플레이스홀더).
+
+---
+
+## 4. 관계와 카디널리티 정리
+
+| 관계 | 카디널리티 | 구현 방식 | FK 제약 | 실측 |
+|---|---|---|---|---|
+| Store → Position | 1:N | 배열 | 없음(단일 매장) | 1:3 |
+| Store → Recipe | 1:N | 배열 | 없음 | 1:4 |
+| Store → PrepList | 1:N | 배열 | 없음 | 1:2 |
+| Store → Shift | 1:N | 배열 | 없음 | 1:4 |
+| Position → Section | 1:N | 배열 | 계층 | 3:9 |
+| Recipe → Section | 1:N | 배열 | 계층 | 4:4 |
+| Section → Step | 1:N | 배열 | 계층 | 13:38 |
+| Recipe → Ingredient | 1:N | 배열 | 계층 | 4:13 |
+| PrepList → PrepTask | 1:N | 배열 | 계층 | 2:19 |
+| Shift → ShiftFocus | 1:N | 배열(**순서 유의미**) | 계층 | 4:7 |
+| **PrepTask → Recipe** | 0..1 : 1 | `recipeSlug` 문자열 | **없음** | 2건 |
+| **ShiftFocus → Position** | 0..1 : 1 | `slug` 문자열 | **없음** | 3건 |
+| **ShiftFocus → PrepList** | 0..1 : 1 | `slug` 문자열 | **없음** | 2건 |
+| **Assign → Shift** | N:1 | `Shift.name` 문자열 | **없음** | 0건 |
+| Staff → Assign | 1:N | 중첩 객체 | 없음 | 0건 |
+
+**느슨한 참조 4곳 전부 검증 코드가 없다.** 깨졌을 때의 결과:
+
+| 참조 | 깨지면 | 근거 |
+|---|---|---|
+| `prep_task.recipe_slug` | `recipeBySlug.get()`이 `undefined` → 배수 계산기가 조용히 안 붙는다 | `PrepView.tsx:270-271` |
+| `shift_focus.slug` | 404 링크가 된다 | `NowPanel.tsx:19-28` |
+| `assign` 값 | 조 이름을 고치면 기존 배정이 전부 고아 | `roster.ts:21` |
+
+**Section의 다중 부모가 이 모델의 가장 큰 설계 결정이다.** 선택지 셋:
+
+| 안 | 방식 | 장 / 단 |
+|---|---|---|
+| (a) | `section(parent_type, parent_id)` 다형 참조 | 단순 / **FK 제약을 못 건다** |
+| (b) | `position_section` / `recipe_section` 테이블 분리 | FK 명확 / `step`도 갈라져야 하거나 `step`이 다형이 된다 |
+| **(c)** | `section(position_id nullable, recipe_id nullable)` + CHECK | **코드 변경이 가장 적다**(타입 하나 공유를 유지) / 컬럼 하나가 항상 비어 있다 |
+
+현 코드가 `Section` 타입 하나를 양쪽에서 공유하므로 **(c)를 채택한다.** 8절 DDL이 (c)다.
+
+---
+
+## 5. 유니온 타입을 RDB로 — 판별 컬럼 + 널 허용 컬럼
+
+유니온 3개(`Trigger`, `ShiftFocus`, `LeadTimeKind`) 중 페이로드가 갈리는 것은 앞의 둘이다.
+
+### 5-1. `Trigger` — 4분기 (`types.ts:104-112`)
+
+현재 형태:
+
+```ts
+export type Trigger =
+  | { type: "daily";     at: string }
+  | { type: "weekday";   days: number[]; at: string }
+  | { type: "condition"; when: string }
+  | { type: "cycle";     everyDays: number };
+```
+
+**설계: 판별 컬럼 `trigger_type` + 널 허용 컬럼 4개 + CHECK 제약.**
+
+`jsonb` 한 칸으로 넣는 방법도 있으나 채택하지 않는다. 스케줄러가 "지금 떠야 할 업무"를 물을 것이므로 `trigger_at`에 인덱스가 필요하고, `jsonb`로는 그 질의가 어색해진다.
+
+| `trigger_type` | `trigger_at` | `trigger_days` | `trigger_when` | `trigger_every_days` | 화면 라벨 (`PrepView.tsx:105-120`) | seed |
+|---|---|---|---|---|---|---|
+| `daily` | **필수** | null | null | null | `매일 {at}` | 3 |
+| `weekday` | **필수** | **필수** | null | null | `월·화·수·목·금 {at}` | 1 |
+| `condition` | null | null | **필수** | null | `when` 문장 그대로 | 2 |
+| `cycle` | null | null | null | **필수** | ≥365 → `1년마다`, ≥30 → `N개월마다`, 그 외 `N일마다` | 13 |
+
+CHECK 제약 (8절 DDL에 포함):
+
+```sql
+CONSTRAINT prep_task_trigger_shape CHECK (
+  CASE trigger_type
+    WHEN 'daily'     THEN trigger_at IS NOT NULL AND trigger_days IS NULL
+                          AND trigger_when IS NULL AND trigger_every_days IS NULL
+    WHEN 'weekday'   THEN trigger_at IS NOT NULL AND trigger_days IS NOT NULL
+                          AND trigger_when IS NULL AND trigger_every_days IS NULL
+    WHEN 'condition' THEN trigger_when IS NOT NULL AND trigger_at IS NULL
+                          AND trigger_days IS NULL AND trigger_every_days IS NULL
+    WHEN 'cycle'     THEN trigger_every_days IS NOT NULL AND trigger_at IS NULL
+                          AND trigger_days IS NULL AND trigger_when IS NULL
+    ELSE false
+  END
+)
+```
+
+`trigger_days`는 `smallint[]`로 두고 값 범위(0~6)를 별도 CHECK로 건다. 요일을 행으로 쪼개는 안(`prep_task_weekday` 테이블)도 가능하지만, 최대 7개 원소이고 순서가 무의미하며 요일별 조회 요구가 아직 없어 배열로 둔다. ❓ 확인 필요 — "금요일에 떠야 할 업무" 질의가 필요해지면 쪼개야 한다.
+
+### 5-2. `ShiftFocus` — 3분기 (`types.ts:169-172`)
+
+```ts
+export type ShiftFocus =
+  | { kind: "position"; slug: string; label: string }
+  | { kind: "prep";     slug: string; label: string }
+  | { kind: "recipes";  label: string };
+```
+
+`recipes` 분기에 `slug`가 없다는 것이 이 유니온의 존재 이유다.
+
+| `kind` | `slug` | 라우팅 | seed |
+|---|---|---|---|
+| `position` | **필수** → `position(share_slug)` | `/t/{slug}` | 3 |
+| `prep` | **필수** → `prep_list(slug)` | `/prep/{slug}` | 2 |
+| `recipes` | **null** | `/r` 고정 | 2 |
+
+**참조 대상 테이블이 둘이라 다형 참조가 된다.** FK를 직접 걸 수 없으므로 두 안이 있다.
+
+| 안 | 방식 |
+|---|---|
+| (a) | `slug text` 한 칸 + `kind` 판별 + **트리거로 존재 검증** |
+| **(b)** | `position_id` / `prep_list_id` 널 허용 2칸 + CHECK로 `kind`와 일치 강제 |
+
+**(b)를 채택한다.** 진짜 FK를 걸 수 있어 "404 링크" 결함이 DB 단계에서 막힌다. 8절 DDL이 (b)다.
+
+```sql
+CONSTRAINT shift_focus_shape CHECK (
+  CASE kind
+    WHEN 'position' THEN position_id IS NOT NULL AND prep_list_id IS NULL
+    WHEN 'prep'     THEN prep_list_id IS NOT NULL AND position_id IS NULL
+    WHEN 'recipes'  THEN position_id IS NULL AND prep_list_id IS NULL
+    ELSE false
+  END
+)
+```
+
+### 5-3. `LeadTimeKind` — 3분기, 페이로드 없음 (`types.ts:95`)
+
+값만 갈리므로 판별 컬럼 하나로 끝난다. 단 리드타임 컬럼과의 정합은 CHECK로 건다.
+
+| `kind` | `lead_time_hours` | `lead_time_days` | 뜻 | seed |
+|---|---|---|---|---|
+| `time` | 채워짐 | null | 시간이 흘러야 완성 (콜드브루·반죽·르방) | 4 |
+| `order` | null | 채워짐 | 주문해야 들어옴 (우유·원두) | 2 |
+| `cycle` | null | null | 주기적으로 갈아줘야 함 (정수 필터·보건증) | 13 |
+
+❓ 확인 필요 — 실측 시드는 위 표대로 깔끔하나, `kind=cycle`에 리드타임을 넣고 싶은 항목이 생길 수 있다. 그때는 이 CHECK를 느슨하게 한다.
+
+### 5-4. `step`과 `prep_task`의 필드 중복 7개
+
+`id`, `title`, `desc`, `critical`, `good_image`, `bad_image`, `video_url`이 겹친다. 공통 `task` 상위 테이블 + 1:1 확장으로 쪼갤 수 있으나, **8절 DDL은 두 테이블을 유지한다.** 이유:
+
+1. 현 코드가 두 타입을 별개로 다루므로 변경 폭이 작다
+2. 상위 테이블을 만들어도 컬럼 7개가 줄고 조인 하나가 늘어 실익이 작다
+3. **다만 `id`는 두 테이블에 걸쳐 전역 유일해야 한다** (미디어 파일명 제약) → 이것만 `media_key` 레지스트리 테이블로 강제한다
+
+---
+
+## 6. 브라우저 저장소 스키마 (현재 구현. 전수)
+
+`grep -rn "localStorage\|sessionStorage" src/`로 전수 확인. **키는 6종이다.**
+
+| # | 키 형식 | 저장소 | 값 구조 | 만료 / 초기화 규칙 | 정의 위치 |
+|---|---|---|---|---|---|
+| 1 | `sop:sid` | localStorage | 문자열. `Math.random().toString(36).slice(2) + Date.now().toString(36)` | **없음 (영구)** | `ChecklistView.tsx:21`, `PrepView.tsx:27`, `RecipeDetail.tsx:18` — 같은 코드 3중복 |
+| 2 | `sop:{shareSlug}:{YYYY-MM-DD}` | localStorage | `string[]` — 체크한 `step.id` 배열 (`Set`을 스프레드) | **날짜가 바뀌면 새 키가 되어 자동 초기화.** 옛 키는 지워지지 않고 남는다 | `ChecklistView.tsx:62` |
+| 3 | `prep:{prepSlug}:{YYYY-MM-DD}` | localStorage | `string[]` — 체크한 `prep_task.id` 배열 | 동일 | `PrepView.tsx:133` |
+| 4 | `sop:run:{shareSlug}` | **sessionStorage** | `{ runId: string; idx: number; startedAt: number(epoch ms); confirmed: string[] }` | 교육 완료 시 `removeItem`(`TrainingMode.tsx:83`). **탭을 닫으면 소멸** | `TrainingMode.tsx:62` |
+| 5 | `sop:recipes` | localStorage | `Recipe[]` — 직접 추가한 레시피 전체 배열 | **없음.** 개별 삭제만 (`removeLocalRecipe`) | `localRecipes.ts:14` |
+| 6 | `sop:roster` | localStorage | `{ staff: Staff[]; assign: Assign }` | **없음** | `roster.ts:29` |
+
+### 6-1. 6종 중 4번만 sessionStorage인 이유
+
+`TrainingMode.tsx:8-15`에 명시돼 있다 — 공용 태블릿에서 localStorage에 진도를 남기면 **앞사람 체크가 다음 신입에게 그대로 보인다.** 그래서 교육 모드만 sessionStorage + `runId`(시작할 때마다 새로 발급)를 쓴다. `CLAUDE.md`가 "검증 완료"로 표시한 몇 안 되는 항목이다.
+
+### 6-2. 실패 처리
+
+6종 전부 `try/catch`로 감싸고 실패 시 무시한다. `getSessionId()`는 실패 시 **`"no-storage"` 리터럴**을 반환하고(`ChecklistView.tsx:29`), 이 값이 이벤트 로그의 `sessionId`로 그대로 들어간다.
+
+실패를 화면에 알리는 곳은 레시피 추가 한 군데뿐이다(`RecipeForm.tsx:102`).
+
+### 6-3. 날짜 키 생성이 3중복이다
+
+`todayKey()`가 `ChecklistView.tsx:13-18`과 `PrepView.tsx:19-24`에 **동일한 코드로** 중복 정의돼 있고, `roster.ts:70-74`의 `ymd(d: Date)`가 같은 일을 한다. 셋 다 `YYYY-MM-DD`, **로컬 타임존 기준**이다.
+
+### 6-4. 단일 파일 HTML은 키가 다르다 — 데이터가 섞이지 않는다
+
+`presentation/프렙노트.html`(발표용 단일 파일)은 별개 키를 쓴다.
+
+| 용도 | Next 앱 | 단일 HTML |
+|---|---|---|
+| 체크리스트 | `sop:{slug}:{날짜}` | `list:{slug}:{날짜}` |
+| 프렙 | `prep:{slug}:{날짜}` | `prep:{slug}:{날짜}` (같음) |
+| 교육 진도 | `sop:run:{slug}` (sessionStorage) | **저장 안 함** |
+| 로컬 레시피 | `sop:recipes` | `recipes:mine` |
+| 근무표 | `sop:roster` | `roster` + `roster:mode` |
+| 세션 id | `sop:sid` | **없음** |
+
+두 버전은 같은 브라우저에서도 데이터를 공유하지 않는다.
+
+### 6-5. 서버 이전 시 각 키의 행선지
+
+| 키 | 행선지 | 비고 |
+|---|---|---|
+| `sop:sid` | 유지 (기기 식별용) | 서버로 옮기면 개인 식별 위험이 커진다 |
+| `sop:{slug}:{날짜}` | `checklist_check` 테이블 신설 | 이걸 옮기면 "사장님이 신입 진도를 본다"가 가능해진다 |
+| `prep:{slug}:{날짜}` | `prep_check` 테이블 신설 | **이걸 옮기면 교대 인계 문제가 풀린다.** 1-2절 #4 |
+| `sop:run:{slug}` | 유지 (sessionStorage) | 공용 태블릿 전제 때문에 서버로 옮기면 안 된다 |
+| `sop:recipes` | `recipe(origin='store')`로 흡수 | `my-` 접두사 → `origin` 컬럼으로 대체 |
+| `sop:roster` | `staff` + `assign` 테이블 | **개인정보가 서버로 넘어가는 유일한 경로.** 10절 |
+
+---
+
+## 7. 이벤트 로그 스키마
+
+### 7-1. 현재 수집 방식
+
+`POST /api/log` (`src/app/api/log/route.ts`). **검증이 없다** — 받은 body를 그대로 받아 `at`만 붙인다.
+
+```ts
+const record = { ...body, at: new Date().toISOString() };
+await fs.appendFile(file, `${JSON.stringify(record)}\n`, "utf-8");
+```
+
+- 잘못된 JSON만 400. 스키마 검증 없음
+- 파일 쓰기 실패는 `catch {}`로 삼키고 **응답은 실패해도 `{ok:true}`**
+- 저장소는 `data/events.jsonl` (JSON Lines)
+
+### 7-2. 이벤트 10종 — 필드 조합 실측 (`data/events.jsonl` 58줄)
+
+공통 필드: `event`(클라이언트), `at`(ISO 8601, **서버 생성**).
+
+| event | `sessionId` | `runId` | 고유 필드 | 발생 위치 | 실측 |
+|---|---|---|---|---|---|
+| `view` | ● | — | `positionSlug` | `ChecklistView.tsx:77` | 6 |
+| `survey` | 화면에 따라 갈림 | — | `positionSlug`, `askedSenior`, `mode?` | `ChecklistView.tsx:267` / `TrainingMode.tsx:219` | 4 |
+| `training_start` | **없음** | ● | `positionSlug`, `totalTasks` | `TrainingMode.tsx:101` | 5 |
+| `critical_confirm` | **없음** | ● | `positionSlug`, `taskId` | `TrainingMode.tsx:117` | 13 |
+| `training_complete` | **없음** | ● | `positionSlug`, `durationSec`, `confirmedCount` | `TrainingMode.tsx:132` | 3 |
+| `prep_view` | ● | — | `prepSlug` | `PrepView.tsx:158` | 12 |
+| `prep_check` | ● | — | `prepSlug`, `taskId`, **`recoverable`** | `PrepView.tsx:168` | 2 |
+| `prep_scale` | ● | — | `prepSlug`, `taskId`, `scale` | `PrepView.tsx:188` | 9 |
+| `recipe_view` | ● | — | `recipeSlug` | `RecipeDetail.tsx:54` | 3 |
+| `recipe_scale` | ● | — | `recipeSlug`, `scale` | `RecipeDetail.tsx:90` | 1 |
+
+값 도메인:
+
+| 필드 | 값 |
+|---|---|
+| `askedSenior` | `"0번"`, `"1~2번"`, `"3~5번"`, `"6번 이상"` 4개 리터럴. 두 화면에 **각각 하드코딩** (`ChecklistView.tsx:260`, `TrainingMode.tsx:213`) |
+| `scale` | `SCALES = [0.5, 1, 1.5, 2, 3]` (`scale.ts:8`) |
+| `mode` | 교육 모드 survey에만 `"training"`. **없으면 체크리스트다** |
+| `recoverable` | boolean. `prep_check`에만 실린다 |
+
+### 7-3. ⚠️ 조인이 불가능한 구간 — DB 이전과 같이 고쳐야 한다
+
+**`TrainingMode`의 `log()`에는 `getSessionId()` 호출이 없다.** 다른 3개 컴포넌트와 비교하면 그 한 줄만 빠져 있다.
+
+```ts
+// TrainingMode.tsx:35   ← sessionId 없음
+body: JSON.stringify({ event, ...payload }),
+// PrepView.tsx:45 / ChecklistView.tsx:39 / RecipeDetail.tsx:36
+body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
+```
+
+공용 태블릿에서 기기 단위 추적을 피하려는 의도일 수 있다. 다만 결과가 이렇다:
+
+- 교육 모드 `survey`는 `sessionId`도 없고 `runId`도 안 싣는다 (`TrainingMode.tsx:219-223`은 `positionSlug`, `askedSenior`, `mode`만)
+- 따라서 `training_complete.durationSec`와 `survey.askedSenior`를 잇는 키가 **`positionSlug` + 시각 근접성뿐**이다
+- `CLAUDE.md`의 검증 대상 가설이 "`training_complete.durationSec` + `survey`를 붙여서 본다"인데, **지금 데이터로는 붙일 수 없다**
+
+**조치:** `TrainingMode`의 survey에 `runId`를 실으면 해결된다. 컬럼 추가가 아니라 한 줄 추가다. DB 이전과 동시에 하는 것이 맞다.
+
+### 7-4. 현재 데이터의 성격
+
+58줄 = `view` 6 / `survey` 4 / `training_start` 5 / `critical_confirm` 13 / `training_complete` 3 / `prep_view` 12 / `prep_scale` 9 / `prep_check` 2 / `recipe_view` 3 / `recipe_scale` 1.
+
+**전부 로컬 개발 중 본인 조작 기록이다.** 첫 행의 `positionSlug`가 `grill-day1`·`fryer-day1`(교체 전 버거집 시드)다. **실사용 데이터는 0건.** 집계할 때는 `at`(≥ 2026-08-31)이나 slug로 걸러야 한다.
+
+### 7-5. `event` 테이블 설계 — 넓은 테이블 + jsonb 병용
+
+이벤트 10종의 페이로드가 다르다. 자주 질의하는 것만 컬럼으로 올리고 나머지는 `payload jsonb`에 둔다.
+
+| 컬럼으로 올릴 것 | 이유 |
+|---|---|
+| `kind`, `at`, `session_id`, `run_id` | 조인·기간 집계의 축 |
+| `subject_kind`, `subject_slug` | `positionSlug`/`prepSlug`/`recipeSlug`를 한 쌍으로 통합. 셋 중 하나만 오므로 컬럼 3개를 둘 필요가 없다 |
+| `task_id` | `critical_confirm`, `prep_check`, `prep_scale` |
+| `duration_sec` | 가설의 1차 지표 |
+| `recoverable` | **H7("리드타임 항목은 종이로 못 잡는다")의 직접 지표.** 되돌릴 수 없는 항목을 실제로 체크했는지 셀 수 있다 |
+| `payload jsonb` | `totalTasks`, `confirmedCount`, `scale`, `askedSenior`, `mode` 등 |
+
+`subject_kind` 매핑:
+
+| 원본 필드 | `subject_kind` |
+|---|---|
+| `positionSlug` | `position` |
+| `prepSlug` | `prep` |
+| `recipeSlug` | `recipe` |
+
+---
+
+## 8. 향후 PostgreSQL DDL **(아직 코드에 없다. 신설 제안)**
+
+`package.json` 의존성은 `next`, `react`, `react-dom` 3개뿐이고 **Supabase는 미설치**다(`.env.example`에 주석으로만 존재). 아래는 이전 대상 스키마다.
+
+멀티테넌트를 처음부터 넣는다. 지금은 매장이 1곳이지만 `store_id`를 나중에 끼우려면 전 테이블과 `repo.ts` 12개 함수를 다 고쳐야 한다.
+
+```sql
+-- =====================================================================
+--  프렙노트(가칭) 스키마 v1
+--  근거: src/lib/types.ts (데이터 모델 v2, 2026-08-31)
+--        src/lib/roster.ts (staff / assign)
+--  작성: 2026-09-03 · 상태: 초안
+-- =====================================================================
+
+create extension if not exists "pgcrypto";
+
+-- ---------------------------------------------------------------------
+-- 1. 매장
+-- ---------------------------------------------------------------------
+create table store (
+  id          text primary key,
+  name        text not null,
+  slug        text not null unique,
+  created_at  timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------
+-- 2. 미디어 키 레지스트리
+--
+--    step.id 와 prep_task.id 는 전역 유일해야 한다.
+--    public/media/{id}-good.jpg 처럼 컨테이너 구분 없이 평면에 놓이므로
+--    (src/lib/mediaProbe.ts:53) 컨테이너 안에서만 유일한 id로는 파일이
+--    충돌한다. 두 테이블에 걸친 유일성을 이 테이블이 강제한다.
+-- ---------------------------------------------------------------------
+create table media_key (
+  key         text primary key,
+  store_id    text not null references store(id) on delete cascade,
+  owner_kind  text not null check (owner_kind in ('step','prep_task')),
+  created_at  timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------
+-- 3. 포지션 — 체크리스트 / 교육 모드
+--    조회 키는 id 가 아니라 share_slug 다 (src/lib/repo.ts:41)
+-- ---------------------------------------------------------------------
+create table position (
+  id          text primary key,
+  store_id    text not null references store(id) on delete cascade,
+  share_slug  text not null,
+  name        text not null,
+  subtitle    text not null default '',
+  summary     text not null default '',
+  sort_order  int  not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  constraint position_share_slug_uniq unique (store_id, share_slug)
+);
+
+-- ---------------------------------------------------------------------
+-- 4. 레시피
+-- ---------------------------------------------------------------------
+create table recipe (
+  id            text primary key,
+  store_id      text not null references store(id) on delete cascade,
+  slug          text not null,
+  name          text not null,
+  category      text not null,
+  yield_amount  numeric(10,2) not null check (yield_amount > 0),
+  yield_unit    text not null,
+  for_newbie    boolean not null default false,
+  -- 'seed'  = 시드 데이터
+  -- 'store' = 매장이 직접 추가 (기존 localStorage sop:recipes + my- 접두사)
+  origin        text not null default 'seed' check (origin in ('seed','store')),
+  sort_order    int  not null default 0,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  constraint recipe_slug_uniq unique (store_id, slug)
+);
+
+-- ---------------------------------------------------------------------
+-- 5. 섹션 — 부모가 포지션 또는 레시피다 (types.ts 가 Section 타입을 공유)
+--    4절 (c)안: 널 허용 2칸 + CHECK 로 정확히 하나만 non-null
+-- ---------------------------------------------------------------------
+create table section (
+  id           text primary key,
+  position_id  text references position(id) on delete cascade,
+  recipe_id    text references recipe(id)   on delete cascade,
+  title        text not null,
+  note         text,
+  sort_order   int  not null default 0,
+  constraint section_one_parent check (
+    (position_id is not null and recipe_id is null) or
+    (position_id is null     and recipe_id is not null)
+  )
+);
+
+-- ---------------------------------------------------------------------
+-- 6. 단계 — 포지션·레시피가 공유하는 공통 단위
+--    good_image / bad_image / video_url 은 types.ts 에 있으나
+--    현재 읽는 코드가 없다. 컬럼은 남겨두되 미사용으로 표시한다.
+-- ---------------------------------------------------------------------
+create table step (
+  id          text primary key references media_key(key) on delete restrict,
+  section_id  text not null references section(id) on delete cascade,
+  title       text not null,
+  descr       text not null default '',      -- TS 의 desc. SQL 예약어라 개칭
+  tip         text,
+  critical    boolean not null default false,
+  good_image  text,                          -- 미사용 (2026-09-03 기준)
+  bad_image   text,                          -- 미사용
+  video_url   text,                          -- 미사용
+  sort_order  int  not null default 0
+);
+
+-- ---------------------------------------------------------------------
+-- 7. 재료 — 배수 계산 대상
+-- ---------------------------------------------------------------------
+create table ingredient (
+  id          bigserial primary key,
+  recipe_id   text not null references recipe(id) on delete cascade,
+  name        text not null,
+  amount      numeric(10,2) not null,        -- "적당히"는 넣을 수 없다 (의도된 제약)
+  unit        text not null,
+  note        text,                           -- '60%', '1:10' 등. 배수와 무관
+  sort_order  int  not null default 0
+);
+
+-- ---------------------------------------------------------------------
+-- 8. 프렙 목록 — Section 계층이 없다. 포지션·레시피와 깊이가 다르다
+-- ---------------------------------------------------------------------
+create table prep_list (
+  id          text primary key,
+  store_id    text not null references store(id) on delete cascade,
+  slug        text not null,
+  name        text not null,
+  note        text,
+  sort_order  int  not null default 0,
+  constraint prep_list_slug_uniq unique (store_id, slug)
+);
+
+-- ---------------------------------------------------------------------
+-- 9. 프렙 업무 — 이 스키마의 중심
+--    recoverable 한 칸이 경고 세기를 나눈다 (types.ts:127)
+-- ---------------------------------------------------------------------
+create table prep_task (
+  id                text primary key references media_key(key) on delete restrict,
+  prep_list_id      text not null references prep_list(id) on delete cascade,
+  title             text not null,
+  descr             text not null default '',
+  kind              text not null check (kind in ('time','order','cycle')),
+
+  -- 5-1절: 판별 컬럼 + 널 허용 컬럼 4개
+  trigger_type      text not null
+                    check (trigger_type in ('daily','weekday','condition','cycle')),
+  trigger_at        time,
+  trigger_days      smallint[],
+  trigger_when      text,
+  trigger_every_days int check (trigger_every_days > 0),
+
+  lead_time_hours   int check (lead_time_hours > 0),
+  lead_time_days    int check (lead_time_days   > 0),
+
+  -- false = 어떤 방법으로도 못 되돌린다. 이 항목만 빨간 불이다
+  recoverable       boolean not null default true,
+  consequence       text not null default '',
+  quantity_varies   boolean not null default false,
+  critical          boolean not null default false,
+
+  good_image        text,                     -- 미사용
+  bad_image         text,                     -- 미사용
+  video_url         text,                     -- 미사용
+
+  -- 느슨한 slug 참조를 진짜 FK 로 바꾼다
+  recipe_id         text references recipe(id) on delete set null,
+
+  sort_order        int not null default 0,
+
+  constraint prep_task_trigger_shape check (
+    case trigger_type
+      when 'daily'     then trigger_at is not null and trigger_days is null
+                            and trigger_when is null and trigger_every_days is null
+      when 'weekday'   then trigger_at is not null and trigger_days is not null
+                            and trigger_when is null and trigger_every_days is null
+      when 'condition' then trigger_when is not null and trigger_at is null
+                            and trigger_days is null and trigger_every_days is null
+      when 'cycle'     then trigger_every_days is not null and trigger_at is null
+                            and trigger_days is null and trigger_when is null
+      else false
+    end
+  ),
+  constraint prep_task_weekday_range check (
+    trigger_days is null or (
+      array_length(trigger_days, 1) between 1 and 7
+      and 0 <= all(trigger_days) and 7 > all(trigger_days)
+    )
+  ),
+  -- 5-3절. 실측 시드는 이 형태다. 느슨하게 할 필요가 생기면 여기를 고친다
+  constraint prep_task_lead_time_shape check (
+    case kind
+      when 'time'  then lead_time_hours is not null and lead_time_days is null
+      when 'order' then lead_time_days  is not null and lead_time_hours is null
+      when 'cycle' then lead_time_hours is null and lead_time_days is null
+      else false
+    end
+  )
+);
+
+-- ---------------------------------------------------------------------
+-- 10. 근무조 — 태블릿을 켰을 때 어떤 화면을 먼저 띄울지의 기준
+-- ---------------------------------------------------------------------
+create table shift (
+  id          text primary key,
+  store_id    text not null references store(id) on delete cascade,
+  name        text not null,
+  start_at    time not null,
+  end_at      time not null,
+  -- 자정을 넘기는 조가 있으면 true. 현재 시드 4개는 전부 false 다.
+  -- NowPanel 의 toMinutes() 비교가 이 경우를 처리하지 못한다 (미구현)
+  crosses_midnight boolean not null default false,
+  note        text,
+  sort_order  int not null default 0,
+  constraint shift_name_uniq unique (store_id, name),
+  constraint shift_time_order check (crosses_midnight or start_at < end_at)
+);
+
+-- ---------------------------------------------------------------------
+-- 11. 근무조가 띄울 화면 — 5-2절 (b)안. sort_order 0 번이 대표
+-- ---------------------------------------------------------------------
+create table shift_focus (
+  id            bigserial primary key,
+  shift_id      text not null references shift(id) on delete cascade,
+  kind          text not null check (kind in ('position','prep','recipes')),
+  position_id   text references position(id)  on delete cascade,
+  prep_list_id  text references prep_list(id) on delete cascade,
+  label         text not null,
+  sort_order    int not null default 0,
+  constraint shift_focus_shape check (
+    case kind
+      when 'position' then position_id is not null and prep_list_id is null
+      when 'prep'     then prep_list_id is not null and position_id is null
+      when 'recipes'  then position_id is null and prep_list_id is null
+      else false
+    end
+  ),
+  constraint shift_focus_order_uniq unique (shift_id, sort_order)
+);
+
+-- =====================================================================
+--  개인정보 구역 — 아래 두 테이블만 개인정보를 담는다 (10절)
+--  현재는 브라우저 localStorage 'sop:roster' 에만 있고 서버에 없다
+-- =====================================================================
+
+create table staff (
+  id          text primary key,              -- 'st-' + 랜덤7자 (roster.ts:66)
+  store_id    text not null references store(id) on delete cascade,
+  section     text not null default '',      -- 빈 값이면 화면에서 '미지정'
+  name        text not null,                 -- ● 개인정보. 유일한 필수 입력
+  email       text not null default '',      -- ● 개인정보. 빈 값이면 메일 대상 제외
+  phone       text not null default '',      -- ● 개인정보
+  created_at  timestamptz not null default now(),
+  deleted_at  timestamptz                    -- 소프트 삭제. 파기 이력 보존용
+);
+
+-- 배정. 현재는 assign[staffId][date] = Shift.name 문자열이라
+-- 조 이름을 고치면 전부 고아가 된다. shift_id FK 로 바꾼다.
+-- 휴무('' = OFF 상수)는 행을 만들지 않는 것으로 대체한다.
+create table assign (
+  staff_id    text not null references staff(id) on delete cascade,
+  work_date   date not null,
+  shift_id    text not null references shift(id) on delete restrict,
+  created_at  timestamptz not null default now(),
+  primary key (staff_id, work_date)
+);
+
+-- =====================================================================
+--  체크 기록 — 현재 코드에 대응하는 테이블이 없다 (localStorage 뿐)
+--  이 두 테이블이 1-2절의 한계 #4·#5·#6 을 푼다
+-- =====================================================================
+
+-- 포지션 체크리스트. 지금은 sop:{shareSlug}:{날짜} 에만 있어
+-- 사장님이 신입 진도를 볼 수 없다
+create table checklist_check (
+  id           bigserial primary key,
+  store_id     text not null references store(id) on delete cascade,
+  position_id  text not null references position(id) on delete cascade,
+  step_id      text not null references step(id) on delete cascade,
+  work_date    date not null,
+  session_id   text,                          -- △ 기기 단위 의사 식별자
+  checked_at   timestamptz not null default now(),
+  constraint checklist_check_uniq unique (position_id, step_id, work_date, session_id)
+);
+
+-- 프렙 체크. 이걸 서버로 올리면 교대 인계가 성립한다 —
+-- 오픈조가 체크한 것을 마감조가 다른 기기에서 본다
+create table prep_check (
+  id            bigserial primary key,
+  store_id      text not null references store(id) on delete cascade,
+  prep_list_id  text not null references prep_list(id) on delete cascade,
+  prep_task_id  text not null references prep_task(id) on delete cascade,
+  work_date     date not null,
+  -- 실측 스냅샷. 나중에 prep_task.recoverable 이 바뀌어도 그날의 판단이 남는다
+  recoverable   boolean not null,
+  session_id    text,                         -- △
+  checked_at    timestamptz not null default now(),
+  constraint prep_check_uniq unique (prep_task_id, work_date)
+);
+
+-- 주기 점검의 마지막 수행일.
+-- 현재는 저장 키에 날짜가 박혀 있어(prep:{slug}:{YYYY-MM-DD})
+-- 120일 주기 정수 필터 체크가 매일 0으로 리셋된다. 이 뷰가 그걸 고친다.
+create view prep_task_last_done as
+select
+  pt.id                as prep_task_id,
+  pt.trigger_every_days,
+  max(pc.work_date)    as last_done_on,
+  max(pc.work_date) + (pt.trigger_every_days || ' days')::interval as due_on
+from prep_task pt
+left join prep_check pc on pc.prep_task_id = pt.id
+where pt.trigger_type = 'cycle'
+group by pt.id, pt.trigger_every_days;
+
+-- =====================================================================
+--  이벤트 로그 (7-5절)
+-- =====================================================================
+create table event (
+  id            bigserial primary key,
+  store_id      text references store(id) on delete set null,
+  kind          text not null,               -- view / survey / training_* / prep_* / recipe_*
+  at            timestamptz not null default now(),
+
+  session_id    text,                        -- △ 교육 모드 4종에는 없다 (7-3절)
+  run_id        text,                        -- 교육 모드 1회분
+
+  -- positionSlug / prepSlug / recipeSlug 를 한 쌍으로 통합
+  subject_kind  text check (subject_kind in ('position','prep','recipe')),
+  subject_slug  text,
+
+  task_id       text,                        -- FK 를 걸지 않는다: 항목이 삭제돼도 로그는 남아야 한다
+  duration_sec  int,
+  recoverable   boolean,                     -- prep_check 이벤트. H7 의 직접 지표
+  payload       jsonb not null default '{}'::jsonb
+);
+
+-- =====================================================================
+--  인덱스
+-- =====================================================================
+
+-- 조회 키 (repo.ts 의 Array.find() 를 대체)
+create index position_slug_idx   on position (store_id, share_slug);
+create index recipe_slug_idx     on recipe   (store_id, slug);
+create index prep_list_slug_idx  on prep_list(store_id, slug);
+
+-- 화면 렌더 순서 — 배열 순서가 의미를 가지므로 전부 sort_order 로 정렬한다
+create index section_position_idx on section    (position_id, sort_order);
+create index section_recipe_idx   on section    (recipe_id,   sort_order);
+create index step_section_idx     on step       (section_id,  sort_order);
+create index ingredient_recipe_idx on ingredient(recipe_id,   sort_order);
+create index prep_task_list_idx   on prep_task  (prep_list_id, sort_order);
+create index shift_focus_shift_idx on shift_focus(shift_id,    sort_order);
+create index shift_store_idx      on shift      (store_id,     start_at);
+
+-- 첫 화면의 "까먹지 말 것 N개" (repo.ts:82 irreversibleTasks)
+create index prep_task_irreversible_idx
+  on prep_task (prep_list_id) where recoverable = false;
+
+-- 스케줄러: "지금 떠야 할 업무" (5-1절이 jsonb 를 안 쓴 이유)
+create index prep_task_trigger_at_idx
+  on prep_task (trigger_type, trigger_at) where trigger_at is not null;
+
+-- 레시피 검색 (RecipeSearch: 이름 또는 분류 부분 일치, 대소문자 무시)
+create index recipe_name_idx     on recipe (store_id, lower(name));
+create index recipe_category_idx on recipe (store_id, category);
+
+-- 체크 기록 조회
+create index checklist_check_date_idx on checklist_check (position_id, work_date);
+create index prep_check_date_idx      on prep_check      (prep_list_id, work_date);
+create index assign_date_idx          on assign          (work_date);
+create index staff_store_idx          on staff           (store_id) where deleted_at is null;
+
+-- 이벤트 집계
+create index event_at_idx      on event (at desc);
+create index event_kind_at_idx on event (kind, at desc);
+create index event_run_idx     on event (run_id) where run_id is not null;
+create index event_session_idx on event (session_id) where session_id is not null;
+create index event_subject_idx on event (subject_kind, subject_slug, at desc);
+```
+
+### 8-1. 이 DDL이 현재 코드와 다르게 한 것 (의도된 변경)
+
+| # | 변경 | 이유 |
+|---|---|---|
+| 1 | `sort_order`를 6개 테이블에 신설 | JSON 배열 순서가 의미를 가지지만 SQL은 순서를 보장하지 않는다. `shift_focus`는 0번이 대표라 특히 필수 |
+| 2 | `desc` → `descr` | `desc`가 SQL 예약어다 |
+| 3 | `prep_task.recipe_slug` → `recipe_id` FK | 느슨한 문자열 참조를 없앤다 |
+| 4 | `shift_focus.slug` → `position_id`/`prep_list_id` FK | "404 링크"를 DB에서 막는다 |
+| 5 | `assign.shift_name` → `shift_id` FK | 조 이름을 고쳐도 배정이 안 깨진다. 휴무는 행을 안 만든다 |
+| 6 | `store_id`를 전 테이블에 | 나중에 끼우면 `repo.ts` 12개 함수를 다 고쳐야 한다 |
+| 7 | `recipe.origin` 신설 | `my-` 접두사 규약(`localRecipes.ts:49`)을 컬럼으로 대체. `/r/my?id=`를 `/r/{slug}`로 통합할 수 있게 된다 |
+| 8 | `media_key` 레지스트리 | 57개 id의 전역 유일성을 DB가 강제 |
+| 9 | `shift.crosses_midnight` 신설 | 자정 넘김을 명시적으로 다룬다. **현재 `toMinutes()`는 이 경우를 처리하지 않는다(미구현)** |
+| 10 | `checklist_check`·`prep_check`·`prep_task_last_done` 신설 | 1-2절의 한계 #4·#5·#6을 푼다. **현재 코드에 대응 없음** |
+| 11 | `staff.deleted_at` 신설 | 소프트 삭제. 현재는 배열에서 즉시 제거된다 |
+| 12 | `good_image`/`bad_image`/`video_url` 컬럼 유지 | 미사용이지만 타입에 있다. 지우는 것은 별도 결정 사항 |
+
+### 8-2. ❓ 확인 필요 — DDL 확정 전에 답이 있어야 하는 것
+
+| # | 질문 | 걸리는 곳 |
+|---|---|---|
+| 1 | `kind`와 `trigger_type`을 둘 다 유지할지 (현재 데이터에서 `cycle` 13건이 중복) | `prep_task` |
+| 2 | 자정을 넘기는 근무조가 실제로 있는지 | `shift.crosses_midnight` |
+| 3 | `prep_check`를 세션별로 볼지 매장 단위로 볼지 — 교대 인계가 목적이면 매장 단위여야 한다(현 제약이 그렇다) | `prep_check_uniq` |
+| 4 | `shareSlug`의 유일 범위를 전역으로 할지 매장 단위로 할지 (현재 DDL은 매장 단위) | `position_share_slug_uniq` |
+| 5 | 로컬 레시피와 시드 레시피의 **id 충돌 검사가 현재 없다** (`RecipeSearch.tsx:25`가 단순 concat). 이전 시 충돌 처리 규칙 | `recipe` |
+| 6 | 거래처별 발주 요일·마감 시각·입고 소요일 — 현재 시드는 우유 1일·원두 4일로 넣어둔 **초안**이다 | `prep_task.lead_time_days` |
+| 7 | 배포 대상 호스팅. Vercel이면 `/api/log`의 파일 append가 무동작이라 이벤트가 이 테이블로 들어오지 않는다 | `event` |
+
+---
+
+## 9. 마이그레이션 경로 — JSON에서 DB로
+
+`repo.ts`의 주석이 전제를 밝혀둔 것이 있다(`repo.ts:16-17`) — 함수 본문만 쿼리로 바꾸면 페이지·컴포넌트는 손댈 필요가 없다. 그 전제가 유지되는 순서로 짠다.
+
+### 단계 순서
+
+| # | 단계 | 하는 일 | 화면 영향 | 되돌리기 |
+|---|---|---|---|---|
+| **0** | 준비 | 8절 DDL 적용. 빈 DB | 없음 | 스키마 drop |
+| **1** | 읽기 전용 이관 | `data/seed.json` → `store`·`position`·`section`·`step`·`recipe`·`ingredient`·`prep_list`·`prep_task`·`shift`·`shift_focus`·`media_key`. **`repo.ts` 12개 함수 본문만 쿼리로 교체.** 시그니처 유지 | 없음(같은 화면) | `repo.ts`를 파일 읽기로 되돌린다 |
+| **2** | 이벤트 | `/api/log`를 insert로 교체. `data/events.jsonl` 58줄은 **이관하지 않는다** — 전부 개발 중 본인 조작이고 버거집 slug가 섞여 있다 | 없음 | 파일 append 병행 |
+| **3** | 로그 조인 결함 수정 | `TrainingMode`의 survey에 `runId` 추가 (7-3절). 한 줄 | 없음 | 되돌릴 이유 없음 |
+| **4** | 프렙 체크 서버화 | `prep_check` 쓰기. localStorage는 오프라인 캐시로 남긴다 | **교대 인계가 성립한다.** 주기 점검 매일 리셋도 이때 풀린다 | localStorage 단독으로 복귀 |
+| **5** | 체크리스트 서버화 | `checklist_check` 쓰기 | **사장님이 신입 진도를 본다** | 동일 |
+| **6** | 레시피 통합 | `sop:recipes` → `recipe(origin='store')`. `/r/my?id=`를 `/r/{slug}`로 통합 | 기기 밖에서도 보인다 | 로컬 배열 유지 |
+| **7** | 근무표 이관 | `sop:roster` → `staff` + `assign`(`shift_id` FK). **⚠️ 개인정보가 서버로 넘어가는 유일한 단계.** 10절 조치를 이 단계 전에 마쳐야 한다 | 기기 교체에도 안 날아간다 | localStorage 단독 |
+| **8** | 편집 화면 | `repo.ts`에 write 함수. 사장님이 JSON을 안 고쳐도 되게 | 신규 화면 | — |
+| **9** | PIN 잠금 | 레시피·근무표 접근 제어 | 신규 | — |
+
+### 단계별로 지켜야 할 것
+
+**단계 1 — 시드 이관 스크립트가 검사할 것 5가지.** 지금 검증 코드가 없어서 조용히 넘어가는 것들이다.
+
+| # | 검사 | 실측 상태 |
+|---|---|---|
+| 1 | Step 38 + PrepTask 19 = 57개 id가 전역 유일한가 | 통과 |
+| 2 | `prep_task.recipe_slug` 2건이 실존 레시피를 가리키는가 | 통과 (`cold-brew`, `shokupan`) |
+| 3 | `shift_focus.slug` 5건이 실존 포지션·프렙을 가리키는가 | 통과 (position 3, prep 2) |
+| 4 | `trigger` 4분기의 키 조합이 유니온과 일치하는가 | 통과 |
+| 5 | `kind`와 리드타임 컬럼이 일치하는가 (`time`↔hours, `order`↔days, `cycle`↔둘 다 null) | 통과 |
+
+**단계 1에서 이관하지 않는 것:** `step.good_image` 3건(`/photos/handwash.svg`, `/photos/fridge-temp.svg` ×2). 버거집 시절 SVG 플레이스홀더를 가리키고 읽는 코드도 없다. 컬럼은 만들되 값은 비운다.
+
+**단계 2 주의:** `/api/log`가 파일 append인 채로 배포하면 이벤트가 0건이 된다. 실패해도 `{ok:true}`를 반환하므로 **클라이언트는 성공으로 안다.** 순서를 뒤집으면 안 되는 이유가 이것이다.
+
+**단계 4의 되돌리기 경계:** 교육 모드의 `sop:run:{shareSlug}`는 **서버로 옮기지 않는다.** 공용 태블릿에서 앞사람 진도가 다음 신입에게 보이면 안 되고, 그게 sessionStorage를 쓴 이유다(`TrainingMode.tsx:8-15`).
+
+**단계 7 전에 반드시:** 10절의 조치 3가지(메일 본문에서 이메일·전화 제거 / 보관 기간 / 접근 제어)를 마친다. 지금은 개인정보가 기기 안에만 있어서 위험 범위가 좁다. 서버로 올리는 순간 수집·처리 주체가 된다.
+
+### 되돌리기 안전망
+
+단계 1~2는 `repo.ts` 한 파일과 `api/log` 한 파일만 바뀌므로 되돌리기가 파일 교체다. 단계 4 이후는 데이터가 서버에 쌓이기 시작하므로, **각 단계마다 localStorage 쓰기를 한동안 병행**해서 서버 쪽을 언제든 버릴 수 있게 한다.
+
+---
+
+## 10. 개인정보 보관 항목 **(개인정보처리방침 작성용)**
+
+이 절은 그대로 옮겨 쓸 수 있게 정리했다.
+
+### 10-1. 수집·보관 항목 전량
+
+| 항목 | 유형 | 필수/선택 | 수집 시점 | 현재 저장 위치 | 서버 이전 후 | 보관 기간 |
+|---|---|---|---|---|---|---|
+| 직원 이름 | 개인정보 | **필수** | 근무표에 직원 추가 | 브라우저 localStorage `sop:roster` | `staff.name` | ❓ 확인 필요 |
+| 직원 이메일 | 개인정보 | 선택 (없으면 메일 발송 제외) | 동일 | 동일 | `staff.email` | ❓ 확인 필요 |
+| 직원 전화번호 | 개인정보 | 선택 | 동일 | 동일 | `staff.phone` | ❓ 확인 필요 |
+| 직원 소속 섹션 | 개인정보 | 선택 (빈 값이면 '미지정') | 동일 | 동일 | `staff.section` | ❓ 확인 필요 |
+| 근무 배정 이력 (누가 언제 일했는지) | 개인정보 | 필수 | 근무표 칸 선택 | 동일 | `assign` | ❓ 확인 필요 |
+| 기기 세션 식별자 `sop:sid` | 의사 식별자 | 자동 | 체크리스트·프렙·레시피 화면 첫 방문 | localStorage, **영구** | `event.session_id` | ❓ 확인 필요 |
+| 교육 회차 식별자 `runId` | 의사 식별자 | 자동 | 교육 모드 시작 | sessionStorage, 1회성 | `event.run_id` | ❓ 확인 필요 |
+| 선배 질문 횟수 응답 `askedSenior` | 설문 응답 | 선택 | 교육·체크리스트 완료 후 | `data/events.jsonl`, **영구** | `event.payload` | ❓ 확인 필요 |
+
+**법정 근거·보유 기간은 이 문서가 정할 수 없다.** ❓ 확인 필요 — 노무 기록으로서의 근무표 보관 의무 기간과 이 앱의 보관 기간을 맞출지.
+
+### 10-2. 개인정보를 담는 곳은 두 테이블뿐이다
+
+8절 DDL 전체에서 개인정보 컬럼은 `staff`(name, email, phone, section)와 `assign`(누가 언제)뿐이다. **접근 제어는 이 두 테이블에 걸면 된다.** 나머지 테이블(포지션·레시피·프렙·근무조)에는 개인정보가 없다.
+
+`event` 테이블은 개인정보가 아니지만 **의사 식별자**를 담는다. `session_id`는 랜덤 문자열이고 이름·이메일과 이어 붙이는 코드가 없다(grep 확인). 다만 영구 보관되므로 기기 단위 추적은 가능하다.
+
+### 10-3. ⚠️ 현재 구현의 개인정보 결함 1건 — 실측
+
+**메일 본문에 전 직원의 이메일과 전화번호가 평문으로 들어간다.**
+
+```
+// src/lib/roster.ts:129-134 (buildEmailBody)
+out.push("[ 직원 명단 ]");
+out.push(pad("섹션", 8) + pad("이름", 12) + pad("이메일", 26) + "전화번호");
+for (const s of data.staff) {
+  out.push(pad(s.section || "-", 8) + pad(s.name, 12) + pad(s.email || "-", 26) + (s.phone || "-"));
+}
+```
+
+수신자는 **숨은참조(bcc)**로 넣는다 — "직원끼리 서로의 주소가 노출되지 않게"라는 의도가 `RosterView.tsx:103-107`에 적혀 있다. 그런데 **bcc로 가린 것이 본문에서 다시 드러난다.** 직원 A가 받은 메일에 직원 B·C의 이메일과 전화번호가 전부 있다.
+
+개인정보 처리에 관한 지적이 나온다면 여기가 첫 대상이다. **조치:** 근무표 발송 본문에서 `[ 직원 명단 ]` 블록의 이메일·전화 열을 빼고, 명단은 관리자 화면에서만 본다. 코드 변경은 `roster.ts:129-134` 한 곳이다.
+
+### 10-4. 설계상 이미 되어 있는 완화 장치 (실측 확인)
+
+| 장치 | 내용 | 근거 |
+|---|---|---|
+| 발송을 대행하지 않는다 | `mailto:`로 사용자의 메일 앱을 열 뿐이다. **서버에 개인정보가 남지 않는다** | `RosterView.tsx:108` |
+| 수신자는 bcc | 직원끼리 주소가 안 보인다 (단 10-3절 참조) | `RosterView.tsx:103-107` |
+| 세션 식별자와 개인 식별자를 잇지 않는다 | `sop:sid`를 이름·이메일과 붙이는 코드가 없다 | grep 확인 |
+| 서버 저장이 없다 | 현재 개인정보는 기기 안에만 있다. 위험 범위가 좁다 | `roster.ts:29` |
+| 일부 화면 `noindex` | `/r`, `/r/[slug]`, `/r/new`, `/r/my`, `/roster`, `/shoot` | 각 `page.tsx`의 `robots: { index: false, follow: false }` |
+
+### 10-5. 미구현 — 배포 전에 필요한 것
+
+| # | 항목 | 현재 | 근거 |
+|---|---|---|---|
+| 1 | **매장 PIN 잠금** | **미구현.** src 전체에 인증 코드 0건. `/roster`는 주소를 아는 누구나 열 수 있다. 화면에 "매장 PIN 잠금은 배포 전에 붙입니다"라고 표시만 해둔 상태 | `src/app/r/page.tsx:38-40` |
+| 2 | `robots.txt` | **없다.** `public/robots.txt`도 `src/app/robots.ts`도 존재하지 않는다 | 파일 확인 |
+| 3 | `/`, `/t/[slug]`, `/p/[slug]`, `/prep/[slug]`의 noindex | **없다.** 지금 배포하면 홈·교육·체크리스트·프렙 목록이 색인 대상 | 각 `page.tsx` |
+| 4 | 삭제 요청 처리 | **미구현.** 직원 삭제는 배열에서 즉시 제거(confirm 1회)이고 이력이 남지 않는다. DDL의 `staff.deleted_at`이 이걸 위한 칸이다 | `RosterView.tsx` |
+| 5 | 사용자 인증·로그인 | **없다.** 코드 0건 | grep 확인 |
+| 6 | 보관 기간에 따른 자동 파기 | **미구현** | — |
+
+---
+
+## 11. 이 문서를 근거로 쓸 때 주의할 것
+
+| # | |
+|---|---|
+| 1 | **`goodImage`/`badImage`/`videoUrl`은 필드로만 존재한다.** ERD에 그렸지만 읽는 코드가 0개다. 미디어의 실제 조회 키는 항목 id + 파일명 규약(3-13절) |
+| 2 | **사진·영상 콘텐츠는 사실상 0건이다.** 배관은 완성됐고 57개 항목 중 1개만, 그것도 70바이트 투명 픽셀이 들어 있다 |
+| 3 | **`Staff`/`Assign`은 서버 데이터가 아니다.** `SeedData`에 `staff` 필드가 없다. `types.ts`에서 유도할 수 없고 `roster.ts`에서 가져온 것이다 |
+| 4 | **8~9절은 아직 코드에 없다.** Supabase 미설치, 배포 안 됨, git remote 없음 |
+| 5 | **`data/events.jsonl` 58줄은 실사용 데이터가 아니다.** 전부 개발 중 본인 조작이고 버거집 slug가 섞여 있다. "수집된 지표"로 제시하면 안 된다 |
+| 6 | **`README.md:86-100`의 SQL 초안은 낡았다.** 이 문서의 8절이 그것을 대체한다 |
+| 7 | **주기 점검을 "관리된다"고 쓰면 안 된다.** 라벨은 뜨지만 마지막 수행일 저장이 없어 매일 리셋된다. 8절의 `prep_check` + `prep_task_last_done` 뷰가 그걸 고치는 제안이고, 아직 구현이 아니다 |

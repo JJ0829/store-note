@@ -161,7 +161,15 @@ npm run dev
   `$env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")`
 - 그래서 `.claude/launch.json`은 `node.exe` **절대경로**를 쓴다. 건드리지 말 것.
 - **dev 서버를 켜둔 채 `npm run build` 하면 `.next`가 덮어써져서 dev 서버가 죽는다.** 빌드 전에 서버를 끌 것.
+- **워크플로/서브에이전트가 도는 중에는 빌드하지 말 것.** (2026-09-03에 실제로 당함)
+  에이전트가 스스로 `.next`를 지우거나 dev 서버를 띄우기 때문에, 동시에 빌드하면
+  매번 다른 오류가 난다 — `_app.js.nft.json` 없음 / `clientReferenceManifest` 불변식 위반 /
+  `/_not-found` 모듈 못 찾음. 코드 문제로 착각하기 쉽다.
+  **복구법:** 서버·에이전트 다 멈추고 `.next` 완전 삭제 후 다시 시작.
+- **타입만 볼 때는 `npx tsc --noEmit`을 쓸 것.** `.next`를 안 건드리므로 dev 서버가 안 죽는다.
 - 큰 파일은 Bash heredoc이 깨진다(따옴표 파싱 에러). Write 도구를 쓸 것.
+- **Bash로 `node -e` / `python -c` 안에 백틱을 쓰면 셸이 먹는다.** (여러 번 당함)
+  마크다운 코드표기나 JS 템플릿 리터럴이 필요하면 스크립트 파일로 만들어 실행할 것.
 
 ## 구조
 
