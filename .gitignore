@@ -1,8 +1,18 @@
 node_modules/
 .next/
 out/
-.env
-.env.local
 *.tsbuildinfo
 next-env.d.ts
 data/events.jsonl
+data/events.backup-*.jsonl
+
+# 비밀값 — 정확한 파일명만 막으면 .env.production 같은 게 샌다
+.env*
+!.env.example
+
+# 배포 도구
+.vercel/
+
+# 매장에서 찍은 사진·영상. 사람이 찍히고 용량이 크다
+public/media/*
+!public/media/촬영목록.md

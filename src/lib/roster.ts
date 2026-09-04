@@ -122,11 +122,24 @@ function pad(text: string, width: number): string {
  * HTML 표는 메일 앱마다 깨지므로 글자 그대로 폭을 맞춘다.
  * 폰에서 그대로 읽히는 것이 목적이다.
  */
+export type EmailOptions = {
+  /**
+   * 명단에 이메일·전화번호를 넣을지.
+   *
+   * 기본은 넣지 않는다. 받는 사람을 숨은참조로 가려놓고 본문에 연락처를
+   * 그대로 실으면 가린 의미가 없다 — 직원 A가 받은 메일에 직원 B의
+   * 전화번호가 다 보인다. 연락처 공유가 필요한 경우에만 켠다.
+   */
+  includeContacts?: boolean;
+};
+
 export function buildEmailBody(
   storeName: string,
   days: Date[],
   data: RosterData,
+  opts: EmailOptions = {},
 ): string {
+  const withContacts = opts.includeContacts === true;
   const out: string[] = [];
   out.push(`${storeName} 근무표`);
   out.push(`${label(days[0])} ~ ${label(days[6])}`);
@@ -134,17 +147,23 @@ export function buildEmailBody(
 
   /* ---------- 1. 전체 직원 명단 ---------- */
   out.push("[ 직원 명단 ]");
-  out.push(
-    pad("섹션", 8) + pad("이름", 12) + pad("이메일", 26) + "전화번호",
-  );
-  out.push("-".repeat(64));
-  for (const s of data.staff) {
-    out.push(
-      pad(s.section || "-", 8) +
-        pad(s.name, 12) +
-        pad(s.email || "-", 26) +
-        (s.phone || "-"),
-    );
+  if (withContacts) {
+    out.push(pad("섹션", 8) + pad("이름", 12) + pad("이메일", 26) + "전화번호");
+    out.push("-".repeat(64));
+    for (const s of data.staff) {
+      out.push(
+        pad(s.section || "-", 8) +
+          pad(s.name, 12) +
+          pad(s.email || "-", 26) +
+          (s.phone || "-"),
+      );
+    }
+  } else {
+    out.push(pad("섹션", 10) + "이름");
+    out.push("-".repeat(28));
+    for (const s of data.staff) {
+      out.push(pad(s.section || "-", 10) + s.name);
+    }
   }
   out.push("");
 

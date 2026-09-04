@@ -26,6 +26,13 @@ import type { Shift } from "@/lib/types";
  * 직원이 받았을 때 누가 보낸 건지 분명하고 답장도 사장님에게 간다.
  * ------------------------------------------------------------------ */
 
+/** 공용 태블릿이라 기본으로 가린다. 앞뒤 몇 글자만 남겨 누구 것인지는 알아보게 */
+function mask(v: string): string {
+  const t = v.trim();
+  if (t.length <= 4) return "•".repeat(t.length);
+  return t.slice(0, 2) + "•".repeat(Math.max(3, t.length - 4)) + t.slice(-2);
+}
+
 const inputBase =
   "rounded-xl border-2 border-zinc-300 bg-white px-3 py-2.5 text-[15px] outline-none focus:border-orange-500 dark:border-zinc-700 dark:bg-zinc-900";
 
@@ -43,6 +50,10 @@ export default function RosterView({
   const [section, setSection] = useState("");
   const [phone, setPhone] = useState("");
   const [saved, setSaved] = useState(false);
+  // 연락처는 기본으로 가린다. 공용 태블릿이라 다음 사람이 그대로 본다.
+  const [showContacts, setShowContacts] = useState(false);
+  // 메일 본문에 연락처를 넣을지. 기본은 넣지 않는다 (bcc로 가린 의미를 지키려고)
+  const [mailContacts, setMailContacts] = useState(false);
 
   useEffect(() => {
     setData(loadRoster());
@@ -99,7 +110,9 @@ export default function RosterView({
 
   function sendMail() {
     if (days.length === 0) return;
-    const body = buildEmailBody(storeName, days, data);
+    const body = buildEmailBody(storeName, days, data, {
+      includeContacts: mailContacts,
+    });
     const subject = `[${storeName}] 근무표 ${label(days[0])}~${label(days[6])}`;
     // 받는 사람을 숨은참조로 넣는다. 직원끼리 서로의 주소가 노출되지 않게.
     const bcc = withEmail.map((s) => s.email).join(",");
@@ -111,7 +124,9 @@ export default function RosterView({
 
   function copyForChat() {
     if (days.length === 0) return;
-    const body = buildEmailBody(storeName, days, data);
+    const body = buildEmailBody(storeName, days, data, {
+      includeContacts: mailContacts,
+    });
     void copyText(body, "아래 근무표를 복사해 단톡방에 붙여넣으세요").then((r) => {
       if (r === "copied") window.alert("근무표를 복사했습니다. 단톡방에 붙여넣으세요.");
     });
@@ -238,9 +253,18 @@ export default function RosterView({
         <section className="mt-5 overflow-x-auto rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <table className="w-full border-collapse text-[13px]">
             <caption className="px-4 pt-3 text-left text-[15px] font-bold">
-              직원 명단
-              <span className="ml-2 text-[12px] font-normal text-zinc-500 dark:text-zinc-400">
-                메일에 이 표가 그대로 들어갑니다
+              <span className="flex flex-wrap items-center gap-2">
+                직원 명단
+                <span className="text-[12px] font-normal text-zinc-500 dark:text-zinc-400">
+                  연락처는 가려져 있습니다
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowContacts((v) => !v)}
+                  className="rounded-lg border border-zinc-300 px-2.5 py-1 text-[12px] font-semibold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
+                >
+                  {showContacts ? "가리기" : "연락처 보기"}
+                </button>
               </span>
             </caption>
             <thead>
@@ -265,7 +289,7 @@ export default function RosterView({
                       s.email ? "" : "text-zinc-400",
                     ].join(" ")}
                   >
-                    {s.email || "없음"}
+                    {s.email ? (showContacts ? s.email : mask(s.email)) : "없음"}
                   </td>
                   <td
                     className={[
@@ -273,7 +297,7 @@ export default function RosterView({
                       s.phone ? "" : "text-zinc-400",
                     ].join(" ")}
                   >
-                    {s.phone || "없음"}
+                    {s.phone ? (showContacts ? s.phone : mask(s.phone)) : "없음"}
                   </td>
                 </tr>
               ))}
@@ -401,12 +425,22 @@ export default function RosterView({
             </button>
           </div>
 
-          <p className="mt-3 rounded-xl bg-amber-50 px-3.5 py-3 text-[12px] leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-            <b>보내기 전에 확인하세요.</b> 받는 사람은 숨은참조로 넣지만,{" "}
-            <b>메일 본문의 명단에는 전 직원의 이메일과 전화번호가 그대로
-            들어갑니다.</b> 받는 직원 모두가 서로의 연락처를 보게 됩니다.
-            연락처를 공유하지 않으려면 메일 앱에서 명단 부분을 지우고 보내세요.
-          </p>
+          <label className="mt-3 flex items-start gap-2.5 rounded-xl border border-zinc-200 px-3.5 py-3 dark:border-zinc-800">
+            <input
+              type="checkbox"
+              checked={mailContacts}
+              onChange={(e) => setMailContacts(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-orange-500"
+            />
+            <span className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              <b>명단에 이메일·전화번호도 넣기</b>
+              <span className="mt-1 block text-zinc-500 dark:text-zinc-400">
+                기본은 <b>섹션·이름만</b> 나갑니다. 이걸 켜면 받는 직원 전원이
+                서로의 연락처를 보게 됩니다. 받는 사람은 숨은참조로 가리지만
+                본문에 적히면 가린 의미가 없습니다.
+              </span>
+            </span>
+          </label>
 
           {withEmail.length === 0 && (
             <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">

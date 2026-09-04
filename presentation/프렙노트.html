@@ -314,30 +314,34 @@ const DATA = {
   store: { name: "○○ 베이커리 카페" },
 
   shifts: [
+    /* focus.kind 는 seed.json 과 같은 낱말을 쓴다.
+       "training" = 교육 모드(한 장씩) / "checklist" = 스크롤 체크리스트.
+       예전에는 둘 다 "study" 하나였는데, 그러면 [오픈 체크리스트]를 눌러도
+       교육 모드 표지("시작하기")가 떠서 매일 쓰는 사람이 첫날 화면을 다시 본다. */
     { id:"sh-bakery", name:"제빵",   start:"05:00", end:"13:00", note:"어제 걸어둔 것 받고, 내일 것 다시 걸어두기",
-      focus:[{kind:"study", slug:"bakery-morning", label:"제빵 순서 보기"},{kind:"recipes", label:"레시피 찾기"}] },
+      focus:[{kind:"training", slug:"bakery-morning", label:"제빵 순서 보기"},{kind:"recipes", label:"레시피 찾기"}] },
     { id:"sh-open",   name:"오픈조", start:"07:30", end:"15:30", note:"오픈 준비 → 오전 영업 → 오후 프렙",
-      focus:[{kind:"study", slug:"cafe-open", label:"오픈 체크리스트"},{kind:"prep", slug:"afternoon", label:"오후 프렙"}] },
+      focus:[{kind:"checklist", slug:"cafe-open", label:"오픈 체크리스트"},{kind:"prep", slug:"afternoon", label:"오후 프렙"}] },
     { id:"sh-middle", name:"미들",   start:"11:00", end:"19:00", note:"피크 커버",
       focus:[{kind:"recipes", label:"레시피 찾기"}] },
     { id:"sh-close",  name:"마감조", start:"14:30", end:"22:30", note:"오후 프렙부터 마감까지",
-      focus:[{kind:"prep", slug:"afternoon", label:"오후 프렙 (내일 것 걸기)"},{kind:"study", slug:"cafe-close", label:"마감 체크리스트"}] }
+      focus:[{kind:"prep", slug:"afternoon", label:"오후 프렙 (내일 것 걸기)"},{kind:"checklist", slug:"cafe-close", label:"마감 체크리스트"}] }
   ],
 
   positions: [
     { slug:"cafe-open", name:"오픈조", subtitle:"첫날 체크리스트",
-      summary:"07:30 출근해서 08:00 오픈까지 30분입니다. 순서대로 하시면 시간 안에 끝납니다.",
+      summary:"07:30 출근해서 08:00 오픈까지 30분입니다. 순서대로 하시면 시간 안에 끝납니다. 빨간 표시는 절대 건너뛰면 안 되는 항목이에요.",
       sections:[
         { title:"들어오자마자", note:"머신 예열이 20~30분 걸려서 이게 제일 먼저입니다", steps:[
           { title:"손 씻고 위생 복장 착용", desc:"손목까지 30초 이상. 앞치마, 모자, 편한 신발까지 갖추고 시작합니다.", critical:true, tip:null },
           { title:"에스프레소 머신 전원 켜기", desc:"예열에 20~30분 걸립니다. 다른 걸 먼저 하면 오픈 시간에 못 맞춥니다.", critical:false, tip:"이것만 먼저 켜두고 나머지를 하세요." },
-          { title:"냉장·냉동고 온도 확인 후 기록", desc:"냉장 0~5℃, 냉동 -18℃ 이하. 벗어나 있으면 그 자리에서 점장에게 알립니다.", critical:true, tip:"기록은 몰아서 쓰면 의미가 없습니다. 본 순간에 적으세요." }
+          { title:"냉장·냉동고 온도 확인 후 기록", desc:"냉장 0~5℃, 냉동 -18℃ 이하. 벗어나 있으면 그 자리에서 점장에게 알립니다.", critical:true, tip:"기록은 나중에 몰아서 쓰면 의미가 없습니다. 본 순간에 적으세요." }
         ]},
         { title:"바 세팅", note:null, steps:[
           { title:"그룹헤드 물 흘리기", desc:"밤새 고인 물을 5초 정도 빼냅니다. 첫 잔 맛이 달라집니다.", critical:false, tip:null },
           { title:"추출 테스트 (원두를 새로 깠을 때만)", desc:"매일 하는 게 아닙니다. 원두를 새로 개봉했거나, 로스팅 날짜가 바뀌었거나, 그라인더를 청소한 뒤에 합니다.", critical:false, tip:"합격 기준은 영상으로 보세요. 글로는 설명이 안 되는 항목입니다." },
-          { title:"우유 소분, 스팀피처·행주 세팅", desc:"행주는 스팀용과 작업대용을 따로 둡니다. 섞이면 위생 사고입니다.", critical:true, tip:null },
-          { title:"어제 담근 콜드브루 여과·병입", desc:"어제 오후에 걸어둔 것을 오늘 아침에 받아냅니다. 그대로 두면 과추출로 씁니다.", critical:false, tip:"여과하면서 오늘 분량이 충분한지 봅니다." }
+          { title:"우유 소분, 스팀피처·행주 세팅", desc:"피처는 사이즈별로, 행주는 스팀용과 작업대용을 따로 둡니다. 섞이면 위생 사고입니다.", critical:true, tip:null },
+          { title:"어제 담근 콜드브루 여과·병입", desc:"어제 오후에 걸어둔 것을 오늘 아침에 받아냅니다. 그대로 두면 과추출로 씁니다.", critical:false, tip:"여과하면서 오늘 분량이 충분한지 봅니다. 모자라면 오후 프렙 때 양을 늘려야 합니다." }
         ]},
         { title:"매장 열기", note:null, steps:[
           { title:"쇼케이스 진열 + 가격표·알레르기 표시", desc:"제빵조가 구운 것을 받아 진열합니다. 알레르기 표시가 빠지면 법적 문제가 됩니다.", critical:true, tip:null },
@@ -350,7 +354,7 @@ const DATA = {
       sections:[
         { title:"기계", note:null, steps:[
           { title:"에스프레소 머신 백플러시 + 세제 청소", desc:"세제 넣고 백플러시 5회, 헹굼 5회. 거르면 다음날 커피에서 쩐내가 납니다.", critical:true, tip:null },
-          { title:"그라인더 청소", desc:"호퍼 원두 비우고 안쪽까지 닦습니다. 원두 기름이 굳으면 다음날 맛이 무너집니다.", critical:false, tip:null }
+          { title:"그라인더 청소", desc:"호퍼 원두 비우고 안쪽까지 닦습니다. 남은 원두 기름이 굳으면 다음날 맛이 무너집니다.", critical:false, tip:null }
         ]},
         { title:"재료·위생", note:null, steps:[
           { title:"우유 폐기 / 보관, 개봉일 라벨", desc:"개봉한 우유는 날짜를 적어둡니다. 라벨 없는 우유는 다음 사람이 못 씁니다.", critical:true, tip:null },
@@ -366,10 +370,10 @@ const DATA = {
       ]},
 
     { slug:"bakery-morning", name:"제빵", subtitle:"새벽 05:00~",
-      summary:"어제 걸어둔 것을 받아서 오늘 진열분을 만듭니다. 그리고 내일 것을 다시 걸어둡니다.",
+      summary:"어제 걸어둔 것을 받아서 오늘 진열분을 만듭니다. 그리고 내일 것을 다시 걸어둡니다. 이 두 가지가 매일 반복됩니다.",
       sections:[
         { title:"어제 것 받기", note:null, steps:[
-          { title:"르방 상태 확인", desc:"부피가 2배 정도 올랐는지, 냄새가 시큼하고 상쾌한지 봅니다. 쏘는 냄새면 과발효입니다.", critical:false, tip:"판단이 어려우면 영상을 보세요. 사람마다 제일 다른 항목입니다." },
+          { title:"르방 상태 확인", desc:"부피가 2배 정도 올랐는지, 냄새가 시큼하고 상쾌한지 봅니다. 시큼하다 못해 쏘면 과발효입니다.", critical:false, tip:"판단이 어려우면 영상을 보세요. 이게 사람마다 제일 다른 항목입니다." },
           { title:"냉장 발효 반죽 꺼내 실온 복원", desc:"어제 만들어둔 반죽을 꺼냅니다. 차가운 채로 성형하면 안 됩니다.", critical:false, tip:null }
         ]},
         { title:"오늘 것 만들기", note:null, steps:[
@@ -389,51 +393,53 @@ const DATA = {
     { slug:"americano", name:"아메리카노", category:"음료", forNewbie:true,
       yield:{amount:1, unit:"잔"}, note:"업계 표준값입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
       ingredients:[
-        {name:"원두 (도징)", amount:18, unit:"g", note:"18~22g"},
-        {name:"추출량", amount:36, unit:"g", note:"1:2"},
-        {name:"물", amount:200, unit:"ml", note:"아이스는 150ml+얼음"}
+        {name:"원두 (도징)", amount:18, unit:"g", note:"더블 바스켓 18~22g"},
+        {name:"추출량", amount:36, unit:"g", note:"원두의 2배 (1:2)"},
+        {name:"물", amount:200, unit:"ml", note:"아이스는 150ml + 얼음"}
       ],
       steps:[
         {title:"포터필터 비우고 물기 닦기", desc:"젖은 채로 원두를 받으면 추출이 무너집니다."},
         {title:"도징 후 수평 맞춰 탬핑", desc:"한쪽이 기울면 그쪽으로 물이 몰려서 신맛이 납니다."},
-        {title:"추출 — 시간을 본다", desc:"18g 넣고 36g이 25~30초에 나오는 것이 기준입니다."}
+        {title:"추출 — 시간을 본다", desc:"18g 넣고 36g이 25~30초에 나오는 것이 기준입니다. 빠르면 연하고(과소추출), 느리면 씁니다(과다추출)."}
       ]},
     { slug:"cafe-latte", name:"카페라떼", category:"음료", forNewbie:true,
       yield:{amount:1, unit:"잔"}, note:"업계 표준값입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
       ingredients:[
         {name:"원두 (도징)", amount:18, unit:"g", note:"추출 36g"},
-        {name:"우유", amount:150, unit:"ml", note:null}
+        {name:"우유", amount:150, unit:"ml", note:"스팀 후 부피가 늘어납니다"}
       ],
       steps:[
-        {title:"에스프레소 먼저 내린다", desc:"우유를 먼저 스팀하면 기다리는 동안 거품이 꺼집니다."},
-        {title:"스팀 — 온도와 거품", desc:"공기 주입은 2~3초만. 60~65℃에서 멈춥니다. 넘기면 단맛이 사라집니다."},
+        {title:"에스프레소 먼저 내린다", desc:"우유를 먼저 스팀하면 커피를 기다리는 동안 거품이 꺼집니다."},
+        {title:"스팀 — 온도와 거품", desc:"공기 주입은 2~3초만, 그다음 노즐을 깊이 넣어 회전시킵니다. 60~65℃에서 멈춥니다. 65℃를 넘기면 단맛이 사라지고 쇠맛이 납니다."},
         {title:"스팀완드 즉시 닦기", desc:"우유가 굳으면 안 지워지고 위생 문제가 됩니다.", critical:true}
       ]},
     { slug:"cold-brew", name:"콜드브루 (1배치)", category:"음료", forNewbie:true,
-      yield:{amount:2000, unit:"ml"}, note:"표준 1:10 · 침출 12~18시간",
+      yield:{amount:2000, unit:"ml"}, note:"표준 1:10 · 침출 12~18시간. 오늘 걸면 내일 씁니다",
       ingredients:[
-        {name:"원두 (굵게 분쇄)", amount:200, unit:"g", note:"1:10"},
+        {name:"원두 (굵게 분쇄)", amount:200, unit:"g", note:"물 대비 1:10"},
         {name:"정수", amount:2000, unit:"ml", note:null}
       ],
       steps:[
         {title:"굵게 분쇄", desc:"가늘면 잡미가 나고 필터가 막힙니다."},
-        {title:"물에 담그고 날짜·시각 라벨", desc:"안 적으면 다음 사람이 언제 빼야 할지 모릅니다.", critical:true},
+        {title:"물에 담그고 날짜·시각 라벨", desc:"언제 걸었는지 반드시 적습니다. 안 적으면 다음 사람이 언제 빼야 할지 모릅니다.", critical:true},
         {title:"냉장 12~24시간", desc:"다음날 아침에 여과합니다."}
       ]},
     { slug:"shokupan", name:"식빵 (1배합)", category:"베이커리", forNewbie:true,
       yield:{amount:6, unit:"개"}, note:"표준 세미리치 배합입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
       ingredients:[
-        {name:"강력분", amount:2000, unit:"g", note:"100%"},
+        {name:"강력분", amount:2000, unit:"g", note:"100% (기준)"},
         {name:"물", amount:1200, unit:"g", note:"60%"},
         {name:"설탕", amount:120, unit:"g", note:"6%"},
-        {name:"소금", amount:40, unit:"g", note:"2%"},
-        {name:"이스트", amount:40, unit:"g", note:"2%"},
-        {name:"버터", amount:120, unit:"g", note:"6%"}
+        /* 소금 note 의 "이스트와 직접 닿지 않게" 는 줄이면 안 된다 —
+           소금이 이스트에 직접 닿으면 죽어서 반죽이 안 부푼다. 경고가 본체다 */
+        {name:"소금", amount:40, unit:"g", note:"2% · 이스트와 직접 닿지 않게"},
+        {name:"이스트", amount:40, unit:"g", note:"2% · 인스턴트 드라이 기준"},
+        {name:"버터", amount:120, unit:"g", note:"6% · 실온 상태로"}
       ],
       steps:[
         {title:"버터 뺀 재료 먼저 반죽", desc:"버터를 처음부터 넣으면 글루텐이 안 잡힙니다."},
         {title:"글루텐 잡히면 버터 투입", desc:"반죽이 매끈해지고 얇게 늘어나면 그때 넣습니다."},
-        {title:"냉장 발효 12~18시간", desc:"총 반죽 3520g을 6등분하면 개당 약 590g입니다.", critical:true}
+        {title:"냉장 발효 12~18시간", desc:"총 반죽 3520g을 6등분하면 개당 약 590g입니다(1.5근 틀 기준). 여기서 하루가 걸립니다. 오늘 만들어야 내일 굽습니다.", critical:true}
       ]}
   ],
 
@@ -535,14 +541,29 @@ function readyAt(hours) {
   const w = diff === 0 ? "오늘" : diff === 1 ? "내일" : diff === 2 ? "모레" : `${d.getMonth()+1}/${d.getDate()}`;
   return `${w} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-/** 발주 도착일 — 거래처는 토·일에 배송하지 않는다 */
+const isWeekend = d => d.getDay() === 0 || d.getDay() === 6;
+/**
+ * 발주 도착일 — 거래처는 토·일에 배송하지 않는다.
+ *
+ * 두 번째 while 이 필요한 이유: 예전에는 `while (left > 0)` 하나뿐이라
+ * 당일배송(0일) 거래처를 넣으면 루프가 아예 안 돌아 토요일 발주가
+ * "9/5(토) 도착"으로 나왔다. 주말 배송이 없다는 게 이 함수의 존재 이유인데
+ * 0일에서만 그 규칙이 통째로 빠져 있었다.
+ *
+ * `new Date()` 를 자정으로 맞춰서 세는 이유: 시각이 섞이면 setDate 반복에서
+ * 오차가 난다. Math.max(0, Math.round(days)) 는 days 가 음수·소수로 들어와도
+ * 루프가 안 끝나는 일이 없게 하는 방어다. (src/lib/leadTime.ts 와 같은 계산)
+ */
 function arrivesIn(days) {
-  const d = new Date(); let left = days, skipped = 0;
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let left = Math.max(0, Math.round(days)), skipped = 0;
   while (left > 0) {
     d.setDate(d.getDate() + 1);
-    if (d.getDay() === 0 || d.getDay() === 6) { skipped++; continue; }
+    if (isWeekend(d)) { skipped++; continue; }   // 주말은 배송일로 세지 않는다
     left--;
   }
+  while (isWeekend(d)) { d.setDate(d.getDate() + 1); skipped++; }  // 0일이어도 토·일에는 안 온다
   return { label: dayLabel(d), overWeekend: skipped > 0 };
 }
 function mondayOf(base) {
@@ -550,12 +571,86 @@ function mondayOf(base) {
   d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1));
   return d;
 }
+/**
+ * 월요일부터 7일.
+ *
+ * 이 함수가 통째로 빠져 있었다 — 근무표 [주] 버튼과 paint() 의 라벨,
+ * 발송 범위가 전부 이걸 부르는데 정의가 없어 ReferenceError 로 죽었다.
+ * 게다가 mode 는 그 전에 localStorage 에 이미 저장돼서, 한 번 누른 기기는
+ * 이후 근무표를 열 때마다 계속 깨졌다. (src/lib/roster.ts 에서 옮겨왔다)
+ */
+function weekDays(monday) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
 
 /* ---------- 도우미 ---------- */
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
 const el = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+
+/**
+ * 클립보드 복사. 3단이다. (src/lib/copyText.ts 와 같은 구조)
+ *
+ * navigator.clipboard 는 HTTPS 또는 localhost 에서만 있다. 이 파일은
+ * file:// 로 더블클릭해서 열거나 매장 태블릿에서 평문 HTTP 로 여는 쪽이
+ * 오히려 흔해서, 그 API가 없는 경우가 기본에 가깝다.
+ *
+ * 2단(clipboard → prompt)만 두면 그때마다 prompt 창이 떠서 사람이 손으로
+ * 긁어야 한다. 가운데의 execCommand 는 file:// 와 평문 HTTP 에서도 대개
+ * 조용히 성공하는 유일한 경로다. 그게 빠져 있었다.
+ *
+ * 맨 끝의 prompt 는 마지막 수단이다 — 주방에서 버튼을 눌렀는데 아무 일도
+ * 안 일어나는 것이 제일 나쁘다.
+ */
+function copyText(text, promptLabel = "아래 내용을 복사하세요") {
+  const viaExec = () => {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (ok) return "copied";
+    } catch { /* 여기까지 실패하면 사람 손에 맡긴다 */ }
+    try { window.prompt(promptLabel, text); return "manual"; }
+    catch { return "failed"; }
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(() => "copied").catch(viaExec);
+    }
+  } catch { /* 권한 거부·비보안 출처 — 아래 폴백으로 간다 */ }
+  return Promise.resolve(viaExec());
+}
 const SCALES = [0.5, 1, 1.5, 2, 3];
-const fmt = (n, s) => { const v = n * s; return Number.isInteger(v) ? String(v) : v.toFixed(1); };
+/**
+ * 배수를 곱한 값.
+ *
+ * 예전에는 소수를 무조건 toFixed(1) 로 잘랐다. 그러면 1배를 눌러도 입력한
+ * 값과 다른 숫자가 화면에 뜬다 — 소금 2.55g 이 2.5g 으로, 7.5g 의 0.5배가
+ * 3.75 가 아니라 3.8 로. 베이커리에서 소수점 g 은 예외가 아니라 기본이라
+ * 그대로 두면 배합이 틀린다.
+ *
+ * 규칙은 둘이다. (1) 1배는 입력값 그대로 (2) 부동소수 찌꺼기는 지운다.
+ * toPrecision(12) 를 먼저 거치는 이유는 1.275 * 100 이 127.49999999999999
+ * 라서 그냥 반올림하면 1.27 이 되기 때문이다 — 사람이 손으로 계산한 값과
+ * 달라진다. 저울이 읽는 단위가 0.1g 이라 소수 둘째 자리에서 반올림하고,
+ * 필요 없는 0 은 붙이지 않는다. (src/lib/scale.ts 의 scaled() 와 같은 계산)
+ */
+const fmt = (n, s) => {
+  const v = n * s;
+  if (!Number.isFinite(v)) return "0";
+  return String(Math.round(Number((v * 100).toPrecision(12))) / 100);
+};
 const recipeBy = s => DATA.recipes.find(r => r.slug === s);
 const CHECK = '<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 8 14.5 16 6"/></svg>';
 
@@ -634,7 +729,12 @@ function renderHome() {
   const now = new Date();
   const cur = now.getHours() * 60 + now.getMinutes();
   const mins = s => +s.slice(0,2) * 60 + +s.slice(3);
-  const active = DATA.shifts.filter(s => cur >= mins(s.start) && cur < mins(s.end));
+  // 겹치는 시간대에는 방금 시작한 조를 위에 둔다.
+  // 등록 순서로 두면 07:30에 제빵(05:00 시작)이 먼저 떠서,
+  // 그 시각에 막 출근한 오픈조가 자기 화면을 아래에서 찾아야 한다.
+  const active = DATA.shifts
+    .filter(s => cur >= mins(s.start) && cur < mins(s.end))
+    .sort((a, b) => mins(b.start) - mins(a.start));
   const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
   const panel = el(`<div class="stack" style="margin-top:18px"></div>`);
@@ -656,7 +756,14 @@ function renderHome() {
         const primary = i === 0 && fi === 0;
         const b = el(`<button type="button" class="nav-row ${primary ? "btn-primary" : ""}">
           <b>${esc(f.label)}</b><span class="chev">›</span></button>`);
-        b.onclick = () => go(f.kind === "recipes" ? "#/recipes" : f.kind === "prep" ? `#/prep/${f.slug}` : `#/study/${f.slug}`);
+        // checklist 갈래가 없으면 [오픈 체크리스트]가 교육 모드 표지로 떨어진다.
+        // 매일 여는 사람에게 첫날 화면을 다시 보여주는 셈이라 동선이 틀린다.
+        b.onclick = () => go(
+          f.kind === "recipes"   ? "#/recipes" :
+          f.kind === "prep"      ? `#/prep/${f.slug}` :
+          f.kind === "checklist" ? `#/list/${f.slug}` :
+                                   `#/study/${f.slug}`   // training
+        );
         box.appendChild(b);
       });
       panel.appendChild(card);
@@ -791,11 +898,13 @@ function renderPrep(slug) {
       const draw = () => {
         const s = scales[t.id];
         [...grid.children].forEach((b, i) => b.setAttribute("aria-pressed", String(SCALES[i] === s)));
+        // 단위(unit)도 사용자가 직접 치는 값이다. 지금은 recipeBy()가 내장
+        // 레시피만 보지만, 사용자 레시피를 합치는 순간 그대로 취약해진다.
         sc.querySelector(".yield").innerHTML =
-          `${esc(rec.name)} · 1배합 ${rec.yield.amount}${rec.yield.unit} → <b>${fmt(rec.yield.amount, s)}${rec.yield.unit}</b>`;
+          `${esc(rec.name)} · 1배합 ${rec.yield.amount}${esc(rec.yield.unit)} → <b>${fmt(rec.yield.amount, s)}${esc(rec.yield.unit)}</b>`;
         sc.querySelector(".ing").innerHTML = rec.ingredients.map(i =>
           `<li><span class="nm">${esc(i.name)}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ""}</span>
-           <span class="amt ${s !== 1 ? "on" : ""}">${fmt(i.amount, s)}${i.unit}</span></li>`).join("");
+           <span class="amt ${s !== 1 ? "on" : ""}">${fmt(i.amount, s)}${esc(i.unit)}</span></li>`).join("");
       };
       SCALES.forEach(s => {
         const b = el(`<button type="button">${s}배</button>`);
@@ -850,7 +959,7 @@ function renderRecipes() {
         <b>${esc(r.name)}</b>
         ${r.forNewbie ? ' <span class="pill new">첫 주</span>' : ""}
         ${mine ? ' <span class="pill">직접 추가</span>' : ""}
-        <span class="meta">${esc(r.category)} · 1배합 ${r.yield.amount}${r.yield.unit} · 재료 ${r.ingredients.length}개</span>
+        <span class="meta">${esc(r.category)} · 1배합 ${r.yield.amount}${esc(r.yield.unit)} · 재료 ${r.ingredients.length}개</span>
         </span><span class="chev">›</span></button>`);
       b.onclick = () => go(`#/recipe/${r.slug}`);
       rows.appendChild(b);
@@ -920,10 +1029,13 @@ function renderRecipe(slug) {
 
   const draw = () => {
     [...grid.children].forEach((b, i) => b.setAttribute("aria-pressed", String(SCALES[i] === s)));
-    box.querySelector("#y").innerHTML = `${r.yield.amount}${r.yield.unit} → <span style="font-family:var(--mono);color:var(--accent)">${fmt(r.yield.amount, s)}${r.yield.unit}</span> 나옵니다`;
+    // unit 은 '레시피 추가' 폼(#ru, .i-u)에서 그대로 들어온 문자열이다.
+    // 이름은 esc 를 거치는데 단위만 빠져 있어서, 단위 칸에 태그를 넣으면
+    // 목록 화면만 열어도 실행됐다. el() 의 <template> 은 방어가 아니다.
+    box.querySelector("#y").innerHTML = `${r.yield.amount}${esc(r.yield.unit)} → <span style="font-family:var(--mono);color:var(--accent)">${fmt(r.yield.amount, s)}${esc(r.yield.unit)}</span> 나옵니다`;
     ing.querySelector(".ing").innerHTML = r.ingredients.map(i =>
       `<li><span class="nm">${esc(i.name)}${i.note ? `<span class="nt">${esc(i.note)}</span>` : ""}</span>
-       <span class="amt ${s !== 1 ? "on" : ""}">${fmt(i.amount, s)}${i.unit}</span></li>`).join("");
+       <span class="amt ${s !== 1 ? "on" : ""}">${fmt(i.amount, s)}${esc(i.unit)}</span></li>`).join("");
     ing.querySelector("#pc").textContent = s === 1 ? (r.note || "") : `${s}배로 계산된 값입니다. 퍼센트는 배수와 상관없이 그대로입니다.`;
   };
   SCALES.forEach(x => { const b = el(`<button type="button">${x}배</button>`); b.onclick = () => { s = x; draw(); }; grid.appendChild(b); });
@@ -1113,11 +1225,25 @@ function renderRoster() {
   }
 
   /* ---------- 메일 본문 ---------- */
+  /**
+   * 연락처를 본문에 넣을지. 기본은 안 넣는다.
+   *
+   * 받는 사람을 숨은참조(bcc)로 가려놓고 본문에 이메일·전화번호를 그대로
+   * 실으면 가린 의미가 없다 — 직원 A가 받은 메일에 직원 B의 전화번호가
+   * 다 보인다. 연락처 공유가 필요할 때만 사용자가 켠다.
+   */
+  let withContacts = false;
+
   function body(D) {
-    const out = [`${DATA.store.name} 근무표`, `${dayLabel(D[0])} ~ ${dayLabel(D[D.length - 1])}`, "", "[ 직원 명단 ]",
-      "섹션      이름        이메일                    전화번호", "-".repeat(64)];
+    const out = [`${DATA.store.name} 근무표`, `${dayLabel(D[0])} ~ ${dayLabel(D[D.length - 1])}`, "", "[ 직원 명단 ]"];
     const p = (t, w) => { let n = 0; for (const c of t) n += c.charCodeAt(0) > 0x2000 ? 2 : 1; return t + " ".repeat(Math.max(1, w - n)); };
-    data.staff.forEach(s => out.push(p(s.section || "-", 10) + p(s.name, 12) + p(s.email || "-", 26) + (s.phone || "-")));
+    if (withContacts) {
+      out.push("섹션      이름        이메일                    전화번호", "-".repeat(64));
+      data.staff.forEach(s => out.push(p(s.section || "-", 10) + p(s.name, 12) + p(s.email || "-", 26) + (s.phone || "-")));
+    } else {
+      out.push(p("섹션", 10) + "이름", "-".repeat(28));
+      data.staff.forEach(s => out.push(p(s.section || "-", 10) + s.name));
+    }
     out.push("", "[ 근무 ]", "");
     const groups = {};
     data.staff.forEach(s => (groups[secOf(s)] ||= []).push(s));
@@ -1188,7 +1314,7 @@ function renderRoster() {
                               for (let i = 1; i <= n; i++) a.push(new Date(cursor.getFullYear(), cursor.getMonth(), i)); return a; })();
     const withMail = data.staff.filter(s => s.email);
     sendSec.appendChild(el(`<h2>보내기</h2>`));
-    sendSec.appendChild(el(`<p class="hint">메일 한 통에 <b>직원 명단</b>과 <b>${week ? "이번 주" : cursor.getMonth() + 1 + "월"} 근무</b>가 함께 들어가고, 전 직원에게 한꺼번에 나갑니다. 보내기는 직접 누르셔야 합니다.</p>`));
+    sendSec.appendChild(el(`<p class="hint">메일 한 통에 <b>직원 명단(섹션·이름)</b>과 <b>${week ? "이번 주" : cursor.getMonth() + 1 + "월"} 근무</b>가 함께 들어가고, 전 직원에게 한꺼번에 나갑니다. 보내기는 직접 누르셔야 합니다.</p>`));
     const btns = el(`<div class="row-in"></div>`);
     const m = el(`<button type="button" class="btn-primary" style="padding:12px 18px">메일로 보내기 (${withMail.length}명)</button>`);
     if (!withMail.length) { m.disabled = true; m.style.opacity = .5; }
@@ -1200,12 +1326,27 @@ function renderRoster() {
     };
     const c = el(`<button type="button" style="padding:12px 18px;font-weight:700">복사 (카톡용)</button>`);
     c.onclick = () => {
-      const t = body(D);
-      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject())
-        .then(() => alert("근무표를 복사했습니다.")).catch(() => prompt("아래 내용을 복사하세요", t));
+      // 조용히 복사되면 alert 로 알리고, prompt 로 넘어갔으면 이미 창을 봤으니 조용히 지나간다
+      copyText(body(D), "아래 근무표를 복사해서 단톡방에 붙여넣으세요")
+        .then(r => { if (r === "copied") alert("근무표를 복사했습니다."); });
     };
     btns.append(m, c);
     sendSec.appendChild(btns);
+
+    /* 연락처 포함 여부. 기본은 꺼둔다 — 위 withContacts 주석 참고 */
+    const opt = el(`<label class="card" style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-top:10px">
+      <input type="checkbox" style="margin-top:2px;width:16px;height:16px;flex:none;accent-color:var(--accent)">
+      <span style="font-size:12.5px;line-height:1.6;color:var(--ink-2)">
+        <b>명단에 이메일·전화번호도 넣기</b><br>
+        기본은 <b>섹션·이름만</b> 나갑니다. 이걸 켜면 받는 직원 전원이 서로의 연락처를 보게 됩니다.
+        받는 사람은 숨은참조로 가리지만 본문에 적히면 가린 의미가 없습니다.
+      </span></label>`);
+    const cb = opt.querySelector("input");
+    cb.checked = withContacts;
+    cb.onchange = () => { withContacts = cb.checked; };   // 본문은 누를 때 만들어지므로 다시 그릴 필요가 없다
+    sendSec.appendChild(opt);
+
+    if (!withMail.length) sendSec.appendChild(el(`<p class="muted" style="margin-top:8px">이메일이 입력된 직원이 없습니다. <b>복사</b>를 눌러 단톡방에 붙여넣으세요.</p>`));
   }
   paint();
 }

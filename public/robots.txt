@@ -1,0 +1,6 @@
+# 이 서비스는 검색에 노출되지 않는다.
+# 레시피는 영업비밀이고(docs/08_DECISION_LOG.md), 체크리스트 공유 링크도
+# 매장 밖 사람이 열어볼 이유가 없다.
+# metadata의 robots는 Next 라우트에만 걸리므로 정적 파일(public/)은 여기서 막는다.
+User-agent: *
+Disallow: /
