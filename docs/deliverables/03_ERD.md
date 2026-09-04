@@ -1,5 +1,17 @@
 # 03. 데이터 모델 / ERD
 
+> **2026-09-04 갱신** — 운영 기능 7종(원가·근태·출퇴근·매출·발주·거래처·근로계약서)이
+> 추가되어 **localStorage 엔티티 9종이 늘었다.** → **3-A절** (3-14 ~ 3-22)
+>
+> 핵심은 **새 데이터를 거의 만들지 않았다**는 점이다. 원가는 `RECIPE × INGREDIENT ×
+> VENDOR_ITEM`의 계산 결과이고 근태는 `ASSIGN × PUNCH × SHIFT`의 계산 결과라서,
+> **둘 다 저장되지 않는다.** 그래서 엔티티 표에 없다.
+>
+> 새로 생긴 문제 둘:
+> - **느슨한 참조가 하나 늘었다** — `VENDOR_ITEM.name` ↔ `INGREDIENT.name`.
+>   기존 3건과 달리 **결과가 돈으로 나온다** (3-17절)
+> - **저장소 키 8개가 늘었고 그중 6개에 삭제 경로가 없다** (6절)
+
 | | |
 |---|---|
 | 작성일 | 2026-09-03 |
@@ -98,6 +110,7 @@ function load(): SeedData {
 > | `PREP_TASK.recipeSlug` 느슨한참조 | `recipe_id text references recipe(id)` | #3 |
 > | `SHIFT_FOCUS.slug` 느슨한참조 | `position_id`/`prep_list_id` 두 FK | #4 |
 > | `ASSIGN.shift_name` 이름문자열 | `shift_id text references shift(id)` | #5 |
+| **`VENDOR_ITEM.name` 이름문자열** ↔ `INGREDIENT.name` | `ingredient_id`? **❓ 미결정 — 한 재료를 여러 거래처에서 사는 경우를 함께 정해야 한다** | **#6 (신설)** |
 >
 > **DDL이 만들 최종 스키마는 8절 본문이 유일한 기준이다.** 지금 코드가 실제로 다루는 칸은 3절 속성 표에서 본다.
 
@@ -107,6 +120,7 @@ function load(): SeedData {
 |---|---|
 | `data/seed.json`에 있음 (서버 데이터) | `STORE` `POSITION` `SECTION` `STEP` `RECIPE` `INGREDIENT` `PREP_LIST` `PREP_TASK` `SHIFT` `SHIFT_FOCUS` |
 | 브라우저 localStorage에만 있음 | `STAFF` `ASSIGN` (`sop:roster`. 3-11·3-12절) |
+| **브라우저 localStorage에만 있음 (2026-09-04 추가)** | `PUNCH` `CONTRACT` `VENDOR` `VENDOR_ITEM` `DAY_SALES` `ORDER_STATE` `ORDER_LINK` `SETTINGS` `OWNER_PIN` (3-A절) |
 | 파일에만 있음 | `EVENT` (`data/events.jsonl` 무스키마 append. 7절) |
 | **코드에 대응물이 아예 없다 — DDL 신설** | `MEDIA_KEY` (지금은 파일명 규약이 대신한다. 3-13절) · **`CHECKLIST_CHECK`** · **`PREP_CHECK`** (지금은 localStorage 날짜 키뿐. **1-2절 한계 #4·#5·#6이 이 둘로 풀린다**) |
 
@@ -557,6 +571,198 @@ ERD에서 가장 오해를 사기 쉬운 부분이다. 데이터에 경로를 �
 
 ---
 
+
+---
+
+## 3-A. 운영 기능 엔티티 (2026-09-04 추가) — 전부 localStorage
+
+> ### ★ 이 9종의 공통점 — 새 데이터를 거의 만들지 않았다
+>
+> 화면은 7개가 늘었지만 **엔티티 사이의 새 관계는 대부분 기존 것에 붙었다.**
+>
+> | 새 엔티티 | 무엇에 붙는가 | 연결 방식 |
+> |---|---|---|
+> | `PUNCH` | `STAFF` + `ASSIGN`(계획) + `SHIFT`(시작 시각) | `staff_id` + `date` |
+> | `CONTRACT` | `STAFF` | `staff_id` |
+> | `VENDOR_ITEM` | `INGREDIENT` | ⚠️ **이름 문자열 일치** (느슨한 참조) |
+> | `ORDER_STATE` | `PREP_TASK` (`kind = "order"`) | `task_id` |
+> | `ORDER_LINK` | `PREP_TASK` ↔ `VENDOR` | `task_id` → `vendor_id` |
+> | `SETTINGS.prices` | `RECIPE` | ⚠️ 앱은 `recipe.id` 키, 단일 파일은 `recipe.slug` 키 |
+>
+> **원가는 엔티티가 아니라 계산 결과다.** `RECIPE × INGREDIENT × VENDOR_ITEM`을 곱해서
+> 나오며 저장되지 않는다 (`src/lib/cost.ts`). 근태도 마찬가지로
+> `ASSIGN × PUNCH × SHIFT`의 계산 결과다 (`judgeDay()`). 그래서 이 둘은 표에 없다.
+
+### 3-14. `punch` — `src/lib/attendance.ts:23-35` **(개인정보 · 근로기준법 보존 대상)**
+
+현재 형태: `Record<staffId, Record<"YYYY-MM-DD", Punch>>` — `ASSIGN`과 **같은 모양으로 맞췄다.**
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `"pu-" + 랜덤7자` | |
+| `staff_id` | string / `text` | X | — | → `staff(id)`. 복합 PK 1 | ● |
+| `date` | string / `date` | X | — | `"YYYY-MM-DD"`. 복합 PK 2 | ● |
+| `in_at` | string / `time` | X | `''` | `"07:28"`. 빈 문자열이면 출근 미기록 | ● |
+| `out_at` | string / `time` | X | `''` | 빈 문자열이면 **근무 중** (0이 아니다) | ● |
+| `break_min` | number / `integer` | X | `0` | 휴게시간(분). 근로시간에서 뺀다 | ● |
+| `note` | string / `text` | X | `''` | | ● |
+
+> ⚠️ **`out_at`이 `in_at`보다 작을 수 있다.** 자정을 넘기는 마감조(23:00 → 01:00)다.
+> `workedMinutes()`가 `b + 1440 - a`로 처리한다. **RDB로 옮길 때 `time` 두 칸으로 두면
+> 같은 함정이 서버에도 생긴다** — `timestamptz` 두 칸으로 바꾸는 편이 안전하다.
+> 테스트로 고정: `tests/attendance.test.ts` "자정을 넘겨도 음수가 나오지 않는다".
+
+### 3-15. `contract` — `src/lib/contracts.ts:28-50` **(개인정보 · 급여 정보)**
+
+현재 형태: `Contract[]`. 한 직원에게 여러 계약이 있을 수 있고,
+**시작일이 가장 늦은 것이 현재 계약**이다 (`contractOf()`).
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `"ct-" + 랜덤7자` | |
+| `staff_id` | string / `text` | X | — | → `staff(id)` | ● |
+| `start_date` | string / `date` | X | `''` | 계약 시작일 | ● |
+| `end_date` | string / `date` | X | `''` | **빈 문자열 = 기간의 정함이 없는 근로계약** | ● |
+| `hourly_wage` | number / `integer` | X | `0` | **시급(원).** `0`은 "미입력"이며 최저임금 경고를 띄우지 않는다 | ● **급여** |
+| `weekly_hours` | number / `integer` | X | `0` | 1주 소정근로시간. **15 이상이면 주휴수당 발생** | ● |
+| `work_days` | number[] / `smallint[]` | X | `[]` | 0=일 … 6=토 | ● |
+| `start_time` | string / `time` | X | `''` | 소정 근로시간대 시작 | ● |
+| `end_time` | string / `time` | X | `''` | | ● |
+| `handed_over` | boolean / `boolean` | X | `false` | ★ **서면 교부 여부.** 근로기준법 제17조 | ● |
+| `insured` | boolean / `boolean` | X | `false` | 4대보험 가입 | ● |
+| `note` | string / `text` | X | `''` | 수습 기간·담당 업무 | ● |
+
+> ### ★ 없는 칸이 중요하다
+>
+> **주민등록번호·주소·계좌번호 칸이 없다.** 개인정보보호법 제24조의2가 암호화 저장을
+> 요구하는데 localStorage로는 못 맞춘다. 이유를 `contracts.ts:1-24`에 코드와 함께 남겼다.
+> **RDB로 옮길 때도 이 결정을 그대로 유지할 것** — 서버에 올리면 암호화는 가능해지지만
+> 그때는 "법령상 근거"를 먼저 확정해야 한다.
+>
+> ⚠️ **퇴사일 칸도 없다.** `end_date`는 계약 종료일이지 퇴사일이 아니다.
+> 근로기준법 제42조의 3년 보존은 퇴사일부터 기산하므로 **보존 만기를 정확히 계산할 수 없다.**
+> `keepUntil()`은 `end_date || start_date` + 3년으로 근사한다.
+
+### 3-16. `vendor` — `src/lib/vendors.ts:16-36`
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
+|---|---|---|---|---|---|
+| `id` | string / `text` | X | — | `"vd-" + 랜덤7자` | |
+| `name` | string / `text` | X | `''` | 업체명 | |
+| `phone` | string / `text` | X | `''` | ⚠️ 업체 대표번호일 수도, **담당자 개인 휴대번호**일 수도 있다 | ●? |
+| `contact` | string / `text` | X | `''` | ⚠️ **담당자 이름** — 제3자의 개인정보다 | ● |
+| `how` | string / `text` | X | `'전화'` | 전화 / 카톡 / 앱 / 홈페이지 / 방문 | |
+| `cutoff` | string / `time` | X | `'15:00'` | **주문 마감 시각.** 넘기면 주문일이 하루 밀린다 | |
+| `deliver_days` | number[] / `smallint[]` | X | `[1..6]` | 배송 요일. **빈 배열은 "매일"로 해석** (`arrivalOf()`) | |
+| `lead_days` | number / `integer` | X | `1` | 주문 후 며칠 | |
+| `note` | string / `text` | X | `''` | 최소 주문금액·계좌 | |
+
+### 3-17. `vendor_item` — `src/lib/vendors.ts:45-56` **(영업비밀 — 매입 단가)**
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 |
+|---|---|---|---|---|
+| `id` | string / `text` | X | — | `"vi-" + 랜덤7자` |
+| `vendor_id` | string / `text` | X | — | → `vendor(id)`. 거래처 삭제 시 **함께 삭제** (`removeVendor()`) |
+| `name` | string / `text` | X | `''` | ⚠️ **`ingredient.name`과 글자 그대로 같아야** 원가가 붙는다 |
+| `pack_amount` | number / `numeric` | X | `0` | 한 번에 사는 수량. **`0`이면 단가 계산을 하지 않는다** (0으로 나누기 방지) |
+| `pack_unit` | string / `text` | X | `'g'` | 그 수량의 단위 |
+| `pack_price` | number / `integer` | X | `0` | 그 한 팩의 값(원, 부가세 포함가) |
+| `note` | string / `text` | X | `''` | |
+
+> ### ⚠️ 느슨한 참조 — 8-1절 목록에 한 건 추가된다
+>
+> `vendor_item.name` ↔ `ingredient.name`이 **이름 문자열로 이어진다.**
+> `PREP_TASK.recipeSlug`(#3)·`SHIFT_FOCUS.slug`(#4)·`ASSIGN.shift_name`(#5)과 같은 종류이고,
+> **여기서는 결과가 돈으로 나온다.**
+>
+> - "우유"와 "멸균우유"를 자동으로 잇지 않는다 (일부러 그렇게 했다 — 이었으면 원가가 틀린다)
+> - 재료명을 고치면 그 재료의 단가가 조용히 사라지고, 원가율이 **낮아진다**
+> - `findItemByName()`은 `trim()`만 하고 그 외에는 정확히 일치해야 한다
+>
+> **DDL로 옮길 때:** `ingredient`에 안정적인 id를 주고 `vendor_item.ingredient_id`로
+> 참조하는 것이 맞다. 다만 **한 재료를 여러 거래처에서 사는 경우**(원두를 두 곳에서)를
+> 어떻게 다룰지 함께 정해야 한다 — 지금 `findItemByName()`은 **먼저 찾은 것 하나만** 쓴다.
+> ❓ 미결정.
+
+### 3-18. `day_sales` — `src/lib/sales.ts:18-27` **(영업비밀)**
+
+현재 형태: `Record<"YYYY-MM-DD", DaySales>`.
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 |
+|---|---|---|---|---|
+| `date` | string / `date` | X | — | PK |
+| `total` | number / `integer` | X | `0` | 총매출(원) |
+| `count` | number / `integer` | X | `0` | 결제 건수. **`0`이면 객단가를 계산하지 않는다** |
+| `material` | number / `integer` | X | `0` | 그날 재료비(보통 발주 금액) |
+| `note` | string / `text` | X | `''` | 비·행사·기계 고장 — 나중에 왜 그랬는지 알려면 필요하다 |
+
+> **인건비 칸이 없다.** 물어보지 않고 `PUNCH × CONTRACT`에서 계산한다 (`dayLaborCost()`).
+> 마감 입력을 세 칸으로 유지하려는 결정이고, 그 이상 요구하면 안 쓴다는 판단이다.
+
+### 3-19. `order_state` — `src/lib/orders.ts:19-26`
+
+현재 형태: `Record<"YYYY-MM-DD", Record<taskId, OrderState>>`.
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 |
+|---|---|---|---|---|
+| `date` | string / `date` | X | — | 복합 PK 1 |
+| `task_id` | string / `text` | X | — | 복합 PK 2. → `prep_task(id)` (`kind = "order"`인 것) |
+| `ordered` | boolean / `boolean` | X | `false` | 주문을 넣었다 |
+| `received` | boolean / `boolean` | X | `false` | 물건이 들어왔다 |
+| `memo` | string / `text` | X | `''` | 수량 — 사람이 읽는 문장 ("우유 12팩") |
+
+> ### ★ 왜 칸이 두 개인가
+> 종이 체크리스트는 "주문함"까지만 적는다. 그런데 사고는 대개
+> **주문은 했는데 안 들어온 것을 아침에 모르는 데서** 난다.
+> `pendingFrom()`이 `ordered && !received`인 지난 7일치를 찾아 화면 맨 위에 띄운다.
+> **이 한 칸이 종이가 못 하는 일이다.**
+
+### 3-20. `order_link` — `src/lib/orders.ts:32`
+
+`Record<taskId, vendorId>` — `PREP_TASK` ↔ `VENDOR`의 **다대일 연결**.
+발주 문구를 거래처별로 모을 때 쓴다.
+
+| 컬럼 | TS / PG 타입 | 널 | 설명 |
+|---|---|---|---|
+| `task_id` | string / `text` | X | PK. → `prep_task(id)` |
+| `vendor_id` | string / `text` | X | → `vendor(id)`. ⚠️ 거래처를 지우면 **이 연결이 고아가 된다** (정리 코드 없음) |
+
+### 3-21. `settings` — `src/lib/settings.ts:10-42` (단일 행)
+
+| 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 |
+|---|---|---|---|---|
+| `min_wage` | number / `integer` | X | `10320` | 최저임금 시급. **2026년 적용액.** 코드에 박지 않고 기본값으로만 둔다 — 해마다 바뀐다 |
+| `five_or_more` | boolean / `boolean` | X | **`false`** | ★ 상시 근로자 5인 이상 여부. **이 한 칸이 인건비 금액을 바꾼다** (근로기준법 제11조·제56조) |
+| `target_cost_rate` | number / `numeric` | X | `30` | 목표 원가율(%) |
+| `prices` | `Record<string,number>` / 별도 테이블 | X | `{}` | 레시피별 판매가. **키가 앱은 `recipe.id`, 단일 파일은 `recipe.slug`다** |
+| `excluded` | string[] / 별도 테이블 | X | `[]` | ★ 원가에 세지 않을 재료 이름 |
+
+> ### ★ `excluded`가 왜 필요한가 — 이 모델에서 가장 미묘한 칸
+>
+> 아메리카노 레시피에 **`원두 (도징) 18g`과 `추출량 36g`이 둘 다 있다.**
+> 추출량은 사는 재료가 아니라 **원두 18g이 나온 결과**다. 그런데 원가 화면이
+> "단가가 없는 재료"로 세어서 **"채우세요"라고 권했다.** 채우면 원두가 두 번 계산된다.
+>
+> 즉 이 칸은 **레시피 모델의 구조적 문제를 덮는 우회로다.**
+> 근본 해법은 `ingredient`에 "구매 대상인가 / 계산 결과인가"를 구분하는 판별 칸을 두는 것이다
+> (`PREP_TASK.kind`와 같은 방식).
+> ❓ **미결정. `types.ts`의 `Ingredient`를 고치는 일이라 시드도 함께 바꿔야 한다.**
+> 현재 동작은 테스트로 고정: `tests/cost.test.ts` "제외하지 않으면 원두가 두 번 계산된다".
+
+### 3-22. `owner_pin` — `src/lib/ownerGate.ts:21-38 (키 상수 + digest())` **(가리개. 접근 통제가 아니다)**
+
+| 키 | 저장소 | 값 | 설명 |
+|---|---|---|---|
+| `sop:ownerPin` | localStorage | `string` | FNV-1a 계열 단방향 요약값(36진수). **평문 아님.** 암호학적 해시도 아니다 |
+| `sop:ownerOpen` | **sessionStorage** | `"1"` | 잠금 해제 상태. **브라우저를 닫으면 사라진다** |
+
+> ⚠️ **RDB 이전 시 이 두 키는 옮기지 않는다.** 서버가 붙으면 잠금은
+> **Supabase Row Level Security + 실제 인증**으로 대체되어야 한다.
+> 지금 구조는 검사가 브라우저 안에서 돌고 데이터는 평문이므로 접근 통제가 아니다.
+> `ownerGate.ts:1-20`에 같은 말을 코드 주석으로 남겼다.
+
+---
+
 ## 4. 관계와 카디널리티 정리
 
 | 관계 | 카디널리티 | 구현 방식 | FK 제약 | 실측 |
@@ -727,7 +933,7 @@ CONSTRAINT shift_focus_shape CHECK (
 
 ## 6. 브라우저 저장소 스키마 (현재 구현. 전수)
 
-`grep -rn "localStorage\|sessionStorage" src/`로 전수 확인. **`src/`(Next 앱)의 키는 6종이다.** 단 같은 오리진에 `public/app.html`이 함께 서빙되고 그쪽은 키가 다르다 → 6-4절.
+`grep -rn "localStorage\|sessionStorage" src/`로 전수 확인. **`src/`(Next 앱)의 키는 14종이다** (2026-09-04에 6 → 14로 늘었다). 단 같은 오리진에 `public/app.html`이 함께 서빙되고 그쪽은 키가 다르다 → 6-4절.
 
 | # | 키 형식 | 저장소 | 값 구조 | 만료 / 초기화 규칙 | 정의 위치 |
 |---|---|---|---|---|---|
@@ -737,6 +943,29 @@ CONSTRAINT shift_focus_shape CHECK (
 | 4 | `sop:run:{shareSlug}` | **sessionStorage** | `{ runId: string; idx: number; startedAt: number(epoch ms); confirmed: string[] }` | 교육 완료 시 `removeItem`(`TrainingMode.tsx:83`). **탭을 닫으면 소멸** | `TrainingMode.tsx:62` |
 | 5 | `sop:recipes` | localStorage | `Recipe[]` — 직접 추가한 레시피 전체 배열 | **없음.** 개별 삭제만 (`removeLocalRecipe`) | `localRecipes.ts:14` |
 | 6 | `sop:roster` | localStorage | `{ staff: Staff[]; assign: Assign }` | **없음** | `roster.ts:29` |
+| 7 | ⚠️ `sop:punch` | localStorage | `Record<staffId, Record<"YYYY-MM-DD", Punch>>` | **없음.** 삭제 코드 0건 | `attendance.ts:40` |
+| 8 | ⚠️ `sop:contracts` | localStorage | `Contract[]` | **없음.** 개별 삭제만 | `contracts.ts:52` |
+| 9 | `sop:settings` | localStorage | `Settings` (단일 객체) | **없음.** 삭제 경로 없음 | `settings.ts:44` |
+| 10 | `sop:vendors` | localStorage | `{ vendors: Vendor[]; items: VendorItem[] }` | **없음.** 개별 삭제만 | `vendors.ts:63` |
+| 11 | `sop:sales` | localStorage | `Record<"YYYY-MM-DD", DaySales>` | **없음.** 삭제 코드 0건 | `sales.ts:32` |
+| 12 | `sop:orderLog` | localStorage | `Record<"YYYY-MM-DD", Record<taskId, OrderState>>` | **없음.** 삭제 코드 0건 | `orders.ts:34` |
+| 13 | `sop:orderLinks` | localStorage | `Record<taskId, vendorId>` | **없음.** 삭제 코드 0건 | `orders.ts:35` |
+| 14 | `sop:ownerPin` | localStorage | `string` (단방향 요약값) | **없음.** 재설정 경로 없음 | `ownerGate.ts:21` |
+| 15 | `sop:ownerOpen` | **sessionStorage** | `"1"` | **브라우저를 닫으면 소멸** | `ownerGate.ts:22` |
+
+> ### ⚠️ 새 8키 중 6개에 삭제 경로가 없다
+>
+> `sop:punch`·`sop:sales`·`sop:orderLog`·`sop:orderLinks`·`sop:settings`·`sop:ownerPin`.
+> 이 중 **`sop:punch`가 가장 문제다** — 직원별 근로시간이 무기한 누적되는데 화면에서
+> 지울 방법이 없다. 개인정보 파기 요구에 대응할 수 없다.
+>
+> 다만 **단순히 삭제 버튼을 만드는 것이 답이 아니다.** 출퇴근·계약은 근로기준법이 3년
+> 보존을 요구하는 정보이기도 하다. 두 의무가 부딪치는 문제이고,
+> [10 개인정보처리방침](10_개인정보처리방침.md) **3-5절**에서 따로 다룬다.
+>
+> **6-1절의 "6종 중 4번만 sessionStorage"는 이제 "15종 중 4번과 15번"이다.**
+> 그리고 두 번째 sessionStorage(`sop:ownerOpen`)를 고른 이유도 첫 번째와 같다 —
+> **공용 태블릿이라 영구히 남으면 안 되기 때문이다.**
 
 ### 6-1. 6종 중 4번만 sessionStorage인 이유
 
