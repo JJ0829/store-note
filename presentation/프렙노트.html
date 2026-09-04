@@ -261,11 +261,11 @@ td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: blur(10px); border-top: 1px solid var(--line);
 }
-.tabbar-in { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tabbar-in { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); }
 .tabbar button {
   border: 0; border-radius: 0; background: none; padding: 9px 4px 12px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font-size: 11px; font-weight: 600; color: var(--ink-3);
+  font-size: 10.5px; font-weight: 600; color: var(--ink-3);
 }
 .tabbar button[aria-current="page"] { color: var(--accent); }
 .tabbar .ic { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -654,6 +654,342 @@ const fmt = (n, s) => {
 const recipeBy = s => DATA.recipes.find(r => r.slug === s);
 const CHECK = '<svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 8 14.5 16 6"/></svg>';
 
+/* ================================================================== *
+   운영 기능 — 원가 · 근태 · 출퇴근 · 매출 · 발주 · 거래처 · 근로계약서
+
+   Next.js 앱의 src/lib/{units,vendors,cost,attendance,contracts,
+   sales,orders,settings,ownerGate}.ts 와 같은 계산이다.
+   숫자가 두 곳에서 다르게 나오면 발표 중에 바로 들킨다.
+
+   지키는 규칙 셋 (전부 테스트로 못 박혀 있다):
+     1) 계열이 다른 단위는 계산하지 않는다 (g↔ml 금지)
+     2) 단가를 못 구한 재료를 0원으로 세지 않는다
+     3) 자정을 넘기는 마감조에서 음수 근로시간이 나오지 않는다
+ * ================================================================== */
+
+/* ---------- 돈 · 퍼센트 ---------- */
+const won = v => Number.isFinite(v) ? Math.round(v).toLocaleString("ko-KR") : "-";
+const pct = (part, whole) =>
+  (!Number.isFinite(part) || !Number.isFinite(whole) || whole === 0)
+    ? "-" : (Math.round((part / whole) * 1000) / 10).toFixed(1);
+
+/* ---------- 한글 조사 ----------
+   "${how}으로"라고 박아두면 "전화으로 보내세요"가 된다.
+   한글 음절은 0xAC00부터 28개 종성 단위라 (코드-0xAC00)%28 이 0이면 받침이 없다. */
+function jong(word) {
+  const s = String(word).trim();
+  if (!s) return null;
+  const c = s.charCodeAt(s.length - 1);
+  return (c < 0xac00 || c > 0xd7a3) ? null : (c - 0xac00) % 28;
+}
+const ro  = w => { const j = jong(w); return `${w}${j === null || j === 0 || j === 8 ? "로" : "으로"}`; };
+const eul = w => { const j = jong(w); return `${w}${j === null || j === 0 ? "를" : "을"}`; };
+const gwa = w => { const j = jong(w); return `${w}${j === null || j === 0 ? "와" : "과"}`; };
+
+/* ---------- 단위 환산 ----------
+   원가가 여기서 다 틀어진다. 레시피는 "강력분 2000g"인데 거래처는
+   "밀가루 20kg 34,000원"으로 판다. 못 맞추면 원가가 1000배 틀린다.
+
+   ★ g과 ml은 절대 안 바꾼다. 밀가루 0.55, 우유 1.03, 오일 0.92 —
+     밀도를 모르는 채 바꾸면 조용히 틀린 값이 나오고 사람이 못 알아챈다.
+     개수 단위(개·장·팩)도 이름이 같을 때만 센다. */
+const UNIT_TABLE = {
+  mg:{f:"weight",p:0.001}, g:{f:"weight",p:1}, "그램":{f:"weight",p:1},
+  kg:{f:"weight",p:1000}, "킬로":{f:"weight",p:1000}, "킬로그램":{f:"weight",p:1000},
+  ml:{f:"volume",p:1}, cc:{f:"volume",p:1}, "밀리":{f:"volume",p:1},
+  l:{f:"volume",p:1000}, "리터":{f:"volume",p:1000}
+};
+function unitOf(u) {
+  const k = String(u).trim().toLowerCase();
+  return UNIT_TABLE[k] || { f: "as:" + k, p: 1 };   // 표에 없으면 그 이름이 계열
+}
+function convert(amount, from, to) {
+  if (!Number.isFinite(amount)) return null;
+  const a = unitOf(from), b = unitOf(to);
+  if (a.f !== b.f || b.p === 0) return null;
+  return (amount * a.p) / b.p;
+}
+function familyLabel(u) {
+  const f = unitOf(u).f;
+  return f === "weight" ? "무게" : f === "volume" ? "부피" : `'${String(u).trim()}' 단위`;
+}
+const COMMON_UNITS = ["g","kg","ml","L","개","장","팩","봉"];
+
+/* ---------- 설정 ---------- */
+const SETTINGS_DEFAULT = { minWage: 10320, fiveOrMore: false, targetCostRate: 30, prices: {}, excluded: [] };
+function loadSettings() {
+  const s = store.get("settings", {}) || {};
+  return {
+    minWage: typeof s.minWage === "number" ? s.minWage : SETTINGS_DEFAULT.minWage,
+    fiveOrMore: s.fiveOrMore === true,
+    targetCostRate: (typeof s.targetCostRate === "number" && s.targetCostRate > 0) ? s.targetCostRate : 30,
+    prices: (s.prices && typeof s.prices === "object") ? s.prices : {},
+    excluded: Array.isArray(s.excluded) ? s.excluded : []
+  };
+}
+const saveSettings = s => store.set("settings", s);
+
+/* ---------- 거래처 ---------- */
+const HOW_OPTIONS = ["전화","카톡","앱","홈페이지","방문"];
+function loadVendors() {
+  const d = store.get("vendors", {}) || {};
+  return { vendors: Array.isArray(d.vendors) ? d.vendors : [], items: Array.isArray(d.items) ? d.items : [] };
+}
+const saveVendors = d => store.set("vendors", d);
+const newId = p => `${p}-${Math.random().toString(36).slice(2, 9)}`;
+const newVendor = () => ({ id:newId("vd"), name:"", phone:"", contact:"", how:"전화",
+  cutoff:"15:00", deliverDays:[1,2,3,4,5,6], leadDays:1, note:"" });
+const newVendorItem = vid => ({ id:newId("vi"), vendorId:vid, name:"", packAmount:0, packUnit:"g", packPrice:0, note:"" });
+
+/** 품목 단가를 원하는 단위로. 계열이 다르면 null */
+function unitPrice(item, unit) {
+  if (!(item.packAmount > 0) || !Number.isFinite(item.packPrice)) return null;
+  const packInUnit = convert(item.packAmount, item.packUnit, unit);
+  if (packInUnit === null || packInUnit === 0) return null;
+  return item.packPrice / packInUnit;
+}
+const findItemByName = (items, name) => items.find(i => String(i.name).trim() === String(name).trim()) || null;
+
+/** 오늘 주문하면 언제 오는가. 마감을 넘겼으면 주문일이 하루 밀리고, 배송 안 하는 요일은 건너뛴다 */
+function arrivalOf(vendor, now) {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const [ch, cm] = String(vendor.cutoff || "23:59").split(":").map(Number);
+  if (Number.isFinite(ch) && now.getHours()*60 + now.getMinutes() >= (ch||0)*60 + (cm||0)) d.setDate(d.getDate()+1);
+  d.setDate(d.getDate() + Math.max(0, vendor.leadDays));
+  const days = (vendor.deliverDays && vendor.deliverDays.length) ? vendor.deliverDays : [0,1,2,3,4,5,6];
+  for (let i = 0; i < 7 && !days.includes(d.getDay()); i++) d.setDate(d.getDate()+1);
+  return d;
+}
+function minutesToCutoff(vendor, now) {
+  const [h, m] = String(vendor.cutoff || "23:59").split(":").map(Number);
+  if (!Number.isFinite(h)) return 0;
+  return (h||0)*60 + (m||0) - (now.getHours()*60 + now.getMinutes());
+}
+
+/* ---------- 원가 ----------
+   ★ 값을 못 구한 재료를 0원으로 세지 않는다. 재료 여섯 중 둘의 단가가
+     없는데 원가율 11%가 뜨면 사장님은 그 숫자로 가격을 정한다.
+   ★ "추출량"처럼 사는 게 아니라 결과인 항목은 excluded로 뺀다.
+     안 빼면 원두가 두 번 계산된다. */
+function costOfRecipe(recipe, items, excluded) {
+  const skip = new Set((excluded || []).map(n => String(n).trim()));
+  const lines = recipe.ingredients.map(ing => {
+    const base = { name: ing.name, amount: ing.amount, unit: ing.unit };
+    if (skip.has(String(ing.name).trim()))
+      return { ...base, cost: 0, problem: null, excluded: true };
+    const item = findItemByName(items, ing.name);
+    if (!item)
+      return { ...base, cost: null, problem: "거래처에 단가가 없습니다", excluded: false };
+    const per = unitPrice(item, ing.unit);
+    if (per === null)
+      return { ...base, cost: null, excluded: false,
+        problem: `단위가 안 맞습니다 (레시피 ${familyLabel(ing.unit)} · 거래처 ${familyLabel(item.packUnit)})` };
+    return { ...base, cost: per * ing.amount, problem: null, excluded: false };
+  });
+  const total = lines.reduce((s, l) => s + (l.cost || 0), 0);
+  const y = recipe.yield.amount > 0 ? recipe.yield.amount : 1;
+  return { lines, total, missing: lines.filter(l => l.cost === null).length, perUnit: total / y };
+}
+const costRate = (perUnit, price) =>
+  (!(price > 0) || !Number.isFinite(perUnit)) ? null : (perUnit / price) * 100;
+function suggestedPrice(perUnit, targetRate) {
+  if (!(targetRate > 0) || !Number.isFinite(perUnit) || perUnit <= 0) return null;
+  return Math.ceil((perUnit / (targetRate / 100)) / 100) * 100;   // 4,730원짜리 메뉴판은 없다
+}
+
+/* ---------- 출퇴근 · 근태 ---------- */
+const loadPunches = () => store.get("punch", {}) || {};
+const savePunches = d => store.set("punch", d);
+const getPunch = (data, staffId, date) => (data[staffId] || {})[date] || null;
+const putPunch = (data, p) => ({ ...data, [p.staffId]: { ...(data[p.staffId] || {}), [p.date]: p } });
+const newPunch = (staffId, date) => ({ id:newId("pu"), staffId, date, inAt:"", outAt:"", breakMin:0, note:"" });
+const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+function toMin(hm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hm).trim());
+  if (!m) return null;
+  const h = +m[1], mi = +m[2];
+  return (h > 23 || mi > 59) ? null : h * 60 + mi;
+}
+function hoursLabel(min) {
+  if (!Number.isFinite(min) || min <= 0) return "0분";
+  const h = Math.floor(min / 60), m = Math.round(min % 60);
+  return h === 0 ? `${m}분` : m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
+}
+/** 휴게를 빼기 전 구속시간. ★ 자정을 넘겨도 음수가 나오지 않게 */
+function spanMinutes(p) {
+  const a = toMin(p.inAt), b = toMin(p.outAt);
+  if (a === null || b === null) return null;
+  return b >= a ? b - a : b + 1440 - a;
+}
+function workedMinutes(p) {
+  const span = spanMinutes(p);
+  return span === null ? null : Math.max(0, span - Math.max(0, p.breakMin || 0));
+}
+/** 근로기준법 제54조 — 4시간 30분, 8시간 60분 */
+const requiredBreak = span => span >= 480 ? 60 : span >= 240 ? 30 : 0;
+
+const DAY_LIMIT = 480;      // 1일 8시간 (제50조)
+const LATE_GRACE = 5;       // 1~2분 차이로 지각을 붙이면 아무도 안 쓴다
+
+function judgeDay(date, planned, punch, shifts) {
+  const base = { date, planned, punch, workedMin: null, overtimeMin: 0, lateMin: 0, breakShort: false };
+  if (!planned && (!punch || !punch.inAt)) return { ...base, status: "휴무" };
+  if (!punch || !punch.inAt) return { ...base, status: "결근" };
+
+  const worked = workedMinutes(punch), span = spanMinutes(punch);
+  const shift = shifts.find(s => s.name === planned);
+  const startMin = shift ? toMin(shift.start) : null;
+  const inMin = toMin(punch.inAt);
+  let lateMin = 0;
+  if (startMin !== null && inMin !== null && inMin > startMin + LATE_GRACE) lateMin = inMin - startMin;
+
+  if (worked === null) return { ...base, status: "근무중", lateMin };
+  return { ...base, workedMin: worked, overtimeMin: Math.max(0, worked - DAY_LIMIT), lateMin,
+    breakShort: span !== null && (punch.breakMin || 0) < requiredBreak(span),
+    status: lateMin > 0 ? "지각" : "정상" };
+}
+
+/* 인건비 — ★ 추정이다. 4대보험·소득세·수습감액·연차수당 없음. 급여 대장 아님 */
+function estimatePay(days, input) {
+  const workedMin = days.reduce((s, d) => s + (d.workedMin || 0), 0);
+  const overtimeMin = days.reduce((s, d) => s + d.overtimeMin, 0);
+  const wage = Math.max(0, input.hourlyWage || 0);
+  const basePay = (workedMin / 60) * wage;
+  // ★ 5인 미만은 연장 가산수당이 없다 (근로기준법 제11조 · 제56조 적용 제외)
+  const overtimePay = input.fiveOrMore ? (overtimeMin / 60) * wage * 0.5 : 0;
+  const weekHours = (input.contractWeeklyHours > 0) ? input.contractWeeklyHours : workedMin / 60;
+  const weeklyEligible = weekHours >= 15;                     // 제55조
+  const holidayPay = weeklyEligible ? (Math.min(weekHours, 40) / 40) * 8 * wage : 0;
+  return { workedMin, overtimeMin, basePay, overtimePay, holidayPay,
+    total: basePay + overtimePay + holidayPay, weeklyEligible };
+}
+/** 하루치 인건비 — 주휴는 주 단위라 하루에 나눠 넣지 않는다 */
+function dayLaborCost(day, hourlyWage, fiveOrMore) {
+  const wage = Math.max(0, hourlyWage || 0);
+  return ((day.workedMin || 0) / 60) * wage + (fiveOrMore ? (day.overtimeMin / 60) * wage * 0.5 : 0);
+}
+
+/* ---------- 근로계약서 ----------
+   ★ 계약서 원본을 보관하지 않는다. 원본에는 주민등록번호가 들어가고,
+     개인정보보호법 제24조의2가 암호화 저장을 요구하는데 브라우저
+     저장소로는 못 맞춘다. 그래서 주민번호 칸을 아예 만들지 않았다. */
+const loadContracts = () => { const l = store.get("contracts", []); return Array.isArray(l) ? l : []; };
+const saveContracts = l => store.set("contracts", l);
+const newContract = staffId => ({ id:newId("ct"), staffId, startDate:"", endDate:"", hourlyWage:0,
+  weeklyHours:0, workDays:[], startTime:"", endTime:"", handedOver:false, insured:false, note:"" });
+function contractOf(list, staffId) {
+  return list.filter(c => c.staffId === staffId).sort((a,b) => a.startDate < b.startDate ? 1 : -1)[0] || null;
+}
+/** 계약 종료 후 3년 (근로기준법 제42조) */
+function keepUntil(c) {
+  const end = c.endDate || c.startDate;
+  if (!end) return null;
+  const d = new Date(end + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return null;
+  d.setFullYear(d.getFullYear() + 3);
+  return d;
+}
+function checkContract(c, minWage, today) {
+  today = today || new Date();
+  const out = [];
+  if (!c.handedOver) out.push({ level:"danger", title:"서면 교부를 아직 안 했습니다",
+    basis:"근로기준법 제17조 · 위반 시 500만원 이하 벌금" });
+  if (c.hourlyWage > 0 && minWage > 0 && c.hourlyWage < minWage)
+    out.push({ level:"danger", title:`시급이 최저임금(${minWage.toLocaleString("ko-KR")}원)보다 낮습니다`,
+      basis:"최저임금법 제6조 · 미달분은 무효이고 차액을 지급해야 합니다" });
+  if (!c.startDate) out.push({ level:"warn", title:"계약 시작일이 비어 있습니다",
+    basis:"근로기준법 제17조 · 근로계약기간은 서면 명시 사항입니다" });
+  if (c.weeklyHours >= 15) out.push({ level:"info", title:"주휴수당이 발생합니다 (주 15시간 이상)", basis:"근로기준법 제55조" });
+  else if (c.weeklyHours > 0) out.push({ level:"info", title:"주 15시간 미만이라 주휴수당이 없습니다", basis:"근로기준법 제18조 제3항" });
+  if (c.startDate && c.endDate) {
+    const s = new Date(c.startDate + "T00:00:00"), e = new Date(c.endDate + "T00:00:00");
+    if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime())) {
+      const months = (e.getFullYear()-s.getFullYear())*12 + (e.getMonth()-s.getMonth());
+      if (months > 24) out.push({ level:"warn", title:"계약 기간이 2년을 넘습니다",
+        basis:"기간제법 제4조 · 2년 초과 시 기간의 정함이 없는 근로계약으로 봅니다" });
+      const left = Math.ceil((e.getTime() - today.getTime()) / 86400000);
+      if (left >= 0 && left <= 30) out.push({ level:"warn", title:`계약이 ${left}일 뒤 만료됩니다`,
+        basis:"갱신하거나 종료 통보가 필요합니다" });
+    }
+  }
+  if (!c.insured) out.push({ level:"info", title:"4대보험 가입 표시가 없습니다",
+    basis:"월 60시간 이상이면 가입 대상입니다 — 확인해 주세요" });
+  return out;
+}
+
+/* ---------- 매출 ----------
+   ⚠ "남은 돈"은 순이익이 아니다. 임대료·공과금·카드수수료·세금이 없다 */
+const loadSales = () => store.get("sales", {}) || {};
+const saveSales = d => store.set("sales", d);
+const emptyDay = date => ({ date, total:0, count:0, material:0, note:"" });
+const getDaySales = (data, date) => data[date] || emptyDay(date);
+function profitOf(day, laborCost) {
+  const sales = day.total || 0, material = day.material || 0, labor = Math.max(0, laborCost || 0);
+  return { sales, material, labor, left: sales - material - labor,
+    perCustomer: day.count > 0 ? sales / day.count : null };
+}
+function sumRange(data, dates) {
+  return dates.reduce((acc, d) => {
+    const day = data[d];
+    if (!day) return acc;
+    return { ...acc, total: acc.total + (day.total||0), count: acc.count + (day.count||0),
+      material: acc.material + (day.material||0) };
+  }, { date: dates[0] || "", total:0, count:0, material:0, note:"" });
+}
+
+/* ---------- 발주 ----------
+   ★ "주문함"과 "들어옴"을 나눈다. 종이는 주문함까지만 적는데, 사고는
+     주문은 했는데 안 들어온 것을 아침에 모르는 데서 난다 */
+const loadOrderLog = () => store.get("orderLog", {}) || {};
+const saveOrderLog = l => store.set("orderLog", l);
+const loadOrderLinks = () => store.get("orderLinks", {}) || {};
+const saveOrderLinks = l => store.set("orderLinks", l);
+const EMPTY_ORDER = { ordered:false, received:false, memo:"" };
+const orderStateOf = (log, date, taskId) => (log[date] || {})[taskId] || EMPTY_ORDER;
+function putOrderState(log, date, taskId, patch) {
+  return { ...log, [date]: { ...(log[date] || {}), [taskId]: { ...orderStateOf(log, date, taskId), ...patch } } };
+}
+function pendingOrders(log, dates) {
+  const out = [];
+  for (const date of dates)
+    for (const [taskId, st] of Object.entries(log[date] || {}))
+      if (st.ordered && !st.received) out.push({ date, taskId, memo: st.memo });
+  return out;
+}
+function buildOrderText(storeName, vendorName, lines) {
+  const out = [`[${storeName}] 발주 요청`];
+  if (vendorName) out.push(`${vendorName} 담당자님, 아래와 같이 부탁드립니다.`);
+  out.push("");
+  for (const l of lines) out.push(`- ${l.name}${l.memo ? ` : ${l.memo}` : ""}`);
+  out.push("", "확인 후 회신 부탁드립니다. 감사합니다.");
+  return out.join("\n");
+}
+
+/* ---------- 사장님 잠금 ----------
+   ⚠ 보안이 아니라 가리개다. 기기를 가진 사람이 브라우저 도구를 열면
+     그대로 읽힌다. 홀 직원이 태블릿 만지다 매출·시급을 보는 것까지 막는다.
+   잠금 해제는 sessionStorage에 둔다 — 브라우저를 닫으면 다시 잠긴다. */
+function pinDigest(pin) {
+  let h = 2166136261;
+  const s = `sop-owner:${pin}`;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+function hasPin() { try { return !!localStorage.getItem("ownerPin"); } catch { return false; } }
+function setOwnerPin(pin) {
+  if (String(pin).length < 4) return false;
+  try { localStorage.setItem("ownerPin", pinDigest(pin)); unlockOwner(); return true; } catch { return false; }
+}
+function checkOwnerPin(pin) {
+  try { const v = localStorage.getItem("ownerPin"); return !!v && v === pinDigest(pin); } catch { return false; }
+}
+function unlockOwner() { try { sessionStorage.setItem("ownerOpen", "1"); } catch {} }
+function ownerOpen() {
+  if (!hasPin()) return true;                   // 처음 쓰는 사람을 가두지 않는다
+  try { return sessionStorage.getItem("ownerOpen") === "1"; } catch { return false; }
+}
+
 /* ------------------------------------------------------------------ *
    라우팅
  * ------------------------------------------------------------------ */
@@ -664,7 +1000,16 @@ const routes = {
   "recipe": renderRecipe,
   "roster": renderRoster,
   "study": renderStudy,
-  "list": renderChecklist
+  "list": renderChecklist,
+
+  /* 운영 기능 — 하나의 문(ops)에서 여섯 개로 갈라진다 */
+  "ops": renderOps,
+  "attend": renderAttend,
+  "contracts": renderContracts,
+  "sales": renderSales,
+  "cost": renderCost,
+  "order": renderOrder,
+  "vendors": renderVendors
 };
 
 function go(hash) { location.hash = hash; }
@@ -703,13 +1048,18 @@ const TABS = [
   { key:"prep",    label:"프렙",   icon:'<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/>' },
   { key:"recipes", label:"레시피", icon:'<path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2z"/><path d="M6 16h12"/>' },
   { key:"roster",  label:"근무표", icon:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
-  { key:"study",   label:"교육",   icon:'<path d="M12 5 3 8l9 3 9-3z"/><path d="M7 10v5c0 1.5 2.2 3 5 3s5-1.5 5-3v-5"/>' }
+  { key:"study",   label:"교육",   icon:'<path d="M12 5 3 8l9 3 9-3z"/><path d="M7 10v5c0 1.5 2.2 3 5 3s5-1.5 5-3v-5"/>' },
+  { key:"ops",     label:"운영",   icon:'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>' }
 ];
 
 function renderTabs(active) {
   const wrap = document.getElementById("tabs");
   wrap.innerHTML = "";
-  const cur = ["recipe"].includes(active) ? "recipes" : ["list"].includes(active) ? "study" : active;
+  // 하위 화면에서도 상위 탭이 켜져 있어야 지금 어디인지 알 수 있다
+  const OPS_KEYS = ["attend","contracts","sales","cost","order","vendors"];
+  const cur = ["recipe"].includes(active) ? "recipes"
+    : ["list"].includes(active) ? "study"
+    : OPS_KEYS.includes(active) ? "ops" : active;
   for (const t of TABS) {
     const b = el(`<button type="button" ${cur === t.key ? 'aria-current="page"' : ""}>
       <svg class="ic" viewBox="0 0 24 24">${t.icon}</svg>${t.label}</button>`);
@@ -787,7 +1137,11 @@ function renderHome() {
   const sec2 = el(`<section class="sec"><h2>바로 가기</h2><div class="rows"></div></section>`);
   [
     { label: "레시피 찾기", meta: `${DATA.recipes.length}개 · 이름으로 찾고 배수 계산`, to: "#/recipes" },
-    { label: "이번 주 근무표", meta: "짜서 전 직원에게 메일 발송", to: "#/roster" }
+    { label: "이번 주 근무표", meta: "짜서 전 직원에게 메일 발송", to: "#/roster" },
+    /* 근무표 바로 아래에 둔다 — 근무표가 계획이고 출퇴근이 실제라 짝이다 */
+    { label: "출퇴근 · 근태", meta: "버튼 두 개로 찍고, 근무표와 비교해 지각·연장을 봅니다", to: "#/attend" },
+    { label: "발주", meta: "주문 마감까지 남은 시간, 주문했는데 안 들어온 것", to: "#/order" },
+    { label: "운영 (원가 · 매출 · 거래처 · 계약서)", meta: "매출 − 재료비 − 인건비 = 오늘 남은 돈", to: "#/ops" }
   ].forEach(x => {
     const b = el(`<button type="button" class="nav-row"><span><b>${esc(x.label)}</b><span class="meta">${esc(x.meta)}</span></span><span class="chev">›</span></button>`);
     b.onclick = () => go(x.to);
@@ -1478,7 +1832,1308 @@ function renderChecklist(slug) {
 }
 
 render();
+
+/* ================================================================== *
+   운영 화면 여섯 개
+ * ================================================================== */
+
+/* ---------- 공통 조각 ---------- */
+
+/** 라벨 + 입력칸 */
+function field(label, input) {
+  const w = el(`<div class="field"><label>${esc(label)}</label></div>`);
+  w.appendChild(input);
+  return w;
+}
+
+/** 숫자 입력. type=number는 태블릿에서 스크롤로 값이 바뀌는 사고가 있어 쓰지 않는다 */
+function numIn(value, onChange, ph, aria, width) {
+  const i = el(`<input inputmode="decimal" placeholder="${esc(ph || "")}"
+    aria-label="${esc(aria || "")}"
+    style="text-align:right;font-family:var(--mono);${width ? `width:${width}px` : ""}">`);
+  i.value = value ? String(value) : "";
+  i.oninput = () => {
+    const c = i.value.replace(/[^\d.]/g, "");   // 28,000처럼 쉼표를 붙이는 사람이 많다
+    onChange(c === "" ? 0 : Number(c));
+  };
+  return i;
+}
+
+function textIn(value, onChange, ph, aria, width) {
+  const i = el(`<input placeholder="${esc(ph || "")}" aria-label="${esc(aria || "")}"
+    ${width ? `style="width:${width}px"` : ""}>`);
+  i.value = value || "";
+  i.oninput = () => onChange(i.value);
+  return i;
+}
+
+/** 눌러서 켜고 끄는 칩 */
+function chip(label, on, onClick) {
+  const b = el(`<button type="button" aria-pressed="${on}"
+    style="padding:7px 13px;font-size:13px;font-weight:600;${on ? "background:var(--accent);border-color:var(--accent);color:#fff" : ""}">${esc(label)}</button>`);
+  b.onclick = onClick;
+  return b;
+}
+
+/** 이름 + 금액 한 줄 */
+function moneyRow(label, value, opt) {
+  opt = opt || {};
+  return el(`<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:6px 0">
+    <span style="font-size:13px;${opt.strong ? "font-weight:700" : "color:var(--ink-2)"}">${label}</span>
+    <span style="font-family:var(--mono);font-variant-numeric:tabular-nums;flex:none;
+      ${opt.strong ? "font-size:17px;font-weight:700" : "font-size:14px"}
+      ${opt.danger ? ";color:var(--danger)" : ""}">${esc(value)}</span>
+  </div>`);
+}
+
+/** 추정치·법적 주의 */
+const caveat = html => el(`<p style="margin:14px 0 0;background:var(--warn-w);color:var(--warn-t);
+  border-radius:12px;padding:11px 13px;font-size:12px;line-height:1.6">${html}</p>`);
+
+const emptyBox = html => el(`<p style="border:2px dashed var(--line);border-radius:var(--r);
+  padding:28px 16px;text-align:center;font-size:13px;line-height:1.7;color:var(--ink-3)">${html}</p>`);
+
+/**
+ * 사장님 잠금.
+ *
+ * ⚠ 가리개다. 보안이 아니다 — 기기를 가진 사람이 브라우저 도구를 열면
+ *   그대로 읽힌다. 홀 직원이 태블릿 만지다 매출·시급을 보는 것까지 막는다.
+ * 열려 있으면 true. 잠겼으면 잠금 화면을 그리고 false.
+ */
+function opsGate(title) {
+  if (ownerOpen()) return true;
+  topbar({ title, sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+  const card = el(`<div class="card" style="padding:18px;margin-top:18px">
+    <b style="font-size:15px">사장님 화면입니다</b>
+    <p class="muted" style="margin:5px 0 0">잠금번호를 넣어주세요.</p>
+    <div class="stack" style="margin-top:12px"></div>
+  </div>`);
+  const box = card.querySelector(".stack");
+  const inp = el(`<input type="password" inputmode="numeric" autocomplete="current-password"
+    placeholder="잠금번호" aria-label="잠금번호">`);
+  const err = el(`<p style="margin:0;font-size:13px;font-weight:600;color:var(--danger);display:none"></p>`);
+  const go2 = () => {
+    if (checkOwnerPin(inp.value)) { unlockOwner(); render(); }
+    else { err.textContent = "번호가 맞지 않습니다."; err.style.display = "block"; }
+  };
+  inp.onkeydown = e => { if (e.key === "Enter") go2(); };
+  const b = el(`<button type="button" class="btn-primary" style="padding:13px">열기</button>`);
+  b.onclick = go2;
+  box.append(inp, err, b);
+  v.appendChild(card);
+  return false;
+}
+
+/* ------------------------------------------------------------------ *
+   운영 — 6개로 들어가는 문
+ * ------------------------------------------------------------------ */
+const OPS_MENU = [
+  { hash:"#/attend",    name:"출퇴근 · 근태",  note:"버튼 두 개로 찍습니다. 지각·연장·휴게시간을 근무표와 비교합니다", lock:false },
+  { hash:"#/contracts", name:"근로계약서",     note:"서면 교부·최저임금·주휴수당·보관 기한을 점검합니다", lock:true },
+  { hash:"#/sales",     name:"매출",           note:"마감에 세 칸만 넣으면 매출 − 재료비 − 인건비가 계산됩니다", lock:true },
+  { hash:"#/cost",      name:"원가",           note:"메뉴별 재료비와 원가율. 목표 원가율에서 판매가를 거꾸로 계산합니다", lock:true },
+  { hash:"#/order",     name:"발주",           note:"주문 마감까지 남은 시간, 주문했는데 안 들어온 것", lock:false },
+  { hash:"#/vendors",   name:"거래처",         note:"전화·마감 시각·배송 요일과 품목 단가. 원가가 여기서 나옵니다", lock:true }
+];
+
+function renderOps() {
+  topbar({ title: "운영", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+
+  v.appendChild(el(`<section class="sec" style="margin-top:16px">
+    <h2>이어져 있습니다</h2>
+    <p class="hint">일곱 개를 따로 만들지 않았습니다. 이미 있는 데이터에 붙였습니다.</p>
+    <div class="card" style="padding:14px 16px">
+      <pre style="margin:0;font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--ink-2);overflow-x:auto">근무표(계획) ─┐
+              ├→ 출퇴근(실제) ─ 차이 = 근태 ─┐
+근로계약서(시급)┘                            ├→ 인건비 ─┐
+                                                        ├→ 매출 − 재료비 − 인건비
+거래처(단가) → 레시피 재료 → 원가 → 재료비 ────────────┘   = 오늘 남은 돈
+            └ 프렙의 발주 항목 → 발주 체크</pre>
+    </div>
+  </section>`));
+
+  const sec = el(`<section class="sec"><div class="rows"></div></section>`);
+  const rows = sec.querySelector(".rows");
+  for (const m of OPS_MENU) {
+    const b = el(`<button type="button" class="nav-row"><span>
+      <b>${esc(m.name)}${m.lock ? ' <span style="font-weight:400;font-size:11px;color:var(--ink-3)">🔒</span>' : ""}</b>
+      <span class="meta">${esc(m.note)}</span></span><span class="chev">›</span></button>`);
+    b.onclick = () => go(m.hash);
+    rows.appendChild(b);
+  }
+  v.appendChild(sec);
+
+  /* 잠금 만들기 / 상태 */
+  const lockSec = el(`<section class="sec"></section>`);
+  if (!hasPin()) {
+    const b = el(`<button type="button" style="width:100%;padding:13px;border-style:dashed;border-width:2px;
+      font-size:13px;font-weight:600;color:var(--ink-2)">🔒 매출·시급 화면에 잠금번호 걸기</button>`);
+    b.onclick = () => {
+      const card = el(`<div class="card" style="padding:16px">
+        <b style="font-size:15px">잠금번호 만들기</b>
+        <p class="muted" style="margin:5px 0 0">숫자 4자리 이상. 이 태블릿에만 저장됩니다.
+        잊으면 되돌릴 수 없으니 사장님만 아는 번호로 하세요.</p>
+        <div class="stack" style="margin-top:12px"></div></div>`);
+      const box = card.querySelector(".stack");
+      const p1 = el(`<input type="password" inputmode="numeric" autocomplete="new-password" placeholder="잠금번호" aria-label="잠금번호">`);
+      const p2 = el(`<input type="password" inputmode="numeric" autocomplete="new-password" placeholder="한 번 더" aria-label="잠금번호 확인">`);
+      const err = el(`<p style="margin:0;font-size:13px;font-weight:600;color:var(--danger);display:none"></p>`);
+      const mk = el(`<button type="button" class="btn-primary" style="padding:13px">만들기</button>`);
+      const fail = m => { err.textContent = m; err.style.display = "block"; };
+      mk.onclick = () => {
+        if (p1.value.length < 4) return fail("4자리 이상으로 해주세요.");
+        if (p1.value !== p2.value) return fail("두 번 입력한 번호가 다릅니다.");
+        if (!setOwnerPin(p1.value)) return fail("이 태블릿에 저장할 수 없습니다.");
+        render();
+      };
+      box.append(p1, p2, err, mk);
+      box.appendChild(el(`<p style="margin:2px 0 0;background:var(--warn-w);color:var(--warn-t);border-radius:12px;
+        padding:11px 13px;font-size:12px;line-height:1.6">이 잠금은 <b>다른 직원이 실수로 열어보는 것</b>까지만
+        막습니다. 기기를 가진 사람이 브라우저 도구를 쓰면 볼 수 있습니다. 진짜 차단은 서버를 붙일 때 됩니다.</p>`));
+      b.replaceWith(card);
+    };
+    lockSec.appendChild(b);
+  } else {
+    lockSec.appendChild(el(`<p class="muted" style="text-align:center">🔒 사장님 화면은 잠금번호로 보호됩니다${
+      ownerOpen() ? " · 지금 열려 있음 (브라우저를 닫으면 다시 잠깁니다)" : ""}</p>`));
+  }
+  v.appendChild(lockSec);
+}
+
+/* ------------------------------------------------------------------ *
+   거래처 · 품목 단가 — 원가의 뿌리
+ * ------------------------------------------------------------------ */
+function renderVendors() {
+  if (!opsGate("거래처")) return;
+  topbar({ title: "거래처", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+  let data = loadVendors();
+  let settings = loadSettings();
+  let openId = null;
+
+  const ingredientNames = [...new Set(
+    DATA.recipes.flatMap(r => r.ingredients.map(i => String(i.name).trim()))
+  )].filter(Boolean).sort((a, b) => a.localeCompare(b, "ko"));
+
+  const save = () => { saveVendors(data); draw(); };
+  const saveS = () => { saveSettings(settings); draw(); };
+
+  function toggleExcluded(name) {
+    const key = String(name).trim();
+    settings.excluded = settings.excluded.some(n => String(n).trim() === key)
+      ? settings.excluded.filter(n => String(n).trim() !== key)
+      : [...settings.excluded, key];
+    saveS();
+  }
+
+  function draw() {
+    v.innerHTML = "";
+
+    /* ---------- 단가가 빠진 재료를 먼저 띄운다 ----------
+       여기를 안 채우면 원가 화면이 전부 "단가가 없습니다"다.
+       사장님이 뭘 채워야 하는지 스스로 찾게 만들면 안 채운다. */
+    const priced = new Set(data.items.map(i => String(i.name).trim()));
+    const skipped = new Set(settings.excluded.map(n => String(n).trim()));
+    const unpriced = ingredientNames.filter(n => !priced.has(n) && !skipped.has(n));
+
+    const head = el(`<div class="card" style="padding:16px;margin-top:16px">
+      <b style="font-size:15px">${unpriced.length === 0
+        ? "레시피 재료 단가가 모두 들어왔습니다"
+        : `단가가 없는 재료 ${unpriced.length}개`}</b>
+      <p class="muted" style="margin:5px 0 0;line-height:1.6">${unpriced.length === 0
+        ? "원가 화면에서 메뉴별 원가율을 볼 수 있습니다."
+        : "이게 남아 있으면 원가가 실제보다 낮게 나옵니다. 눌러서 바로 등록하세요."}</p>
+    </div>`);
+
+    if (unpriced.length) {
+      const list = el(`<div style="margin-top:10px"></div>`);
+      for (const n of unpriced) {
+        const row = el(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;
+          padding:8px 0;border-top:1px solid var(--line)">
+          <span style="font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n)}</span>
+          <span style="display:flex;gap:6px;flex:none"></span></div>`);
+        const btns = row.querySelector("span:last-child");
+        const add = el(`<button type="button" style="padding:6px 11px;font-size:12px;font-weight:600;
+          border-style:dashed;border-width:2px;border-color:var(--accent-b);color:var(--accent)">단가 넣기</button>`);
+        add.onclick = () => {
+          if (!data.vendors.length) return alert("거래처를 먼저 하나 추가해 주세요.");
+          const it = newVendorItem(data.vendors[0].id);
+          it.name = n;
+          data.items.push(it);
+          openId = data.vendors[0].id;
+          save();
+        };
+        const skip = el(`<button type="button" style="padding:6px 11px;font-size:12px;font-weight:600;color:var(--ink-3)">안 셈</button>`);
+        skip.onclick = () => toggleExcluded(n);
+        btns.append(add, skip);
+        list.appendChild(row);
+      }
+      head.appendChild(list);
+    }
+
+    /* 제외한 재료 — 되돌릴 수 있어야 한다 */
+    if (settings.excluded.length) {
+      const box = el(`<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:11px">
+        <p class="muted" style="margin:0;line-height:1.6">원가에 안 세는 재료 — 수돗물처럼 값이 없는 것,
+        그리고 <b>아메리카노의 '추출량'처럼 사는 게 아니라 결과인 것</b>. 여기에 단가를 붙이면
+        원두 값이 두 번 계산됩니다.</p>
+        <div class="row-in" style="margin-top:8px"></div></div>`);
+      const wrap = box.querySelector(".row-in");
+      for (const n of settings.excluded) {
+        const b = el(`<button type="button" style="padding:6px 11px;font-size:12px;font-weight:600;
+          background:var(--sunken);color:var(--ink-3);text-decoration:line-through">${esc(n)} ×</button>`);
+        b.onclick = () => toggleExcluded(n);
+        wrap.appendChild(b);
+      }
+      head.appendChild(box);
+    }
+    v.appendChild(head);
+
+    /* ---------- 거래처 목록 ---------- */
+    const sec = el(`<section class="sec" style="margin-top:16px"><div class="rows"></div></section>`);
+    const rows = sec.querySelector(".rows");
+
+    if (!data.vendors.length) {
+      rows.appendChild(emptyBox("거래처가 없습니다.<br>우유·원두·부자재는 보통 거래처가 따로입니다. 자주 쓰는 곳부터 하나 추가해 보세요."));
+    }
+
+    for (const vd of data.vendors) {
+      const items = data.items.filter(i => i.vendorId === vd.id);
+      const isOpen = openId === vd.id;
+      const card = el(`<div class="card" style="padding:14px 16px"></div>`);
+
+      const header = el(`<div style="display:flex;align-items:flex-start;gap:8px"></div>`);
+      const hit = el(`<button type="button" style="flex:1;min-width:0;text-align:left;background:none;border:0;padding:0">
+        <b style="display:block;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(vd.name || "(이름 없음)")}</b>
+        <span class="meta" style="display:block;font-size:12px;color:var(--ink-3);margin-top:2px">${esc(vd.how)} ·
+        마감 ${esc(vd.cutoff)} · 주문 후 ${vd.leadDays}일 · 품목 ${items.length}개</span></button>`);
+      hit.onclick = () => { openId = isOpen ? null : vd.id; draw(); };
+      header.appendChild(hit);
+      if (vd.phone) header.appendChild(el(`<a class="btn" href="tel:${esc(vd.phone.replace(/[^\d+]/g, ""))}"
+        style="padding:7px 11px;font-size:13px;flex:none">전화</a>`));
+      header.appendChild(el(`<span style="color:var(--ink-3);font-size:17px;flex:none">${isOpen ? "⌃" : "⌄"}</span>`));
+      card.appendChild(header);
+
+      if (isOpen) {
+        const body = el(`<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px"></div>`);
+        const g = el(`<div class="grid2"></div>`);
+        const full = el(`<div style="grid-column:1 / -1"></div>`);
+        full.appendChild(field("거래처 이름", textIn(vd.name, x => { vd.name = x; saveVendors(data); }, "", "거래처 이름")));
+        g.appendChild(full);
+        g.appendChild(field("전화번호", textIn(vd.phone, x => { vd.phone = x; saveVendors(data); }, "010-0000-0000", "전화번호")));
+        g.appendChild(field("담당자", textIn(vd.contact, x => { vd.contact = x; saveVendors(data); }, "", "담당자")));
+        g.appendChild(field("주문 마감 시각", textIn(vd.cutoff, x => { vd.cutoff = x; saveVendors(data); }, "15:00", "주문 마감 시각")));
+        g.appendChild(field("주문 후 며칠", numIn(vd.leadDays, x => { vd.leadDays = x; saveVendors(data); }, "1", "리드타임(일)")));
+        body.appendChild(g);
+
+        body.appendChild(el(`<p class="muted" style="margin:13px 0 6px">주문 방법</p>`));
+        const hw = el(`<div class="row-in"></div>`);
+        for (const h of HOW_OPTIONS) hw.appendChild(chip(h, vd.how === h, () => { vd.how = h; save(); }));
+        body.appendChild(hw);
+
+        body.appendChild(el(`<p class="muted" style="margin:13px 0 6px;line-height:1.6">배송하는 요일 —
+          여기서 뺀 요일은 다음 배송일로 밀려서 계산됩니다</p>`));
+        const dw = el(`<div class="row-in"></div>`);
+        WD.forEach((w, i) => dw.appendChild(chip(w, vd.deliverDays.includes(i), () => {
+          vd.deliverDays = vd.deliverDays.includes(i)
+            ? vd.deliverDays.filter(d => d !== i) : [...vd.deliverDays, i].sort();
+          save();
+        })));
+        body.appendChild(dw);
+
+        const note = field("메모", textIn(vd.note, x => { vd.note = x; saveVendors(data); }, "최소 주문금액, 계좌 등", "메모"));
+        note.style.marginTop = "13px";
+        body.appendChild(note);
+
+        /* ---------- 품목 ---------- */
+        body.appendChild(el(`<h3 style="margin:20px 0 2px;font-size:14px;font-weight:700">품목과 단가
+          <span style="font-weight:400;font-size:12px;color:var(--ink-3)">이름이 레시피 재료명과 같아야 원가가 붙습니다</span></h3>`));
+        const ilist = el(`<div class="stack" style="margin-top:8px"></div>`);
+        for (const it of items) {
+          const box = el(`<div style="border:1px solid var(--line);border-radius:12px;padding:11px"></div>`);
+          const top = el(`<div style="display:flex;gap:8px"></div>`);
+          const nameIn = textIn(it.name, x => { it.name = x; saveVendors(data); }, "품목 이름", "품목 이름");
+          nameIn.setAttribute("list", "ing-names");
+          nameIn.style.flex = "1";
+          top.appendChild(nameIn);
+          const del = el(`<button type="button" style="flex:none;padding:8px 12px;font-size:13px;font-weight:600;color:var(--danger)"
+            aria-label="${esc((it.name || "품목") + " 지우기")}">삭제</button>`);
+          del.onclick = () => { data.items = data.items.filter(x => x.id !== it.id); save(); };
+          top.appendChild(del);
+          box.appendChild(top);
+
+          const line = el(`<div class="row-in" style="margin-top:8px;align-items:center"></div>`);
+          line.appendChild(numIn(it.packAmount, x => { it.packAmount = x; saveVendors(data); redrawPer(); }, "1000", "구매 수량", 96));
+          const uIn = textIn(it.packUnit, x => { it.packUnit = x; saveVendors(data); redrawPer(); }, "g", "단위", 66);
+          uIn.setAttribute("list", "common-units");
+          line.appendChild(uIn);
+          line.appendChild(el(`<span class="muted">당</span>`));
+          line.appendChild(numIn(it.packPrice, x => { it.packPrice = x; saveVendors(data); redrawPer(); }, "28000", "가격", 118));
+          line.appendChild(el(`<span class="muted">원</span>`));
+          box.appendChild(line);
+
+          const per = el(`<p style="margin:8px 0 0;font-family:var(--mono);font-size:12px;color:var(--ink-3)"></p>`);
+          const redrawPer = () => {
+            per.innerHTML = (it.packAmount > 0 && Number.isFinite(it.packPrice))
+              ? `${esc(it.packUnit)} 1당 <b style="color:var(--ink)">${(it.packPrice / it.packAmount).toFixed(2)}원</b>
+                 · ${won(it.packPrice)}원 / ${it.packAmount}${esc(it.packUnit)}` : "";
+          };
+          redrawPer();
+          box.appendChild(per);
+          ilist.appendChild(box);
+        }
+        const addItem = el(`<button type="button" style="padding:10px;border-style:dashed;border-width:2px;
+          font-size:13px;font-weight:600;color:var(--ink-2)">+ 품목 추가</button>`);
+        addItem.onclick = () => { data.items.push(newVendorItem(vd.id)); save(); };
+        ilist.appendChild(addItem);
+        body.appendChild(ilist);
+
+        const delV = el(`<button type="button" style="width:100%;margin-top:18px;padding:10px;font-size:13px;
+          font-weight:600;color:var(--danger);border-color:var(--danger-b);border-width:2px">이 거래처 지우기</button>`);
+        delV.onclick = () => {
+          const mine = data.items.filter(i => i.vendorId === vd.id).length;
+          const msg = mine
+            ? `${gwa(vd.name)} 등록된 품목 ${mine}개를 지웁니다. 그 품목을 쓰는 레시피는 원가가 다시 빈칸이 됩니다.`
+            : `${eul(vd.name)} 지웁니다.`;
+          if (!confirm(msg)) return;
+          data.vendors = data.vendors.filter(x => x.id !== vd.id);
+          data.items = data.items.filter(i => i.vendorId !== vd.id);
+          openId = null;
+          save();
+        };
+        body.appendChild(delV);
+        card.appendChild(body);
+      }
+      rows.appendChild(card);
+    }
+
+    const addV = el(`<button type="button" class="btn-primary" style="padding:13px">+ 거래처 추가</button>`);
+    addV.onclick = () => { const nv = newVendor(); nv.name = "새 거래처"; data.vendors.push(nv); openId = nv.id; save(); };
+    rows.appendChild(addV);
+    v.appendChild(sec);
+
+    /* 입력 도움말 — 레시피 재료명을 그대로 고를 수 있게 */
+    v.appendChild(el(`<datalist id="ing-names">${ingredientNames.map(n => `<option value="${esc(n)}">`).join("")}</datalist>`));
+    v.appendChild(el(`<datalist id="common-units">${COMMON_UNITS.map(u => `<option value="${esc(u)}">`).join("")}</datalist>`));
+  }
+
+  draw();
+}
+
+/* ------------------------------------------------------------------ *
+   원가 — 레시피 재료 × 거래처 단가
+ * ------------------------------------------------------------------ */
+function renderCost() {
+  if (!opsGate("원가")) return;
+  topbar({ title: "원가", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+  const vd = loadVendors();
+  let settings = loadSettings();
+  let openId = null;
+
+  // 직접 추가한 레시피에 재료·산출량이 없으면 원가를 계산할 수 없다
+  // 직접 추가한 레시피에 재료·산출량이 없으면 원가를 계산할 수 없다
+  const recipes = [...DATA.recipes, ...myRecipes()]
+    .filter(r => r && r.yield && Array.isArray(r.ingredients));
+
+  /* ★ 이 파일의 레시피에는 id가 없다. slug만 있다.
+     r.id 로 판매가를 저장하면 prices[undefined] 한 칸을 네 메뉴가 같이 쓰고,
+     하나를 펼치면 undefined === undefined 라서 전부 펼쳐진다. */
+  const rkey = r => r.slug || r.id;
+
+  function draw() {
+    v.innerHTML = "";
+
+    if (!vd.items.length) {
+      v.appendChild(emptyBox("거래처에 <b>품목 단가</b>가 아직 없습니다.<br>원가는 레시피 재료 × 단가로 계산되므로 단가가 먼저 필요합니다."));
+      const b = el(`<button type="button" class="nav-row btn-primary" style="margin-top:12px">
+        <span><b>거래처에서 단가 넣기</b></span><span class="chev">›</span></button>`);
+      b.onclick = () => go("#/vendors");
+      v.appendChild(b);
+      return;
+    }
+
+    const target = el(`<div class="card" style="padding:16px;margin-top:16px">
+      <b style="font-size:15px">목표 원가율</b>
+      <p class="muted" style="margin:5px 0 10px;line-height:1.6">카페는 보통 30% 안쪽을 봅니다.
+      이 값으로 '얼마에 팔면 되는지'를 거꾸로 계산합니다.</p>
+      <div class="row-in" style="align-items:center"></div></div>`);
+    target.querySelector(".row-in").append(
+      numIn(settings.targetCostRate, x => { settings.targetCostRate = x; saveSettings(settings); draw(); }, "30", "목표 원가율", 80),
+      el(`<span class="muted">%</span>`)
+    );
+    v.appendChild(target);
+
+    const rows = recipes.map(r => {
+      const cost = costOfRecipe(r, vd.items, settings.excluded);
+      const price = settings.prices[rkey(r)] || 0;
+      return { r, cost, price, rate: costRate(cost.perUnit, price) };
+    });
+    const totalMissing = rows.reduce((s, x) => s + x.cost.missing, 0);
+
+    if (totalMissing > 0) {
+      const c = caveat(`단가를 못 찾은 재료가 <b>${totalMissing}개</b> 있습니다. 그 재료는 0원으로 세지 않고
+        빼놨기 때문에, 아래 원가와 원가율은 <b>실제보다 낮습니다.</b>
+        <button type="button" id="toVd" style="padding:0;background:none;border:0;color:inherit;
+        text-decoration:underline;font-size:12px;font-weight:600">거래처에서 채우기</button>`);
+      c.querySelector("#toVd").onclick = () => go("#/vendors");
+      v.appendChild(c);
+    }
+
+    const sec = el(`<section class="sec" style="margin-top:16px"><div class="rows"></div></section>`);
+    const list = sec.querySelector(".rows");
+
+    for (const { r, cost, price, rate } of rows) {
+      const isOpen = openId === rkey(r);
+      const shaky = cost.missing > 0;
+      const suggest = suggestedPrice(cost.perUnit, settings.targetCostRate);
+      const card = el(`<div class="card" style="padding:14px 16px"></div>`);
+
+      const hit = el(`<button type="button" style="display:flex;width:100%;align-items:flex-start;
+        justify-content:space-between;gap:12px;text-align:left;background:none;border:0;padding:0">
+        <span style="min-width:0">
+          <b style="display:block;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</b>
+          <span style="display:block;font-size:12px;color:var(--ink-3);margin-top:2px">1배합 ${r.yield.amount}${esc(r.yield.unit)}
+          · 재료 ${r.ingredients.length}개${shaky ? ` · <b style="color:var(--warn-t)">단가 없음 ${cost.missing}개</b>` : ""}</span>
+        </span>
+        <span style="flex:none;text-align:right">
+          <b style="display:block;font-family:var(--mono);font-size:17px;font-variant-numeric:tabular-nums">${won(cost.perUnit)}원</b>
+          <span style="display:block;font-size:12px;${rate === null || shaky ? "color:var(--ink-3)"
+            : rate > settings.targetCostRate ? "color:var(--danger);font-weight:700" : "color:var(--ok);font-weight:700"}">${
+            rate === null ? "판매가 입력" : `원가율 ${pct(cost.perUnit, price)}%`}</span>
+        </span></button>`);
+      hit.onclick = () => { openId = isOpen ? null : rkey(r); draw(); };
+      card.appendChild(hit);
+
+      /* 판매가 */
+      const pr = el(`<div class="row-in" style="margin-top:11px;align-items:center"></div>`);
+      pr.appendChild(el(`<span class="muted" style="flex:none">판매가</span>`));
+      pr.appendChild(numIn(price, x => {
+        settings.prices = { ...settings.prices, [rkey(r)]: x };
+        saveSettings(settings);
+        draw();
+      }, "4500", `${r.name} 판매가`, 104));
+      pr.appendChild(el(`<span class="muted">원</span>`));
+      if (suggest !== null) {
+        const b = el(`<button type="button" style="padding:7px 10px;font-size:12px;font-weight:600">${
+          settings.targetCostRate}%로 맞추면 ${won(suggest)}원</button>`);
+        b.onclick = () => { settings.prices = { ...settings.prices, [rkey(r)]: suggest }; saveSettings(settings); draw(); };
+        pr.appendChild(b);
+      }
+      card.appendChild(pr);
+
+      if (isOpen) {
+        const body = el(`<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px"></div>`);
+        for (const l of cost.lines) {
+          body.appendChild(moneyRow(
+            `<span${l.excluded ? ' style="color:var(--ink-3)"' : ""}>${esc(l.name)}
+             <span style="color:var(--ink-3)">${l.amount}${esc(l.unit)}</span>${
+             l.excluded ? ' <span style="font-size:11px">안 셈</span>' : ""}</span>`,
+            l.cost === null ? "—" : `${won(l.cost)}원`,
+            { danger: l.cost === null }));
+          if (l.problem) body.appendChild(el(`<p style="margin:0 0 6px;font-size:11px;color:var(--warn-t)">${esc(l.problem)}</p>`));
+        }
+        const sum = el(`<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px"></div>`);
+        sum.appendChild(moneyRow(`1배합 (${r.yield.amount}${esc(r.yield.unit)})`, `${won(cost.total)}원`));
+        sum.appendChild(moneyRow(`1${esc(r.yield.unit)}당 재료비`, `${won(cost.perUnit)}원`, { strong: true }));
+        if (price > 0) sum.appendChild(moneyRow(`1${esc(r.yield.unit)} 팔면 남는 것 (재료비만 뺀 값)`, `${won(price - cost.perUnit)}원`));
+        body.appendChild(sum);
+
+        if (r.slug) {
+          const b = el(`<button type="button" style="margin-top:11px;padding:0;background:none;border:0;
+            color:var(--accent);font-size:13px;font-weight:600;text-decoration:underline">레시피 보기 ›</button>`);
+          b.onclick = () => go(`#/recipe/${r.slug}`);
+          body.appendChild(b);
+        }
+        card.appendChild(body);
+      }
+      list.appendChild(card);
+    }
+    v.appendChild(sec);
+
+    const c = caveat(`여기 원가는 <b>재료비만</b>입니다. 인건비·임대료·공과금·카드수수료·로스(버리는 양)가
+      들어 있지 않습니다. 실제로 남는 돈은 <button type="button" id="toS" style="padding:0;background:none;
+      border:0;color:inherit;text-decoration:underline;font-size:12px;font-weight:600">매출 화면</button>에서
+      인건비까지 빼고 봅니다.`);
+    c.querySelector("#toS").onclick = () => go("#/sales");
+    v.appendChild(c);
+  }
+
+  draw();
+}
+
+/* ------------------------------------------------------------------ *
+   발주 체크 — 화면 순서가 곧 아침 순서다
+ * ------------------------------------------------------------------ */
+function renderOrder() {
+  topbar({ title: "발주", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+  const vd = loadVendors();
+  let log = loadOrderLog();
+  let links = loadOrderLinks();
+  const now = new Date();
+  const td = today();
+
+  /* 프렙의 발주 항목을 그대로 쓴다. 새 목록을 만들지 않는다.
+     ★ 이 파일의 시드에는 kind 필드가 없다(축약 스키마). "주문하면 며칠 뒤 온다"가
+       적힌 항목이 곧 발주 항목이고, 기존 프렙 화면도 같은 기준을 쓴다(t.days != null). */
+  const tasks = DATA.prepLists.flatMap(l => l.tasks.filter(t => t.days != null).map(task => ({ list: l, task })));
+  const taskById = new Map(tasks.map(({ task }) => [task.id, task]));
+
+  const past = [];
+  for (let i = 1; i <= 7; i++) { const d = new Date(now); d.setDate(d.getDate() - i); past.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`); }
+
+  function draw() {
+    v.innerHTML = "";
+
+    /* ---------- 1. 주문했는데 안 들어온 것 ----------
+       이걸 모르고 영업을 열면 점심때 재료가 없다. 종이가 못 잡는 지점 */
+    const pending = pendingOrders(log, past);
+    if (pending.length) {
+      const box = el(`<div class="notice red" style="margin-top:16px">
+        <b>주문했는데 아직 안 들어온 것 ${pending.length}개</b>
+        <p>들어왔으면 눌러서 표시해 주세요. 안 들어왔으면 거래처에 확인이 필요합니다.</p>
+        <div class="stack" style="margin-top:11px"></div></div>`);
+      const st = box.querySelector(".stack");
+      for (const p of pending) {
+        const t = taskById.get(p.taskId);
+        const row = el(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;
+          background:var(--surface);border-radius:11px;padding:9px 12px">
+          <span style="min-width:0">
+            <b style="display:block;font-size:14px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t ? t.title : p.taskId)}</b>
+            <span style="font-size:11px;color:var(--ink-3)">${esc(p.date)} 주문${p.memo ? ` · ${esc(p.memo)}` : ""}</span>
+          </span></div>`);
+        const b = el(`<button type="button" style="flex:none;padding:7px 11px;font-size:13px;font-weight:600">들어왔음</button>`);
+        b.onclick = () => { log = putOrderState(log, p.date, p.taskId, { received: true }); saveOrderLog(log); draw(); };
+        row.appendChild(b);
+        st.appendChild(row);
+      }
+      v.appendChild(box);
+    }
+
+    /* ---------- 2. 오늘 주문 마감 ---------- */
+    if (vd.vendors.length) {
+      const card = el(`<div class="card" style="padding:14px 16px;margin-top:14px">
+        <b style="font-size:15px">오늘 주문 마감</b>
+        <p class="muted" style="margin:5px 0 4px">마감을 넘기면 그 주문은 다음 배송일로 밀립니다.</p>
+        <div></div></div>`);
+      const box = card.querySelector("div");
+      const sorted = [...vd.vendors].sort((a, b) => minutesToCutoff(a, now) - minutesToCutoff(b, now));
+      for (const x of sorted) {
+        const left = minutesToCutoff(x, now);
+        const soon = left >= 0 && left <= 60;
+        const row = el(`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;
+          padding:9px 0;border-top:1px solid var(--line)">
+          <span style="min-width:0">
+            <b style="display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</b>
+            <span style="font-size:11px;color:var(--ink-3)">${esc(x.how)}${x.contact ? ` · ${esc(x.contact)}` : ""}
+            · 지금 주문하면 ${esc(dayLabel(arrivalOf(x, now)))} 도착</span>
+          </span>
+          <span style="display:flex;align-items:center;gap:7px;flex:none">
+            <span style="font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;${
+              left < 0 ? "color:var(--ink-3)" : soon ? "color:var(--danger);font-weight:700" : "color:var(--ink-2)"}">${
+              left < 0 ? "마감" : `${Math.floor(left/60)}시간 ${left%60}분`}</span>
+          </span></div>`);
+        const btns = row.querySelector("span:last-child");
+        if (x.phone) btns.appendChild(el(`<a class="btn" href="tel:${esc(x.phone.replace(/[^\d+]/g, ""))}"
+          style="padding:6px 10px;font-size:12px">전화</a>`));
+        const send = el(`<button type="button" style="padding:6px 10px;font-size:12px;font-weight:600">발주서</button>`);
+        send.onclick = () => {
+          const lines = tasks.filter(({ task }) => links[task.id] === x.id)
+            .map(({ task }) => ({ name: task.title, memo: orderStateOf(log, td, task.id).memo }));
+          if (!lines.length) return alert(`${x.name}에 연결된 발주 항목이 없습니다. 아래에서 거래처를 골라주세요.`);
+          copyText(buildOrderText(DATA.store.name, x.name, lines), "아래 발주 문구를 복사해 보내세요")
+            .then(r => { if (r === "copied") alert(`${x.name} 발주 문구를 복사했습니다. ${ro(x.how)} 보내세요.`); });
+        };
+        btns.appendChild(send);
+        box.appendChild(row);
+      }
+      v.appendChild(card);
+    }
+
+    /* ---------- 3. 주문할 것 ---------- */
+    const sec = el(`<div class="card" style="padding:14px 16px;margin-top:14px">
+      <b style="font-size:15px">주문할 것</b>
+      <p class="muted" style="margin:5px 0 0;line-height:1.6">프렙 목록의 발주 항목을 그대로 가져옵니다.
+      여기서 체크하면 프렙과 따로 관리하지 않아도 됩니다.</p>
+      <div class="stack" style="margin-top:11px"></div></div>`);
+    const st = sec.querySelector(".stack");
+
+    if (!tasks.length) st.appendChild(emptyBox("프렙 목록에 발주 항목이 없습니다."));
+
+    for (const { list, task } of tasks) {
+      const s = orderStateOf(log, td, task.id);
+      const border = s.received ? "var(--ok-b)" : s.ordered ? "var(--accent-b)" : !task.recoverable ? "var(--danger-b)" : "var(--line)";
+      const bg = s.received ? "var(--ok-w)" : s.ordered ? "var(--accent-w)" : "transparent";
+      const box = el(`<div style="border:2px solid ${border};background:${bg};border-radius:12px;padding:11px"></div>`);
+
+      const top = el(`<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <span style="min-width:0">
+          <b style="display:block;font-size:15px">${esc(task.title)}</b>
+          <span style="display:block;font-size:11px;color:var(--ink-3);margin-top:2px">${esc(list.name)}${
+            task.days != null ? ` · 주문 후 ${task.days}일` : ""}</span>
+          ${!task.recoverable ? `<span style="display:block;margin-top:4px;font-size:12px;font-weight:600;
+            color:var(--danger)">까먹지 말고 해야 할 것 — ${esc(task.conseq || "")}</span>` : ""}
+        </span>
+        <span style="display:flex;gap:6px;flex:none"></span></div>`);
+      const chips = top.querySelector("span:last-child");
+      chips.appendChild(chip("주문함", s.ordered, () => {
+        log = putOrderState(log, td, task.id, { ordered: !s.ordered }); saveOrderLog(log); draw();
+      }));
+      chips.appendChild(chip("들어옴", s.received, () => {
+        // 들어왔으면 주문은 당연히 한 것이다
+        log = putOrderState(log, td, task.id, { received: !s.received, ordered: !s.received ? true : s.ordered });
+        saveOrderLog(log); draw();
+      }));
+      box.appendChild(top);
+
+      const line = el(`<div class="row-in" style="margin-top:8px;align-items:center"></div>`);
+      const memo = textIn(s.memo, x => { log = putOrderState(log, td, task.id, { memo: x }); saveOrderLog(log); },
+        "수량 (우유 12팩)", `${task.title} 수량`, 180);
+      line.appendChild(memo);
+      if (vd.vendors.length) {
+        const sel = el(`<select aria-label="${esc(task.title)} 거래처"><option value="">거래처 고르기</option>${
+          vd.vendors.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("")}</select>`);
+        sel.value = links[task.id] || "";
+        sel.onchange = () => { links = { ...links, [task.id]: sel.value }; saveOrderLinks(links); };
+        line.appendChild(sel);
+      }
+      box.appendChild(line);
+      st.appendChild(box);
+    }
+    v.appendChild(sec);
+
+    if (!vd.vendors.length) {
+      const c = caveat(`거래처를 아직 안 넣었습니다. 넣으면 <b>마감 시각까지 남은 시간</b>과
+        <b>주문하면 언제 오는지</b>가 같이 나오고, 발주 문구도 만들어 줍니다.
+        <button type="button" id="toV" style="padding:0;background:none;border:0;color:inherit;
+        text-decoration:underline;font-size:12px;font-weight:600">거래처 넣기</button>`);
+      c.querySelector("#toV").onclick = () => go("#/vendors");
+      v.appendChild(c);
+    }
+  }
+
+  draw();
+}
+
+/* ------------------------------------------------------------------ *
+   출퇴근 · 근태 — 근무표가 계획, 여기가 실제
+ * ------------------------------------------------------------------ */
+function renderAttend() {
+  topbar({ title: "출퇴근 · 근태", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+  const roster = store.get("roster", { staff: [], assign: {} });
+  let punches = loadPunches();
+  const contracts = loadContracts();
+  const settings = loadSettings();
+  let tab = "today";
+  let monday = mondayOf(new Date());
+
+  if (!roster.staff.length) {
+    v.appendChild(emptyBox("직원이 아직 없습니다.<br>근무표에서 직원을 먼저 넣어 주세요. 출퇴근은 근무표에 잡힌 조와 비교해서 지각·결근을 봅니다."));
+    const b = el(`<button type="button" class="btn-primary" style="width:100%;margin-top:12px;padding:13px">근무표로 가기</button>`);
+    b.onclick = () => go("#/roster");
+    v.appendChild(b);
+    return;
+  }
+
+  const dk = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const plannedOf = (id, date) => (roster.assign[id] || {})[date] || "";
+  const commit = () => { savePunches(punches); draw(); };
+
+  function draw() {
+    v.innerHTML = "";
+    const now = new Date();
+    const td = dk(now);
+
+    const tabs = el(`<div class="row-in" style="margin-top:14px"></div>`);
+    tabs.appendChild(chip(`오늘 (${dayLabel(now)})`, tab === "today", () => { tab = "today"; draw(); }));
+    tabs.appendChild(chip("이번 주 · 근태", tab === "week", () => { tab = "week"; draw(); }));
+    v.appendChild(tabs);
+
+    if (tab === "today") {
+      /* ---------- 오늘 — 직원이 직접 누른다. 버튼 두 개여야 한다 ---------- */
+      v.appendChild(el(`<p class="muted" style="margin:14px 0 0;line-height:1.6">지금 ${hhmm(now)} ·
+        버튼을 누르면 그 시각으로 찍힙니다. 잘못 찍었으면 시각을 직접 고칠 수 있습니다.</p>`));
+      const stack = el(`<div class="stack" style="margin-top:12px"></div>`);
+
+      // 오늘 근무표에 잡힌 사람을 위로
+      const ordered = [...roster.staff].sort((a, b) =>
+        (plannedOf(a.id, td) ? 0 : 1) - (plannedOf(b.id, td) ? 0 : 1));
+
+      for (const s of ordered) {
+        const planned = plannedOf(s.id, td);
+        const p = getPunch(punches, s.id, td);
+        const r = judgeDay(td, planned, p, DATA.shifts);
+        const tone = r.status === "지각" ? "background:var(--danger-w);color:var(--danger)"
+          : r.status === "결근" ? "background:var(--sunken);color:var(--ink-2)"
+          : r.status === "근무중" ? "background:var(--accent-w);color:var(--accent)"
+          : r.status === "정상" ? "background:var(--ok-w);color:var(--ok)"
+          : "background:var(--sunken);color:var(--ink-3)";
+
+        const card = el(`<div class="card" style="padding:14px 16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+            <span style="min-width:0">
+              <b style="font-size:16px">${esc(s.name)}
+                <span style="font-weight:400;font-size:12px;color:var(--ink-3);margin-left:6px">${esc(s.section)}</span></b>
+              <span style="display:block;font-size:12px;color:var(--ink-3);margin-top:2px">${
+                planned ? `근무표: ${esc(planned)}` : "근무표: 휴무"}</span>
+            </span>
+            <span style="flex:none;border-radius:9px;padding:4px 9px;font-size:12px;font-weight:700;${tone}">${esc(r.status)}</span>
+          </div></div>`);
+
+        const btns = el(`<div class="grid2" style="margin-top:12px"></div>`);
+        const bIn = el(`<button type="button" style="padding:15px;font-size:15px;font-weight:700;${
+          p && p.inAt ? "color:var(--ink-3)" : "background:var(--accent);border-color:var(--accent);color:#fff"}">${
+          p && p.inAt ? `출근 ${esc(p.inAt)}` : "출근"}</button>`);
+        bIn.onclick = () => {
+          const cur = getPunch(punches, s.id, td) || newPunch(s.id, td);
+          punches = putPunch(punches, { ...cur, inAt: hhmm(new Date()) });
+          commit();
+        };
+        const canOut = !!(p && p.inAt);
+        const bOut = el(`<button type="button" ${canOut ? "" : "disabled"} style="padding:15px;font-size:15px;font-weight:700;${
+          !canOut ? "color:var(--ink-3);opacity:.5" : p.outAt ? "color:var(--ink-3)"
+          : "background:var(--ink);border-color:var(--ink);color:var(--surface)"}">${
+          p && p.outAt ? `퇴근 ${esc(p.outAt)}` : "퇴근"}</button>`);
+        bOut.onclick = () => {
+          const cur = getPunch(punches, s.id, td) || newPunch(s.id, td);
+          punches = putPunch(punches, { ...cur, outAt: hhmm(new Date()) });
+          commit();
+        };
+        btns.append(bIn, bOut);
+        card.appendChild(btns);
+
+        if (p && p.inAt) {
+          const edit = el(`<div class="row-in" style="margin-top:12px;align-items:flex-end"></div>`);
+          const mk = (lbl, val, key, ph) => {
+            const w = el(`<label style="display:flex;align-items:center;gap:6px">
+              <span class="muted">${lbl}</span></label>`);
+            const i = el(`<input placeholder="${ph}" aria-label="${esc(s.name + " " + lbl)}"
+              style="width:84px;text-align:center;font-family:var(--mono)">`);
+            i.value = val || "";
+            i.oninput = () => {
+              const cur = getPunch(punches, s.id, td) || newPunch(s.id, td);
+              punches = putPunch(punches, { ...cur, [key]: i.value });
+              savePunches(punches);
+            };
+            i.onblur = draw;
+            w.appendChild(i);
+            return w;
+          };
+          edit.appendChild(mk("출근", p.inAt, "inAt", "07:30"));
+          edit.appendChild(mk("퇴근", p.outAt, "outAt", "15:30"));
+          const bw = el(`<label style="display:flex;align-items:center;gap:6px"><span class="muted">휴게</span></label>`);
+          const bi = numIn(p.breakMin, x => {
+            const cur = getPunch(punches, s.id, td) || newPunch(s.id, td);
+            punches = putPunch(punches, { ...cur, breakMin: x });
+            savePunches(punches);
+          }, "0", `${s.name} 휴게시간`, 66);
+          bi.onblur = draw;
+          bw.append(bi, el(`<span class="muted">분</span>`));
+          edit.appendChild(bw);
+          card.appendChild(edit);
+        }
+
+        if (r.lateMin > 0) {
+          const sh = DATA.shifts.find(x => x.name === r.planned);
+          card.appendChild(el(`<p style="margin:10px 0 0;font-size:13px;font-weight:600;color:var(--danger)">
+            근무표(${esc(r.planned)}${sh ? " " + esc(sh.start) : ""})보다 ${hoursLabel(r.lateMin)} 늦게 찍혔습니다</p>`));
+        }
+        if (r.workedMin !== null) {
+          card.appendChild(el(`<p style="margin:8px 0 0;font-size:13px;font-weight:600">실근로 ${hoursLabel(r.workedMin)}${
+            r.overtimeMin > 0 ? ` <span style="color:var(--accent)">· 연장 ${hoursLabel(r.overtimeMin)}</span>` : ""}</p>`));
+        }
+        if (r.breakShort) {
+          card.appendChild(el(`<p style="margin:9px 0 0;background:var(--warn-w);color:var(--warn-t);border-radius:11px;
+            padding:9px 11px;font-size:12px;line-height:1.6">휴게시간이 법에서 정한 만큼보다 짧습니다.
+            근로기준법 제54조 — 4시간 근무에 30분, 8시간 근무에 1시간 이상을 주어야 합니다.</p>`));
+        }
+        stack.appendChild(card);
+      }
+      v.appendChild(stack);
+      return;
+    }
+
+    /* ---------- 이번 주 — 사장님이 본다 ---------- */
+    const days = weekDays(monday);
+    const bar = el(`<div class="card" style="padding:9px 12px;margin-top:14px;display:flex;align-items:center;gap:8px">
+      <button type="button" id="pv" style="padding:7px 11px;font-size:13px;font-weight:600">‹ 지난주</button>
+      <b style="flex:1;text-align:center;font-family:var(--mono);font-size:13px">${esc(dayLabel(days[0]))} ~ ${esc(dayLabel(days[6]))}</b>
+      <button type="button" id="nx" style="padding:7px 11px;font-size:13px;font-weight:600">다음주 ›</button></div>`);
+    bar.querySelector("#pv").onclick = () => { const d = new Date(monday); d.setDate(d.getDate()-7); monday = d; draw(); };
+    bar.querySelector("#nx").onclick = () => { const d = new Date(monday); d.setDate(d.getDate()+7); monday = d; draw(); };
+    v.appendChild(bar);
+
+    const weekly = roster.staff.map(s => {
+      const results = days.map(d => judgeDay(dk(d), plannedOf(s.id, dk(d)), getPunch(punches, s.id, dk(d)), DATA.shifts));
+      const c = contractOf(contracts, s.id);
+      return { s, results, c, pay: estimatePay(results, {
+        hourlyWage: c ? c.hourlyWage : 0, fiveOrMore: settings.fiveOrMore,
+        contractWeeklyHours: c ? c.weeklyHours : null }) };
+    });
+
+    // 시급·인건비는 사장님만. 출퇴근 화면 자체는 잠글 수 없다
+    const money = ownerOpen();
+
+    const tw = el(`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr>
+      <th class="sticky-col" style="text-align:left">직원</th>
+      ${days.map(d => `<th>${d.getMonth()+1}/${d.getDate()}</th>`).join("")}
+      <th style="text-align:right">근로</th>
+      ${money ? '<th style="text-align:right">인건비(추정)</th>' : ""}
+      </tr></thead><tbody></tbody></table></div>`);
+    const tb = tw.querySelector("tbody");
+
+    for (const { s, results, c, pay } of weekly) {
+      const cells = results.map(r =>
+        r.status === "휴무" ? `<td style="text-align:center;color:var(--line)">·</td>`
+        : r.status === "결근" ? `<td style="text-align:center;color:var(--danger);font-weight:700">결</td>`
+        : r.workedMin === null ? `<td style="text-align:center;color:var(--accent)">중</td>`
+        : `<td style="text-align:center;font-family:var(--mono);font-variant-numeric:tabular-nums;${
+            r.lateMin > 0 ? "color:var(--danger)" : ""}">${(r.workedMin/60).toFixed(1)}</td>`).join("");
+      tb.appendChild(el(`<tr>
+        <td class="sticky-col"><b>${esc(s.name)}</b>${money
+          ? `<span style="display:block;font-size:11px;color:var(--ink-3)">${
+              c && c.hourlyWage > 0 ? `${won(c.hourlyWage)}원/시` : "시급 없음"}</span>` : ""}</td>
+        ${cells}
+        <td style="text-align:right;font-family:var(--mono)">${hoursLabel(pay.workedMin)}${
+          pay.overtimeMin > 0 ? `<span style="display:block;font-size:11px;color:var(--accent)">연장 ${hoursLabel(pay.overtimeMin)}</span>` : ""}</td>
+        ${money ? `<td style="text-align:right;font-family:var(--mono);font-weight:700">${
+          c && c.hourlyWage > 0 ? `${won(pay.total)}원` : "—"}${
+          pay.holidayPay > 0 ? `<span style="display:block;font-size:11px;font-weight:400;color:var(--ink-3)">주휴 ${won(pay.holidayPay)}</span>` : ""}</td>` : ""}
+      </tr>`));
+    }
+    v.appendChild(tw);
+
+    if (!money) {
+      const box = el(`<div style="border:2px dashed var(--line);border-radius:var(--r);padding:16px;text-align:center;margin-top:14px">
+        <b style="font-size:13px">🔒 시급과 인건비는 사장님만 봅니다</b>
+        <p class="muted" style="margin:4px 0 10px">사장님 잠금번호가 필요합니다.</p>
+        <div class="row-in" style="justify-content:center"></div></div>`);
+      const row = box.querySelector(".row-in");
+      const inp = el(`<input type="password" inputmode="numeric" autocomplete="current-password"
+        placeholder="잠금번호" aria-label="잠금번호" style="width:150px">`);
+      const b = el(`<button type="button" style="padding:9px 14px;font-weight:600">열기</button>`);
+      const tryOpen = () => { if (checkOwnerPin(inp.value)) { unlockOwner(); draw(); } else alert("번호가 맞지 않습니다."); };
+      inp.onkeydown = e => { if (e.key === "Enter") tryOpen(); };
+      b.onclick = tryOpen;
+      row.append(inp, b);
+      v.appendChild(box);
+      return;
+    }
+
+    const sum = el(`<div class="card" style="padding:14px 16px;margin-top:14px">
+      <b style="font-size:15px">이번 주 합계</b><div style="margin-top:6px"></div></div>`);
+    const sb = sum.querySelector("div");
+    sb.appendChild(moneyRow("총 근로시간", hoursLabel(weekly.reduce((a, w) => a + w.pay.workedMin, 0))));
+    sb.appendChild(moneyRow("연장", hoursLabel(weekly.reduce((a, w) => a + w.pay.overtimeMin, 0))));
+    sb.appendChild(moneyRow("인건비 (추정)", `${won(weekly.reduce((a, w) => a + w.pay.total, 0))}원`, { strong: true }));
+    v.appendChild(sum);
+
+    const noWage = weekly.filter(w => !w.c || w.c.hourlyWage <= 0);
+    if (noWage.length) {
+      const c = caveat(`시급이 없는 직원이 <b>${noWage.length}명</b>(${esc(noWage.map(w => w.s.name).join(", "))})
+        있어서 인건비 합계가 실제보다 적습니다.
+        <button type="button" id="toC" style="padding:0;background:none;border:0;color:inherit;
+        text-decoration:underline;font-size:12px;font-weight:600">근로계약서에서 시급 넣기</button>`);
+      c.querySelector("#toC").onclick = () => go("#/contracts");
+      v.appendChild(c);
+    }
+
+    const cav = caveat(`여기 금액은 <b>추정</b>입니다. 4대보험·소득세·수습 감액·연차수당이 들어 있지 않고,
+      ${settings.fiveOrMore ? "5인 이상" : "5인 미만"} 기준으로 연장 가산을
+      ${settings.fiveOrMore ? "적용했습니다" : "적용하지 않았습니다"}(근로기준법 제11조·제56조).
+      <b>급여 대장으로 쓰지 마세요.</b>
+      <button type="button" id="toC2" style="padding:0;background:none;border:0;color:inherit;
+      text-decoration:underline;font-size:12px;font-weight:600">사업장 규모 설정</button>`);
+    cav.querySelector("#toC2").onclick = () => go("#/contracts");
+    v.appendChild(cav);
+  }
+
+  draw();
+}
+
+/* ------------------------------------------------------------------ *
+   매출 — 이 화면의 존재 이유는 빼기 하나다
+ * ------------------------------------------------------------------ */
+function renderSales() {
+  if (!opsGate("매출")) return;
+  topbar({ title: "매출", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+  let sales = loadSales();
+  const roster = store.get("roster", { staff: [], assign: {} });
+  const punches = loadPunches();
+  const contracts = loadContracts();
+  const settings = loadSettings();
+  let tab = "day";
+  let pick = today();
+
+  const dk = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+  /** 그날 인건비 — 출퇴근 × 시급. 사장님에게 안 물어본다 */
+  function laborOn(date) {
+    let cost = 0, minutes = 0;
+    const noWage = [];
+    for (const s of roster.staff) {
+      const r = judgeDay(date, (roster.assign[s.id] || {})[date] || "", getPunch(punches, s.id, date), DATA.shifts);
+      if (!(r.workedMin > 0)) continue;
+      minutes += r.workedMin;
+      const c = contractOf(contracts, s.id);
+      if (!c || c.hourlyWage <= 0) { noWage.push(s.name); continue; }
+      cost += dayLaborCost(r, c.hourlyWage, settings.fiveOrMore);
+    }
+    return { cost, minutes, noWage };
+  }
+
+  function draw() {
+    v.innerHTML = "";
+    const tabs = el(`<div class="row-in" style="margin-top:14px"></div>`);
+    tabs.appendChild(chip("하루", tab === "day", () => { tab = "day"; draw(); }));
+    tabs.appendChild(chip("이번 주", tab === "week", () => { tab = "week"; draw(); }));
+    v.appendChild(tabs);
+
+    if (tab === "day") {
+      const bar = el(`<div class="card" style="padding:9px 12px;margin-top:14px;display:flex;align-items:center;gap:8px">
+        <button type="button" id="pv" style="padding:7px 11px;font-size:13px;font-weight:600">‹ 어제</button>
+        <div style="flex:1;display:flex;justify-content:center"></div>
+        <button type="button" id="nx" style="padding:7px 11px;font-size:13px;font-weight:600">내일 ›</button></div>`);
+      const dinp = el(`<input type="date" aria-label="날짜" style="font-weight:700;text-align:center">`);
+      dinp.value = pick;
+      dinp.onchange = () => { if (dinp.value) { pick = dinp.value; draw(); } };
+      bar.querySelector("div").appendChild(dinp);
+      bar.querySelector("#pv").onclick = () => { const d = new Date(pick + "T00:00:00"); d.setDate(d.getDate()-1); pick = dk(d); draw(); };
+      bar.querySelector("#nx").onclick = () => {
+        const d = new Date(pick + "T00:00:00"); d.setDate(d.getDate()+1);
+        if (dk(d) <= today()) { pick = dk(d); draw(); }     // 아직 안 온 날은 안 넘긴다
+      };
+      v.appendChild(bar);
+
+      const day = getDaySales(sales, pick);
+      const patch = p => { sales = { ...sales, [pick]: { ...day, ...p, date: pick } }; saveSales(sales); };
+
+      const inCard = el(`<div class="card" style="padding:14px 16px;margin-top:14px">
+        <b style="font-size:15px">마감 입력</b>
+        <p class="muted" style="margin:5px 0 11px;line-height:1.6">세 칸만 넣으면 됩니다.
+        인건비는 출퇴근 기록에서 자동으로 나옵니다.</p>
+        <div class="row-in"></div></div>`);
+      const ir = inCard.querySelector(".row-in");
+      const mk = (lbl, val, key, ph, suffix) => {
+        const w = el(`<div class="field" style="flex:1;min-width:132px"><label>${lbl}</label>
+          <div style="display:flex;align-items:center;gap:5px"></div></div>`);
+        const box = w.querySelector("div");
+        const i = numIn(val, x => { patch({ [key]: x }); redraw(); }, ph, lbl);
+        i.style.flex = "1";
+        box.append(i, el(`<span class="muted" style="flex:none">${suffix}</span>`));
+        return w;
+      };
+      ir.append(
+        mk("총매출", day.total, "total", "1250000", "원"),
+        mk("결제 건수", day.count, "count", "180", "건"),
+        mk("재료비 (발주 금액)", day.material, "material", "350000", "원")
+      );
+      v.appendChild(inCard);
+
+      const out = el(`<div></div>`);
+      v.appendChild(out);
+
+      function redraw() {
+        out.innerHTML = "";
+        const d2 = getDaySales(sales, pick);
+        const lb = laborOn(pick);
+        const p = profitOf(d2, lb.cost);
+        const box = el(`<div style="border:2px solid ${p.left >= 0 ? "var(--ok-b)" : "var(--danger-b)"};
+          background:${p.left >= 0 ? "var(--ok-w)" : "var(--danger-w)"};border-radius:var(--r);padding:16px;margin-top:14px">
+          <b style="font-size:15px">${esc(dayLabel(new Date(pick + "T00:00:00")))} 남은 돈</b>
+          <p style="margin:5px 0 0;font-family:var(--mono);font-size:31px;font-weight:700;
+            font-variant-numeric:tabular-nums">${won(p.left)}<span style="font-size:16px">원</span></p>
+          <div style="margin-top:11px;border-top:1px solid rgba(0,0,0,.08);padding-top:5px"></div></div>`);
+        const bd = box.querySelector("div");
+        bd.appendChild(moneyRow("매출", `${won(p.sales)}원`));
+        bd.appendChild(moneyRow(`재료비 ${d2.total > 0 ? `(${pct(p.material, p.sales)}%)` : ""}`, `− ${won(p.material)}원`));
+        bd.appendChild(moneyRow(`인건비 ${d2.total > 0 ? `(${pct(p.labor, p.sales)}%)` : ""}
+          <span style="color:var(--ink-3)">${hoursLabel(lb.minutes)}</span>`, `− ${won(p.labor)}원`));
+        if (p.perCustomer !== null) bd.appendChild(moneyRow("객단가", `${won(p.perCustomer)}원`));
+        out.appendChild(box);
+
+        if (lb.noWage.length) {
+          const c = caveat(`시급이 없는 직원(<b>${esc(lb.noWage.join(", "))}</b>)이 근무한 날입니다.
+            그만큼 인건비가 실제보다 적고, 남은 돈은 실제보다 많게 보입니다.
+            <button type="button" id="tc" style="padding:0;background:none;border:0;color:inherit;
+            text-decoration:underline;font-size:12px;font-weight:600">시급 넣기</button>`);
+          c.querySelector("#tc").onclick = () => go("#/contracts");
+          out.appendChild(c);
+        }
+        if (lb.minutes === 0 && d2.total > 0) {
+          const c = caveat(`이 날 출퇴근 기록이 없어서 인건비가 0원으로 잡혔습니다.
+            <button type="button" id="ta" style="padding:0;background:none;border:0;color:inherit;
+            text-decoration:underline;font-size:12px;font-weight:600">출퇴근 기록 넣기</button>`);
+          c.querySelector("#ta").onclick = () => go("#/attend");
+          out.appendChild(c);
+        }
+
+        const nf = field("메모", textIn(d2.note, x => patch({ note: x }),
+          "비, 근처 행사, 기계 고장 등 — 나중에 왜 그랬는지 알려면 필요합니다", "메모"));
+        nf.style.marginTop = "14px";
+        out.appendChild(nf);
+      }
+      redraw();
+
+    } else {
+      /* ---------- 이번 주 ---------- */
+      const monday = mondayOf(new Date(pick + "T00:00:00"));
+      const week = weekDays(monday);
+      const dates = week.map(dk);
+      const wSum = sumRange(sales, dates);
+      const wLabor = dates.reduce((s, d) => s + laborOn(d).cost, 0);
+      const wp = profitOf(wSum, wLabor);
+
+      const card = el(`<div class="card" style="padding:14px 16px;margin-top:14px">
+        <b style="font-size:15px">${esc(dayLabel(week[0]))} ~ ${esc(dayLabel(week[6]))}</b>
+        <div style="margin-top:6px"></div></div>`);
+      const bd = card.querySelector("div");
+      bd.appendChild(moneyRow("매출", `${won(wp.sales)}원`));
+      bd.appendChild(moneyRow(`재료비 (${pct(wp.material, wp.sales)}%)`, `− ${won(wp.material)}원`));
+      bd.appendChild(moneyRow(`인건비 (${pct(wp.labor, wp.sales)}%)`, `− ${won(wp.labor)}원`));
+      bd.appendChild(moneyRow("남은 돈", `${won(wp.left)}원`, { strong: true }));
+      if (wp.perCustomer !== null) bd.appendChild(moneyRow("객단가", `${won(wp.perCustomer)}원`));
+      v.appendChild(card);
+
+      const tw = el(`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr>
+        <th style="text-align:left">날짜</th><th style="text-align:right">매출</th>
+        <th style="text-align:right">재료비</th><th style="text-align:right">인건비</th>
+        <th style="text-align:right">남은 돈</th></tr></thead><tbody></tbody></table></div>`);
+      const tb = tw.querySelector("tbody");
+      for (const d of week) {
+        const date = dk(d);
+        const row = getDaySales(sales, date);
+        const lb = laborOn(date);
+        const pr = profitOf(row, lb.cost);
+        const empty = row.total === 0 && lb.cost === 0;
+        const tr = el(`<tr style="cursor:pointer">
+          <td><b>${esc(dayLabel(d))}</b></td>
+          <td style="text-align:right;font-family:var(--mono)">${empty ? "—" : won(row.total)}</td>
+          <td style="text-align:right;font-family:var(--mono)">${empty ? "—" : won(row.material)}</td>
+          <td style="text-align:right;font-family:var(--mono)">${empty ? "—" : won(lb.cost)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;${
+            !empty && pr.left < 0 ? "color:var(--danger)" : ""}">${empty ? "—" : won(pr.left)}</td></tr>`);
+        tr.onclick = () => { pick = date; tab = "day"; draw(); };
+        tb.appendChild(tr);
+      }
+      v.appendChild(tw);
+    }
+
+    const c = caveat(`<b>"남은 돈"은 순이익이 아닙니다.</b> 임대료·공과금·카드수수료·세금·감가상각이
+      빠져 있습니다. 재료비도 그날 발주 금액이라 실제로 쓴 양과는 다릅니다(로스·재고 변동).
+      메뉴별 재료비는 <button type="button" id="tk" style="padding:0;background:none;border:0;color:inherit;
+      text-decoration:underline;font-size:12px;font-weight:600">원가 화면</button>에서 봅니다.`);
+    c.querySelector("#tk").onclick = () => go("#/cost");
+    v.appendChild(c);
+  }
+
+  draw();
+}
+
+/* ------------------------------------------------------------------ *
+   근로계약서 — 조건과 의무만 추적한다 (원본 보관 안 함)
+ * ------------------------------------------------------------------ */
+function renderContracts() {
+  if (!opsGate("근로계약서")) return;
+  topbar({ title: "근로계약서", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+  const roster = store.get("roster", { staff: [], assign: {} });
+  let list = loadContracts();
+  let settings = loadSettings();
+  let openId = null;
+
+  const save = () => { saveContracts(list); draw(); };
+  const saveQuiet = () => saveContracts(list);
+
+  function draw() {
+    v.innerHTML = "";
+
+    /* ---------- 사업장 설정 ---------- */
+    const set = el(`<div class="card" style="padding:14px 16px;margin-top:16px">
+      <b style="font-size:15px">사업장 설정</b>
+      <p class="muted" style="margin:5px 0 11px">이 두 값이 경고와 인건비 계산을 좌우합니다.</p>
+      <div class="row-in" style="gap:18px;align-items:flex-start"></div></div>`);
+    const sr = set.querySelector(".row-in");
+
+    const wageBox = el(`<div class="field"><label>최저임금 시급</label>
+      <div style="display:flex;align-items:center;gap:5px"></div>
+      <span class="muted" style="font-size:11px">2026년 적용액 10,320원</span></div>`);
+    wageBox.querySelector("div").append(
+      numIn(settings.minWage, x => { settings.minWage = x; saveSettings(settings); draw(); }, "10320", "최저임금 시급", 92),
+      el(`<span class="muted">원</span>`));
+    sr.appendChild(wageBox);
+
+    const sizeBox = el(`<div class="field"><label>상시 근로자</label>
+      <div class="row-in"></div>
+      <span class="muted" style="font-size:11px">5인 미만은 연장 가산수당이 없습니다 (근로기준법 제11조)</span></div>`);
+    const sb = sizeBox.querySelector(".row-in");
+    sb.appendChild(chip("5인 미만", !settings.fiveOrMore, () => { settings.fiveOrMore = false; saveSettings(settings); draw(); }));
+    sb.appendChild(chip("5인 이상", settings.fiveOrMore, () => { settings.fiveOrMore = true; saveSettings(settings); draw(); }));
+    sr.appendChild(sizeBox);
+    v.appendChild(set);
+
+    if (!roster.staff.length) {
+      v.appendChild(emptyBox("직원이 없습니다. 근무표에서 직원을 먼저 넣어 주세요."));
+      const b = el(`<button type="button" class="btn-primary" style="width:100%;margin-top:12px;padding:13px">근무표로 가기</button>`);
+      b.onclick = () => go("#/roster");
+      v.appendChild(b);
+      return;
+    }
+
+    /* ---------- 계약 정보가 없는 직원 ---------- */
+    const missing = roster.staff.filter(s => !contractOf(list, s.id));
+    if (missing.length) {
+      const box = el(`<div class="notice red" style="margin-top:14px">
+        <b>계약 정보가 없는 직원 ${missing.length}명</b>
+        <p>근로계약서는 일을 시작하기 전에 서면으로 만들어 <b>한 부를 줘야</b> 합니다.
+        안 주면 500만원 이하 벌금입니다 (근로기준법 제17조).</p>
+        <div class="row-in" style="margin-top:11px"></div></div>`);
+      const row = box.querySelector(".row-in");
+      for (const s of missing) {
+        const b = el(`<button type="button" style="padding:7px 12px;font-size:13px;font-weight:600;
+          background:var(--surface);border-style:dashed;border-width:2px;border-color:var(--danger-b);
+          color:var(--danger)">+ ${esc(s.name)}</button>`);
+        b.onclick = () => { const c = newContract(s.id); list.push(c); openId = c.id; save(); };
+        row.appendChild(b);
+      }
+      v.appendChild(box);
+    }
+
+    /* ---------- 계약 목록 ---------- */
+    const stack = el(`<div class="stack" style="margin-top:14px"></div>`);
+    for (const s of roster.staff) {
+      const c = contractOf(list, s.id);
+      if (!c) continue;
+      const checks = checkContract(c, settings.minWage);
+      const danger = checks.filter(x => x.level === "danger");
+      const keep = keepUntil(c);
+      const isOpen = openId === c.id;
+      const card = el(`<div class="card" style="padding:14px 16px"></div>`);
+
+      const hit = el(`<button type="button" style="display:flex;width:100%;align-items:flex-start;
+        justify-content:space-between;gap:12px;text-align:left;background:none;border:0;padding:0">
+        <span style="min-width:0">
+          <b style="display:block;font-size:16px">${esc(s.name)}
+            <span style="font-weight:400;font-size:12px;color:var(--ink-3);margin-left:6px">${esc(s.section)}</span></b>
+          <span style="display:block;font-size:12px;color:var(--ink-3);margin-top:2px">${
+            c.hourlyWage > 0 ? `${won(c.hourlyWage)}원/시` : "시급 미입력"}${
+            c.weeklyHours > 0 ? ` · 주 ${c.weeklyHours}시간` : ""}${
+            c.startDate ? ` · ${esc(c.startDate)}부터` : ""}${
+            c.endDate ? ` ~ ${esc(c.endDate)}` : c.startDate ? " (기간 없음)" : ""}</span>
+        </span>
+        <span style="flex:none;border-radius:9px;padding:4px 9px;font-size:12px;font-weight:700;${
+          danger.length ? "background:var(--danger-w);color:var(--danger)" : "background:var(--ok-w);color:var(--ok)"}">${
+          danger.length ? `확인 ${danger.length}건` : "이상 없음"}</span></button>`);
+      hit.onclick = () => { openId = isOpen ? null : c.id; draw(); };
+      card.appendChild(hit);
+
+      if (checks.length) {
+        const ul = el(`<div class="stack" style="margin-top:11px;gap:6px"></div>`);
+        for (const k of checks) {
+          const tone = k.level === "danger" ? "background:var(--danger-w);color:var(--danger)"
+            : k.level === "warn" ? "background:var(--warn-w);color:var(--warn-t)"
+            : "background:var(--sunken);color:var(--ink-2)";
+          ul.appendChild(el(`<div style="border-radius:11px;padding:8px 11px;font-size:12px;line-height:1.6;${tone}">
+            <b>${esc(k.title)}</b><span style="display:block;opacity:.85;margin-top:1px">${esc(k.basis)}</span></div>`));
+        }
+        card.appendChild(ul);
+      }
+
+      if (isOpen) {
+        const body = el(`<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px"></div>`);
+        const g = el(`<div class="grid2"></div>`);
+
+        const dateF = (lbl, val, key) => {
+          const i = el(`<input type="date" aria-label="${esc(lbl)}">`);
+          i.value = val || "";
+          i.onchange = () => { c[key] = i.value; save(); };
+          return field(lbl, i);
+        };
+        g.appendChild(dateF("계약 시작일", c.startDate, "startDate"));
+        g.appendChild(dateF("계약 종료일 (없으면 비움)", c.endDate, "endDate"));
+
+        const wageF = el(`<div class="field"><label>시급</label><div style="display:flex;align-items:center;gap:5px"></div></div>`);
+        const wi = numIn(c.hourlyWage, x => { c.hourlyWage = x; saveQuiet(); }, "10320", "시급");
+        wi.style.flex = "1"; wi.onblur = draw;
+        wageF.querySelector("div").append(wi, el(`<span class="muted">원</span>`));
+        g.appendChild(wageF);
+
+        const hoursF = el(`<div class="field"><label>1주 소정근로시간</label><div style="display:flex;align-items:center;gap:5px"></div></div>`);
+        const hi = numIn(c.weeklyHours, x => { c.weeklyHours = x; saveQuiet(); }, "20", "1주 소정근로시간");
+        hi.style.flex = "1"; hi.onblur = draw;
+        hoursF.querySelector("div").append(hi, el(`<span class="muted">시간</span>`));
+        g.appendChild(hoursF);
+
+        g.appendChild(field("근로시간 시작", textIn(c.startTime, x => { c.startTime = x; saveQuiet(); }, "09:00", "근로시간 시작")));
+        g.appendChild(field("근로시간 종료", textIn(c.endTime, x => { c.endTime = x; saveQuiet(); }, "14:00", "근로시간 종료")));
+        body.appendChild(g);
+
+        body.appendChild(el(`<p class="muted" style="margin:13px 0 6px">근무 요일</p>`));
+        const dw = el(`<div class="row-in"></div>`);
+        WD.forEach((w, i) => dw.appendChild(chip(w, c.workDays.includes(i), () => {
+          c.workDays = c.workDays.includes(i) ? c.workDays.filter(d => d !== i) : [...c.workDays, i].sort();
+          save();
+        })));
+        body.appendChild(dw);
+
+        const cks = el(`<div class="stack" style="margin-top:14px"></div>`);
+        const mkCheck = (checked, title, sub, key) => {
+          const w = el(`<label style="display:flex;align-items:flex-start;gap:10px;border:2px solid var(--line);
+            border-radius:12px;padding:10px 12px;cursor:pointer"></label>`);
+          const i = el(`<input type="checkbox" style="width:19px;height:19px;flex:none;margin-top:1px;accent-color:var(--accent)">`);
+          i.checked = checked;
+          i.onchange = () => { c[key] = i.checked; save(); };
+          w.appendChild(i);
+          w.appendChild(el(`<span style="font-size:13px;line-height:1.6"><b>${title}</b>${
+            sub ? `<span style="display:block;font-size:11px;color:var(--ink-3);margin-top:1px">${sub}</span>` : ""}</span>`));
+          return w;
+        };
+        cks.appendChild(mkCheck(c.handedOver, "서면으로 만들어 한 부를 줬습니다",
+          "만들기만 하고 안 주면 위반입니다 (근로기준법 제17조)", "handedOver"));
+        cks.appendChild(mkCheck(c.insured, "4대보험에 가입했습니다", "", "insured"));
+        body.appendChild(cks);
+
+        const nf = field("메모 (수습 기간, 담당 업무 등)", textIn(c.note, x => { c.note = x; saveQuiet(); }, "", "메모"));
+        nf.style.marginTop = "13px";
+        body.appendChild(nf);
+
+        if (keep) body.appendChild(el(`<p style="margin:13px 0 0;background:var(--sunken);border-radius:11px;
+          padding:9px 11px;font-size:12px;line-height:1.6;color:var(--ink-2)">원본 계약서는
+          <b>${keep.getFullYear()}년 ${keep.getMonth()+1}월 ${keep.getDate()}일</b>까지 보관해야 합니다
+          (근로기준법 제42조 · 3년).</p>`));
+
+        const del = el(`<button type="button" style="width:100%;margin-top:16px;padding:10px;font-size:13px;
+          font-weight:600;color:var(--danger);border-color:var(--danger-b);border-width:2px">이 계약 정보 지우기</button>`);
+        del.onclick = () => {
+          if (!confirm(`${s.name}의 계약 정보를 지웁니다.`)) return;
+          list = list.filter(x => x.id !== c.id);
+          openId = null;
+          save();
+        };
+        body.appendChild(del);
+        card.appendChild(body);
+      }
+      stack.appendChild(card);
+    }
+    v.appendChild(stack);
+
+    v.appendChild(caveat(`이 화면은 <b>계약서 원본을 보관하지 않습니다.</b> 원본에는 주민등록번호가
+      들어가는데, 개인정보보호법 제24조의2는 그걸 법령 근거가 있을 때만, 그것도 암호화해서 두도록
+      하고 있습니다. 지금처럼 태블릿 브라우저에 저장하는 구조로는 그 요건을 맞출 수 없어서
+      <b>주민등록번호 칸을 아예 만들지 않았습니다.</b> 원본은 종이나 잠긴 폴더에 두시고,
+      여기서는 조건과 기한만 보세요.`));
+  }
+
+  draw();
+}
+
 </script>
+
 
 </body>
 </html>
