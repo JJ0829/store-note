@@ -7,8 +7,26 @@
 
 export const SCALES = [0.5, 1, 1.5, 2, 3];
 
-/** 배수를 곱한 값. 소수점이 지저분해지지 않게 다듬는다. */
+/**
+ * 배수를 곱한 값.
+ *
+ * 예전에는 소수를 무조건 `toFixed(1)`로 잘랐다. 그러면 1배를 눌러도
+ * 입력한 값과 다른 숫자가 화면에 뜬다 — 소금 2.55g이 2.5g으로,
+ * 7.5g의 0.5배가 3.75가 아니라 3.8로. 베이커리에서 소수점 g은
+ * 예외가 아니라 기본이라 그대로 두면 배합이 틀린다. (테스트가 잡아냈다)
+ *
+ * 규칙은 둘이다.
+ *   1) 1배는 입력값 그대로여야 한다 (항등성)
+ *   2) 부동소수 찌꺼기는 지운다 — 0.35 × 3 은 1.0499999999999998이 아니라 1.05
+ *
+ * 저울이 읽는 단위가 0.1g이므로 소수 둘째 자리에서 반올림하고,
+ * 필요 없는 0은 붙이지 않는다(9 → "9", 3.75 → "3.75").
+ */
 export function scaled(amount: number, scale: number): string {
   const v = amount * scale;
-  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+  if (!Number.isFinite(v)) return "0";
+  // toPrecision을 먼저 거치는 이유: 1.275 * 100 은 127.49999999999999라서
+  // 그냥 반올림하면 1.27이 된다. 사람이 손으로 계산한 값과 달라진다.
+  const cents = Number((v * 100).toPrecision(12));
+  return String(Math.round(cents) / 100);
 }

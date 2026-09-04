@@ -5,7 +5,8 @@ import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import MediaSlot from "@/components/MediaSlot";
 import { SCALES, scaled } from "@/lib/scale";
-import type { PrepList, PrepTask, Recipe, Trigger } from "@/lib/types";
+import { arrivesIn, readyAt, triggerLabel } from "@/lib/leadTime";
+import type { PrepList, PrepTask, Recipe } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
  * 프렙 리스트 — 이 제품이 종이를 이기는 지점
@@ -50,74 +51,9 @@ function log(event: string, payload: Record<string, unknown>) {
   }
 }
 
-const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
-
-/** 자정 기준으로 며칠 뒤인지. 8/31 → 9/1 같은 월말을 그냥 빼면 틀린다. */
-function daysApart(from: Date, to: Date): number {
-  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const b = new Date(to.getFullYear(), to.getMonth(), to.getDate());
-  return Math.round((b.getTime() - a.getTime()) / 86400000);
-}
-
-/** 지금 걸면 언제 쓸 수 있는지. 종이가 못 하는 계산이 이거다. */
-function readyAt(hours: number): string {
-  const now = new Date();
-  const d = new Date(now.getTime() + hours * 3600 * 1000);
-  const diff = daysApart(now, d);
-  const day =
-    diff === 0
-      ? "오늘"
-      : diff === 1
-        ? "내일"
-        : diff === 2
-          ? "모레"
-          : `${d.getMonth() + 1}/${d.getDate()}`;
-  return `${day} ${String(d.getHours()).padStart(2, "0")}:${String(
-    d.getMinutes(),
-  ).padStart(2, "0")}`;
-}
-
-/**
- * 발주하면 언제 오는지.
- *
- * 주말을 건너뛴다. 거래처는 토·일에 배송하지 않는다(조사 확인).
- * 이걸 안 하면 "9/6(일) 도착"처럼 실제로 오지 않는 날짜를 알려주게 되고,
- * 그러면 금요일 발주의 무게가 화면에서 사라진다.
- */
-function arrivesIn(days: number): { label: string; overWeekend: boolean } {
-  const d = new Date();
-  let left = days;
-  let skipped = 0;
-  while (left > 0) {
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() === 0 || d.getDay() === 6) {
-      skipped += 1;
-      continue; // 주말은 배송일로 세지 않는다
-    }
-    left -= 1;
-  }
-  return {
-    label: `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY[d.getDay()]})`,
-    overWeekend: skipped > 0,
-  };
-}
-
-function triggerLabel(t: Trigger): string {
-  switch (t.type) {
-    case "daily":
-      return `매일 ${t.at}`;
-    case "weekday":
-      return `${t.days.map((d) => WEEKDAY[d]).join("·")} ${t.at}`;
-    case "condition":
-      return t.when;
-    case "cycle":
-      return t.everyDays >= 365
-        ? "1년마다"
-        : t.everyDays >= 30
-          ? `${Math.round(t.everyDays / 30)}개월마다`
-          : `${t.everyDays}일마다`;
-  }
-}
+/* 리드타임 계산(readyAt · arrivesIn · triggerLabel)은 @/lib/leadTime 으로
+   옮겼다. 이 파일 안에 있으면 테스트를 돌릴 수 없기 때문이다.
+   → docs/deliverables/08_테스트자동화.md */
 
 /* ------------------------------------------------------------------ */
 
@@ -271,6 +207,11 @@ export default function PrepView({
             ? recipeBySlug.get(task.recipeSlug)
             : undefined;
           const scale = scales[task.id] ?? 1;
+          // 한 번만 계산한다. 예전엔 라벨용·주말표시용으로 두 번 불렀다
+          const arrival =
+            now && task.leadTimeDays !== null
+              ? arrivesIn(task.leadTimeDays, now)
+              : null;
 
           return (
             <li
@@ -354,7 +295,7 @@ export default function PrepView({
                       지금 걸면 →{" "}
                       <b>
                         {now
-                          ? `${readyAt(task.leadTimeHours)}부터`
+                          ? `${readyAt(task.leadTimeHours, now)}부터`
                           : `${task.leadTimeHours}시간 뒤부터`}
                       </b>{" "}
                       사용 가능{" "}
@@ -369,12 +310,12 @@ export default function PrepView({
                     <p className="mt-2 rounded-lg bg-zinc-100 px-2.5 py-2 text-[13px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
                       오늘 주문 →{" "}
                       <b>
-                        {now
-                          ? arrivesIn(task.leadTimeDays).label
+                        {arrival
+                          ? arrival.label
                           : `영업일 ${task.leadTimeDays}일 뒤`}
                       </b>{" "}
                       도착
-                      {now && arrivesIn(task.leadTimeDays).overWeekend && (
+                      {arrival?.overWeekend && (
                         <span className="ml-1 font-normal text-zinc-500">
                           (주말 배송 없음)
                         </span>
