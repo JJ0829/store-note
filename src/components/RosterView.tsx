@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
 import {
   buildEmailBody,
@@ -108,13 +109,12 @@ export default function RosterView({
     window.location.href = url;
   }
 
-  function copyText() {
+  function copyForChat() {
     if (days.length === 0) return;
     const body = buildEmailBody(storeName, days, data);
-    void navigator.clipboard
-      .writeText(body)
-      .then(() => window.alert("근무표를 복사했습니다. 단톡방에 붙여넣으세요."))
-      .catch(() => window.prompt("아래 내용을 복사하세요", body));
+    void copyText(body, "아래 근무표를 복사해 단톡방에 붙여넣으세요").then((r) => {
+      if (r === "copied") window.alert("근무표를 복사했습니다. 단톡방에 붙여넣으세요.");
+    });
   }
 
   function shiftWeek(delta: number) {
@@ -380,8 +380,7 @@ export default function RosterView({
             메일 한 통에 <b>직원 명단(섹션·이름·이메일·전화번호)</b>과{" "}
             <b>이번 주 근무표</b>가 함께 들어가고, 전 직원에게 한꺼번에
             나갑니다. 메일 앱이 내용까지 채워진 채로 열리고,{" "}
-            <b>보내기는 직접 누르셔야 합니다.</b> 받는 사람은 숨은참조로 넣어서
-            직원끼리 서로 주소가 보이지 않습니다.
+            <b>보내기는 직접 누르셔야 합니다.</b>
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -395,16 +394,24 @@ export default function RosterView({
             </button>
             <button
               type="button"
-              onClick={copyText}
+              onClick={copyForChat}
               className="rounded-xl border-2 border-zinc-300 px-5 py-3 text-[15px] font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
             >
               복사 (카톡용)
             </button>
           </div>
 
+          <p className="mt-3 rounded-xl bg-amber-50 px-3.5 py-3 text-[12px] leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            <b>보내기 전에 확인하세요.</b> 받는 사람은 숨은참조로 넣지만,{" "}
+            <b>메일 본문의 명단에는 전 직원의 이메일과 전화번호가 그대로
+            들어갑니다.</b> 받는 직원 모두가 서로의 연락처를 보게 됩니다.
+            연락처를 공유하지 않으려면 메일 앱에서 명단 부분을 지우고 보내세요.
+          </p>
+
           {withEmail.length === 0 && (
             <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
-              이메일이 입력된 직원이 없습니다. 카톡용 복사를 쓰세요.
+              이메일이 입력된 직원이 없습니다. 아래 <b>복사</b>를 눌러 단톡방에
+              붙여넣으세요.
             </p>
           )}
         </section>

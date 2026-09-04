@@ -167,7 +167,10 @@ export type PrepList = {
 /* ------------------------------------------------------------------ */
 
 export type ShiftFocus =
-  | { kind: "position"; slug: string; label: string }
+  /** 교육 모드 — 신입 첫날. 한 장씩 넘기며 보고, 진도는 남기지 않는다 */
+  | { kind: "training"; slug: string; label: string }
+  /** 체크리스트 — 매일 쓰는 것. 체크가 그날 날짜로 저장된다 */
+  | { kind: "checklist"; slug: string; label: string }
   | { kind: "prep"; slug: string; label: string }
   | { kind: "recipes"; label: string };
 

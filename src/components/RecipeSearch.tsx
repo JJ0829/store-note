@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { copyText } from "@/lib/copyText";
 import { isLocal, loadLocalRecipes } from "@/lib/localRecipes";
 import type { Recipe } from "@/lib/types";
 
@@ -46,10 +47,9 @@ export default function RecipeSearch({ recipes }: { recipes: Recipe[] }) {
   function exportJson() {
     // 서버 DB가 붙기 전까지, 입력한 것이 기기와 함께 사라지지 않게 하는 안전장치
     const blob = JSON.stringify(mine, null, 2);
-    void navigator.clipboard
-      .writeText(blob)
-      .then(() => window.alert("추가한 레시피를 클립보드에 복사했습니다."))
-      .catch(() => window.prompt("아래 내용을 복사해 보관하세요", blob));
+    void copyText(blob, "아래 내용을 복사해 보관하세요").then((r) => {
+      if (r === "copied") window.alert("추가한 레시피를 복사했습니다.");
+    });
   }
 
   return (

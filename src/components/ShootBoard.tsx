@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
 import { expectedNames, probeAll, type Found } from "@/lib/mediaProbe";
 
@@ -26,9 +27,7 @@ function Row({ item, found }: { item: ShootItem; found?: Found }) {
   const names = expectedNames(item.id);
 
   const copy = (name: string) => {
-    void navigator.clipboard?.writeText(name).catch(() => {
-      window.prompt("이 이름으로 저장하세요", name);
-    });
+    void copyText(name, "이 이름으로 저장하세요");
   };
 
   const cell = (label: string, name: string, url?: string) => (

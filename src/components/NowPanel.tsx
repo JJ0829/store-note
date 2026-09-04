@@ -18,8 +18,10 @@ function toMinutes(hhmm: string): number {
 
 function focusHref(f: ShiftFocus): string {
   switch (f.kind) {
-    case "position":
+    case "training":
       return `/t/${f.slug}`;
+    case "checklist":
+      return `/p/${f.slug}`;
     case "prep":
       return `/prep/${f.slug}`;
     case "recipes":
@@ -45,9 +47,12 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
   }
 
   const cur = now.getHours() * 60 + now.getMinutes();
-  const active = shifts.filter(
-    (s) => cur >= toMinutes(s.start) && cur < toMinutes(s.end),
-  );
+  // 겹치는 시간대에는 방금 시작한 조를 위에 둔다.
+  // 시드 등록 순서로 두면 07:30에 제빵(05:00 시작)이 먼저 떠서,
+  // 그 시각에 막 출근한 오픈조가 자기 화면을 아래에서 찾아야 한다.
+  const active = shifts
+    .filter((s) => cur >= toMinutes(s.start) && cur < toMinutes(s.end))
+    .sort((a, b) => toMinutes(b.start) - toMinutes(a.start));
 
   const clock = `${String(now.getHours()).padStart(2, "0")}:${String(
     now.getMinutes(),
