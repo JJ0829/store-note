@@ -164,15 +164,40 @@ test("buildEmailBody: 두 블록이 다 있다", () => {
 test("buildEmailBody: 명단에 전 직원이 한 줄씩 들어간다", () => {
   const body = buildEmailBody("동네빵집", DAYS, DATA);
   for (const s of STAFF) assert.ok(body.includes(s.name), `${s.name} 없음`);
+});
+
+/* 기본값이 "연락처 제외"인 것은 사고 방지 장치다.
+   받는 사람을 숨은참조로 가려놓고 본문에 연락처를 실으면 가린 의미가 없다 —
+   직원 A가 받은 메일에 직원 B의 전화번호가 다 보인다.
+   실수로 기본값이 뒤집히면 전 직원 연락처가 유출되므로 테스트로 못박는다.
+   → docs/deliverables/06_보안설계.md V-03 */
+test("buildEmailBody: 기본값은 연락처를 넣지 않는다", () => {
+  const body = buildEmailBody("동네빵집", DAYS, DATA);
+  assert.ok(!body.includes("a@x.com"), "이메일이 기본으로 들어갔다");
+  assert.ok(!body.includes("010-1111-2222"), "전화번호가 기본으로 들어갔다");
+  assert.ok(body.includes("이름"), "명단 표 자체는 있어야 한다");
+});
+
+test("buildEmailBody: includeContacts를 켜면 연락처가 들어간다", () => {
+  const body = buildEmailBody("동네빵집", DAYS, DATA, { includeContacts: true });
   assert.ok(body.includes("a@x.com"));
   assert.ok(body.includes("010-1111-2222"));
 });
 
-test("buildEmailBody: 이메일·전화가 없으면 '-'로 자리를 채운다", () => {
-  const body = buildEmailBody("동네빵집", DAYS, DATA);
+test("buildEmailBody: 연락처를 켰을 때 빈 칸은 '-'로 채운다", () => {
+  const body = buildEmailBody("동네빵집", DAYS, DATA, { includeContacts: true });
   const line = body.split("\n").find((l) => l.includes("박지훈"));
   assert.ok(line, "박지훈 줄 없음");
   assert.ok(line.trimEnd().endsWith("-"), `빈 칸 처리 안 됨: ${line}`);
+});
+
+/* 근무표 본문은 연락처 설정과 무관하게 같아야 한다.
+   설정을 끄면 근무 정보까지 빠지는 실수를 막는다. */
+test("buildEmailBody: 연락처 설정이 근무표 부분을 바꾸지 않는다", () => {
+  const off = buildEmailBody("동네빵집", DAYS, DATA);
+  const on = buildEmailBody("동네빵집", DAYS, DATA, { includeContacts: true });
+  const week = (b: string) => b.slice(b.indexOf("[ 이번 주 근무 ]"));
+  assert.equal(week(off), week(on));
 });
 
 test("buildEmailBody: 배정이 없는 날은 '휴무'로 적는다", () => {
