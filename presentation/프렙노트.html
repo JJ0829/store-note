@@ -985,6 +985,7 @@ function checkOwnerPin(pin) {
   try { const v = localStorage.getItem("ownerPin"); return !!v && v === pinDigest(pin); } catch { return false; }
 }
 function unlockOwner() { try { sessionStorage.setItem("ownerOpen", "1"); } catch {} }
+function lockOwner() { try { sessionStorage.removeItem("ownerOpen"); } catch {} }
 function ownerOpen() {
   if (!hasPin()) return true;                   // 처음 쓰는 사람을 가두지 않는다
   try { return sessionStorage.getItem("ownerOpen") === "1"; } catch { return false; }
@@ -1996,8 +1997,17 @@ function renderOps() {
     };
     lockSec.appendChild(b);
   } else {
+    const openNow = ownerOpen();
     lockSec.appendChild(el(`<p class="muted" style="text-align:center">🔒 사장님 화면은 잠금번호로 보호됩니다${
-      ownerOpen() ? " · 지금 열려 있음 (브라우저를 닫으면 다시 잠깁니다)" : ""}</p>`));
+      openNow ? " · 지금 열려 있음" : ""}</p>`));
+    /* 브라우저를 닫으면 알아서 잠기지만, 매장 태블릿은 하루 종일 켜져 있다.
+       사장님이 매출을 보고 자리를 비우면 다음 사람이 그대로 본다. */
+    if (openNow) {
+      const b = el(`<button type="button" style="display:block;margin:8px auto 0;padding:9px 16px;
+        font-size:13px;font-weight:600;color:var(--ink-2)">지금 잠그기</button>`);
+      b.onclick = () => { lockOwner(); render(); };
+      lockSec.appendChild(b);
+    }
   }
   v.appendChild(lockSec);
 }

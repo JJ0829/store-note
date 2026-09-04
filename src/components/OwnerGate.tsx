@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { checkPin, hasPin, isUnlocked, needsPin, setPin, unlock } from "@/lib/ownerGate";
+import { useRouter } from "next/navigation";
+import { checkPin, hasPin, isUnlocked, lock, needsPin, setPin, unlock } from "@/lib/ownerGate";
 import { BTN, BTN_PRIMARY, Card, INPUT, Screen } from "@/components/ui";
 
 /* ------------------------------------------------------------------ *
@@ -165,6 +166,9 @@ export default function OwnerGate({
  * 화면 안에 만들 곳이 없으면 아무도 PIN을 만들지 않는다.
  */
 export function OwnerLockButton() {
+  const router = useRouter();
+  // 잠그기를 누르면 문구가 바로 바뀌어야 한다 (needsPin()은 상태가 아니라 함수다)
+  const [, setTick] = useState(0);
   const [ready, setReady] = useState(false);
   const [locked, setLocked] = useState(false);
   const [setup, setSetup] = useState(false);
@@ -250,11 +254,38 @@ export function OwnerLockButton() {
     );
   }
 
+  const openNow = !needsPin();
+
   return (
-    <p className="mt-3 text-center text-[12px] text-zinc-500 dark:text-zinc-400">
-      🔒 사장님 화면은 잠금번호로 보호됩니다
-      {needsPin() ? "" : " · 지금 열려 있음 (브라우저를 닫으면 다시 잠깁니다)"}
-    </p>
+    <div className="mt-3 text-center">
+      <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
+        🔒 사장님 화면은 잠금번호로 보호됩니다
+        {openNow ? " · 지금 열려 있음" : ""}
+      </p>
+
+      {/*
+        수동 잠그기.
+
+        브라우저를 닫으면 알아서 잠기지만, 매장 태블릿은 하루 종일 켜져 있다.
+        사장님이 매출을 보고 자리를 비우면 다음 사람이 그대로 본다.
+        문서 감사에서 lock()이 아무 데서도 호출되지 않는 걸 찾아 붙였다.
+      */}
+      {openNow && (
+        <button
+          type="button"
+          onClick={() => {
+            lock();
+            setLocked(true);
+            // 지금 화면이 사장님 영역이면 즉시 잠금 화면으로 돌아가야 한다
+            router.refresh();
+            setTick((n) => n + 1);
+          }}
+          className="mt-2 rounded-xl border-2 border-zinc-300 px-4 py-2 text-[13px] font-semibold text-zinc-600 active:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300"
+        >
+          지금 잠그기
+        </button>
+      )}
+    </div>
   );
 }
 
