@@ -19,7 +19,7 @@
 | 대상 | 프렙노트(가칭, 미확정) |
 | 기준 커밋 | `282c0a9` (master, HEAD) |
 | 행 번호 기준 | 본문의 행 번호·인용은 **`4a9192d`에서 뽑았다.** 그 뒤 코드를 건드린 커밋은 `282c0a9`(*문서가 찾아낸 코드 버그 3건 수정*) 하나이고, 바뀐 파일은 `src/lib/types.ts` · `NowPanel.tsx` · `RecipeSearch.tsx` · `RosterView.tsx` · `ShootBoard.tsx` · `src/lib/copyText.ts`(신규) · `data/seed.json` **7개뿐**이다. 이 7개는 행 번호가 몇 줄 밀려 있고, 내용이 바뀐 서술(2절 `SHIFT_FOCUS` · 3-10절 · 5-2절 · 10-3절)은 갱신했다 |
-| 근거 | `src/lib/types.ts`, `src/lib/repo.ts`, `src/lib/roster.ts`, `src/lib/localRecipes.ts`, `data/seed.json`, `src/app/api/log/route.ts`, `src/app/api/media/route.ts`, `src/lib/mediaProbe.ts`, `src/app/shoot/page.tsx`, `src/components/RecipeForm.tsx`, `src/components/NowPanel.tsx`, `src/components/RosterView.tsx`, `src/lib/copyText.ts`, `public/app.html` |
+| 근거 | `src/lib/types.ts`, `src/lib/repo.ts`, `src/lib/roster.ts`, `src/lib/localRecipes.ts`, `data/seed.json`, `src/app/api/log/route.ts`, `src/app/api/media/route.ts`, `src/lib/mediaProbe.ts`, `src/app/shoot/page.tsx`, `src/components/RecipeForm.tsx`, `src/components/NowPanel.tsx`, `src/components/RosterView.tsx`, `src/lib/copyText.ts`, ~~`public/app.html`~~ → `presentation/app.html` (V-05 조치로 `public/` 사본 삭제) |
 
 이 문서는 **현재 코드가 실제로 다루는 데이터**를 그대로 옮긴 것이다. 설계 제안이 아니라 역설계 기록에 가깝다.
 
@@ -57,11 +57,22 @@ function load(): SeedData {
 | 직원 명단 · 근무 배정 | 브라우저 localStorage `sop:roster` | `src/lib/roster.ts:29` |
 | 이벤트 로그 | `data/events.jsonl` (append) | `src/app/api/log/route.ts:27` |
 | 사진·영상 | `public/media/` 파일명 규약 | `src/lib/mediaProbe.ts` |
-| **발표용 정적 사본** | **`public/app.html`** — 시드 전체(매장·포지션·레시피·프렙·근무조)가 인라인된 단일 파일 HTML. `presentation/프렙노트.html`과 **바이트 단위로 동일**(76,749B). git에 추적되고 `.gitignore` 대상이 아니다 | `public/app.html:313` (`const DATA = {`), `git ls-files public/` |
+| **발표용 단일 파일** | **`presentation/app.html`** · **`presentation/프렙노트.html`** — 시드 전체(매장·포지션·레시피·프렙·근무조)가 인라인된 단일 파일 HTML. ~~`public/app.html`~~ 은 **2026-09-04에 삭제**했다(V-05, `528a75b`) — `public/` 아래에 있어 배포하면 `/app.html`로 열렸다. `presentation/`은 웹으로 서빙되지 않는다 | `presentation/app.html`의 `const DATA = {`, `ls public/app.html` → No such file |
 
-⚠️ **`public/app.html`은 `data/seed.json`의 두 번째 사본이고, 동기화되지 않는다.** 시드에 있는 `t-open-5`가 이 파일에는 없고(`grep t-open-5 public/app.html` → 0건), 프렙 업무 id도 시드는 `p-1`인데 이 파일은 `p1`이다. 저장 키도 다르다(6-4절). 즉 **같은 데이터의 두 판본이 서로 모르는 채로 저장소에 들어 있다.**
+⚠️ **단일 파일 HTML은 `data/seed.json`의 두 번째 사본이고, 동기화되지 않는다.** 시드에 있는 `t-open-5`가 이 파일에는 없고, 프렙 업무 id도 시드는 `p-1`인데 이 파일은 `p1`이다. 저장 키도 다르다(6-4절). 즉 **같은 데이터의 두 판본이 서로 모르는 채로 저장소에 들어 있다.**
 
-⚠️ **Next는 `public/`을 사이트 루트로 서빙한다.** 배포하면 이 파일이 `/app.html`로 열린다. 레시피(영업비밀)와 근무표 화면이 그 안에 통째로 들어 있고 `noindex`가 없다(`grep -c noindex public/app.html` → 0). 6-4절·10-5절 참조. **배포 전 조치가 필요하다** → 8-2절 #8.
+> ### ★ 2026-09-04에 이 갈라짐이 실제로 버그를 냈다
+>
+> 운영 기능 7종을 단일 파일로 이식할 때, Next 앱 코드를 그대로 옮겼더니 두 곳이 깨졌다.
+>
+> | 앱 | 단일 파일 | 결과 |
+> |---|---|---|
+> | `recipe.id` 있음 | **없음. `slug`만 있다** | `prices[r.id]` → `prices[undefined]`. **네 메뉴가 판매가 한 칸을 공유**하고, 하나를 펼치면 전부 펼쳐졌다 |
+> | `PrepTask.kind` 있음 | **없음** (축약 스키마: `hours`/`days`/`conseq`/`varies`) | `t.kind === "order"` → **발주 목록이 통째로 비었다** |
+>
+> **이 표가 경고한 위험이 그대로 현실화된 사례다.** 서버 DB로 옮길 때 두 판본을 하나로 합치는 것이 이 문서의 가장 실질적인 권고다.
+
+✅ ~~**Next는 `public/`을 사이트 루트로 서빙한다.** 배포하면 이 파일이 `/app.html`로 열린다~~ → **해소됨 (2026-09-04).** `public/app.html`을 삭제했고, 함께 `public/robots.txt`를 신설하고 `src/app/layout.tsx:10`에 전역 `noindex`를 넣었다. 상세: `06_보안설계.md` V-05 · `02_화면설계서.md` 2-1절.
 
 ### 1-2. 이 구조의 한계 — 실측된 것만
 
@@ -759,7 +770,7 @@ ERD에서 가장 오해를 사기 쉬운 부분이다. 데이터에 경로를 �
 > ⚠️ **RDB 이전 시 이 두 키는 옮기지 않는다.** 서버가 붙으면 잠금은
 > **Supabase Row Level Security + 실제 인증**으로 대체되어야 한다.
 > 지금 구조는 검사가 브라우저 안에서 돌고 데이터는 평문이므로 접근 통제가 아니다.
-> `ownerGate.ts:1-20`에 같은 말을 코드 주석으로 남겼다.
+> `ownerGate.ts:1-19`에 같은 말을 코드 주석으로 남겼다.
 
 ---
 
@@ -933,7 +944,7 @@ CONSTRAINT shift_focus_shape CHECK (
 
 ## 6. 브라우저 저장소 스키마 (현재 구현. 전수)
 
-`grep -rn "localStorage\|sessionStorage" src/`로 전수 확인. **`src/`(Next 앱)의 키는 14종이다** (2026-09-04에 6 → 14로 늘었다). 단 같은 오리진에 `public/app.html`이 함께 서빙되고 그쪽은 키가 다르다 → 6-4절.
+`grep -rn "localStorage\|sessionStorage" src/`로 전수 확인. **`src/`(Next 앱)의 키는 14종이다** (2026-09-04에 6 → 14로 늘었다). 단일 파일 HTML은 키가 대부분 다르다 → 6-4절. (~~`public/app.html`~~ 은 삭제되어 **같은 오리진에서 함께 서빙되는 사본은 이제 없다.**)
 
 | # | 키 형식 | 저장소 | 값 구조 | 만료 / 초기화 규칙 | 정의 위치 |
 |---|---|---|---|---|---|
@@ -988,24 +999,26 @@ CONSTRAINT shift_focus_shape CHECK (
 | 파일 | 크기 | 서빙 여부 |
 |---|---|---|
 | `presentation/프렙노트.html` | 76,749 B | 안 됨. `file://`로만 연다 |
-| **`public/app.html`** | **76,749 B — 위와 바이트 단위로 동일**(`cmp` 무출력) | **된다.** Next가 `public/`을 루트로 서빙하므로 배포하면 `/app.html` |
+| ~~**`public/app.html`**~~ | **삭제됨 (2026-09-04, `528a75b`)** | — |
 
 키 비교:
 
-| 용도 | Next 앱 | 단일 HTML (`public/app.html` = `presentation/프렙노트.html`) |
+| 용도 | Next 앱 | 단일 HTML (`presentation/app.html` = `presentation/프렙노트.html`) |
 |---|---|---|
-| 체크리스트 | `sop:{shareSlug}:{날짜}` | `list:{slug}:{날짜}` (`public/app.html:1299`) |
-| 프렙 | `prep:{slug}:{날짜}` | **`prep:{slug}:{날짜}` — 같다** (`public/app.html:716`) |
+| 체크리스트 | `sop:{shareSlug}:{날짜}` | `list:{slug}:{날짜}` (단일 파일 `renderChecklist()`) |
+| 프렙 | `prep:{slug}:{날짜}` | **`prep:{slug}:{날짜}` — 같다** (단일 파일 `renderPrep()`) |
 | 교육 진도 | `sop:run:{slug}` (sessionStorage) | **저장 안 함** |
-| 로컬 레시피 | `sop:recipes` | `recipes:mine` (`public/app.html:817`) |
-| 근무표 | `sop:roster` | `roster` + `roster:mode` (`public/app.html:951-952`) |
+| 로컬 레시피 | `sop:recipes` | `recipes:mine` (단일 파일 `myRecipes()`) |
+| 근무표 | `sop:roster` | `roster` + `roster:mode` (단일 파일 `renderRoster()`) |
 | 세션 id | `sop:sid` | **없음** |
 
 **결론을 정정한다.** `file://`로 열면 오리진이 달라 분리되지만, **배포된 `/app.html`은 Next 앱과 같은 오리진이므로 프렙 키가 실제로 충돌한다.** 프렙 목록 slug도 양쪽 다 `afternoon`·`cycle`로 같아서(측정 확인) `prep:afternoon:2026-09-04` 한 키를 두 앱이 함께 쓴다. 값은 체크한 id의 `string[]`인데 항목 id가 서로 다르므로(`p-1` vs `p1`) 체크가 섞여 보이진 않고, **나중에 쓴 쪽이 앞선 쪽의 배열을 통째로 덮는다.** 오픈조가 `/prep/afternoon`에서 체크한 것이 누군가 `/app.html`을 열어 체크하면 사라진다.
 
 나머지 4종(체크리스트·로컬 레시피·근무표·세션 id)은 키가 달라 섞이지 않는다.
 
-**이건 저장 키만의 문제가 아니다.** `public/app.html:313`의 `const DATA = {`에 레시피 전량(영업비밀)과 근무표 화면이 인라인돼 있고 `noindex`가 없다 → 10-5절. **배포 전에 이 파일을 `public/` 밖으로 빼는 것이 8-2절 #8이다.**
+~~**이건 저장 키만의 문제가 아니다.**~~ → ✅ **해소됨 (2026-09-04).** `public/app.html`을 삭제해 `/app.html` 노출 경로가 없어졌다(`528a75b`). 단일 파일은 `presentation/`에만 있고 그 폴더는 서빙되지 않는다.
+
+**남아 있는 문제는 저장 키가 다르다는 것 자체다.** 같은 매장이 앱과 단일 파일을 번갈아 쓰면 데이터가 두 곳에 나뉘어 쌓이고 서로 안 보인다. 서버 DB로 옮길 때 키를 통일해야 한다.
 
 ### 6-5. 서버 이전 시 각 키의 행선지
 
@@ -1698,10 +1711,12 @@ for (const s of data.staff) {
 | 4 | 삭제 요청 처리 | **미구현.** 직원 삭제는 배열에서 즉시 제거(confirm 1회)이고 이력이 남지 않는다. DDL의 `staff.deleted_at`이 이걸 위한 칸이다 | §10.3 (나) 14 |
 | 5 | 사용자 인증·로그인 | **없다.** 코드 0건. PIN(#1)과는 다른 층위다 — 이건 LATER다 | — |
 | 6 | 보관 기간에 따른 자동 파기 | **미구현.** 기간 자체가 ❓ 미정이다(10-1절) | §10.3 (나) 14 |
-| 7 | **`public/app.html`을 `public/` 밖으로 빼기** | **미조치.** #3 목록에서 노출이 가장 큰 경로다. 아래 참조 | **§10.3 (나) 8** (8-2절 #8) |
+| 7 | ~~**`public/app.html`을 `public/` 밖으로 빼기**~~ | ✅ **조치 완료 (2026-09-04, `528a75b`).** 빼는 대신 **삭제**했다 — `src/` 어디서도 참조하지 않아 아무것도 깨지지 않았다. 함께 `public/robots.txt` 신설 + `layout.tsx:10` 전역 `noindex` | `06_보안설계.md` V-05 |
 | 8 | **메일 본문에서 이메일·전화 열 제거** | **미조치.** `282c0a9`에서 화면 경고문만 붙었다. 데이터는 그대로 나간다(10-3절) | §10.3 (나) 12 |
 
-**#3 목록에서 `/app.html`이 가장 큰 이유.** `public/app.html`은 git에 추적돼 있고(`git ls-files public/`) Next가 `public/`을 사이트 루트로 서빙한다. 한 장 안에 **레시피 전량(영업비밀)·근무표 화면·시드 전체**가 인라인돼 있는데(`public/app.html:313` `const DATA = {`) `noindex` 메타가 0건이다. 그리고 **정적 파일이라 Next의 `metadata.robots`를 붙일 방법이 없다** — 다른 라우트처럼 `page.tsx`에 한 줄 넣어서 막을 수 없다. `robots.txt`도 없다(#2). 남은 수단은 **파일을 `public/`에서 빼는 것**뿐이다(#7). 6-4·8-2절 참조.
+**~~#3 목록에서 `/app.html`이 가장 큰 이유~~ — 왜 그랬고, 어떻게 끝났는가 (기록).** `public/app.html`은 git에 추적돼 있었고 Next가 `public/`을 사이트 루트로 서빙한다. 한 장 안에 **레시피 전량(영업비밀)·근무표 화면·시드 전체**가 인라인돼 있는데 `noindex` 메타가 0건이었다. 그리고 **정적 파일이라 Next의 `metadata.robots`를 붙일 방법이 없다** — 다른 라우트처럼 `page.tsx`에 한 줄 넣어서 막을 수 없다.
+
+→ ✅ **2026-09-04에 파일을 삭제했다** (`528a75b`). `robots.txt`도 함께 신설했다(#2 해소). **교훈: 정적 파일은 애플리케이션 레벨 통제가 안 닿는다.** `public/`에 무엇을 두는지가 그대로 공개 범위가 된다.
 
 ---
 
@@ -1718,7 +1733,7 @@ for (const s of data.staff) {
 | 7 | **주기 점검을 "관리된다"고 쓰면 안 된다.** 라벨은 뜨지만 마지막 수행일 저장이 없어 매일 리셋된다. 8절의 `prep_check` + `prep_task_last_done` 뷰가 그걸 고치는 제안이고, 아직 구현이 아니다 |
 | 8 | **2절 ERD는 현재 코드 구조 + 신설 테이블 3종이지, 8절 DDL의 최종 스키마가 아니다.** 코드에 없는 칸(`sort_order` 9곳, `SECTION.parent`, `INGREDIENT.id`, `SHIFT_FOCUS.id`, `store_id`, `RECIPE.origin`, `SHIFT.crosses_midnight`, `STAFF.deleted_at`)과 코드에 없는 테이블(`MEDIA_KEY`·`CHECKLIST_CHECK`·`PREP_CHECK`)이 함께 그려져 있고, **속성명은 TS·시드 이름 그대로다.** 그림에는 8-1절 #2·#3·#4·#5가 없애는 느슨한 문자열 참조 4건이 **변경 전 상태로** 남아 있다(`desc`, `recipeSlug`, `SHIFT_FOCUS.slug`, `ASSIGN.shift_name`). **그림대로 테이블을 만들면 안 된다 — 스키마의 정본은 8절 DDL이고, 지금 코드의 칸은 3절 속성 표다** |
 | 9 | **배포 전 조치를 이 문서에서 인용하지 말 것.** 10-5절은 데이터·개인정보 관점의 상태만 적는다. **정본은 `01_MVP기획서.md` §10.3이다** |
-| 10 | **`data/seed.json`의 사본이 하나 더 있다.** `public/app.html`(= `presentation/프렙노트.html`)에 시드 전체가 인라인돼 있고 **동기화되지 않는다.** 개수·id를 인용할 때는 `seed.json`만 근거로 쓴다. 배포 시 `/app.html`로 공개된다는 별개 문제는 6-4·8-2·10-5절 |
+| 10 | **`data/seed.json`의 사본이 하나 더 있다.** `presentation/app.html`(= `프렙노트.html`)에 시드 전체가 인라인돼 있고 **동기화되지 않는다.** 개수·id를 인용할 때는 `seed.json`만 근거로 쓴다. ~~배포 시 `/app.html`로 공개된다~~는 문제는 해소됐다(파일 삭제). **다만 스키마가 갈라져 2026-09-04에 실제 버그를 냈다** — 6-4절의 ★ 박스 |
 
 ---
 
