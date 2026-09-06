@@ -16,9 +16,12 @@
 >
 > 1. **같은 폴더에서 Claude Code를 여는 경우** — 아무것도 안 해도 됩니다. `CLAUDE.md`가 자동으로 읽힙니다.
 > 2. **다른 곳(claude.ai 웹 등)에서 이어가는 경우** — 이 파일을 업로드하거나 통째로 붙여넣으세요.
-> 3. **폴더째 옮기는 경우** — `신입트라이얼-소스백업.zip` 압축 풀고 `npm install` 후 `npm run dev`.
+> 3. **폴더째 옮기는 경우** — GitHub에서 `git clone` 후 `npm ci` → `npm run dev`.
+>    저장소: `github.com/JJ0829/store-note` (**비공개**)
 >
-> **작업 폴더:** `C:\Users\user\Desktop\신입트라이얼`
+> **작업 폴더:** `C:\Users\user\Desktop\store-note`
+> *(2026-09-06에 `신입트라이얼`에서 옮겼다. 제품명이 `매장수첩`으로,
+>  저장소가 `store-note`로 정해지면서 폴더 이름도 맞췄다.)*
 
 ## ⚠️ 지금 상태에서 가장 먼저 알아야 할 것
 
