@@ -16,7 +16,7 @@
 |---|---|
 | 작성일 | 2026-09-03 |
 | 상태 | **초안** |
-| 대상 | 프렙노트(가칭, 미확정) |
+| 대상 | 매장수첩 |
 | 기준 커밋 | `282c0a9` (master, HEAD) |
 | 행 번호 기준 | 본문의 행 번호·인용은 **`4a9192d`에서 뽑았다.** 그 뒤 코드를 건드린 커밋은 `282c0a9`(*문서가 찾아낸 코드 버그 3건 수정*) 하나이고, 바뀐 파일은 `src/lib/types.ts` · `NowPanel.tsx` · `RecipeSearch.tsx` · `RosterView.tsx` · `ShootBoard.tsx` · `src/lib/copyText.ts`(신규) · `data/seed.json` **7개뿐**이다. 이 7개는 행 번호가 몇 줄 밀려 있고, 내용이 바뀐 서술(2절 `SHIFT_FOCUS` · 3-10절 · 5-2절 · 10-3절)은 갱신했다 |
 | 근거 | `src/lib/types.ts`, `src/lib/repo.ts`, `src/lib/roster.ts`, `src/lib/localRecipes.ts`, `data/seed.json`, `src/app/api/log/route.ts`, `src/app/api/media/route.ts`, `src/lib/mediaProbe.ts`, `src/app/shoot/page.tsx`, `src/components/RecipeForm.tsx`, `src/components/NowPanel.tsx`, `src/components/RosterView.tsx`, `src/lib/copyText.ts`, ~~`public/app.html`~~ → `presentation/app.html` (V-05 조치로 `public/` 사본 삭제) |
@@ -27,7 +27,7 @@
 
 **기준 커밋 주의:** 초안이 한때 적어둔 `93307a4`는 틀린 값이었다. 그 커밋에는 `src/lib/mediaProbe.ts`·`src/app/api/media/route.ts`·`public/media/`가 아직 없고 PrepTask도 10개다(이 문서는 19개). 대조하려면 `282c0a9`를 받는다.
 
-**제품명 주의:** 앱 코드의 title은 `주방 체크리스트`(`src/app/layout.tsx`), `package.json` name은 `kitchen-sop`이다. "프렙노트"는 `presentation/` 폴더의 파일명·문서에만 쓰인다. ❓ 확인 필요 — 명칭 확정 여부.
+**제품명:** ✅ **2026-09-06에 `매장수첩`으로 확정.** 앱 title(`src/app/layout.tsx`)·문서·`presentation/` 파일명이 전부 같은 이름을 쓰고, `package.json` name은 `store-note`이다. "매장수첩"는 `presentation/` 폴더의 파일명·문서에만 쓰인다. ❓ 확인 필요 — 명칭 확정 여부.
 
 ---
 
@@ -57,7 +57,7 @@ function load(): SeedData {
 | 직원 명단 · 근무 배정 | 브라우저 localStorage `sop:roster` | `src/lib/roster.ts:29` |
 | 이벤트 로그 | `data/events.jsonl` (append) | `src/app/api/log/route.ts:27` |
 | 사진·영상 | `public/media/` 파일명 규약 | `src/lib/mediaProbe.ts` |
-| **발표용 단일 파일** | **`presentation/app.html`** · **`presentation/프렙노트.html`** — 시드 전체(매장·포지션·레시피·프렙·근무조)가 인라인된 단일 파일 HTML. ~~`public/app.html`~~ 은 **2026-09-04에 삭제**했다(V-05, `528a75b`) — `public/` 아래에 있어 배포하면 `/app.html`로 열렸다. `presentation/`은 웹으로 서빙되지 않는다 | `presentation/app.html`의 `const DATA = {`, `ls public/app.html` → No such file |
+| **발표용 단일 파일** | **`presentation/app.html`** · **`presentation/매장수첩.html`** — 시드 전체(매장·포지션·레시피·프렙·근무조)가 인라인된 단일 파일 HTML. ~~`public/app.html`~~ 은 **2026-09-04에 삭제**했다(V-05, `528a75b`) — `public/` 아래에 있어 배포하면 `/app.html`로 열렸다. `presentation/`은 웹으로 서빙되지 않는다 | `presentation/app.html`의 `const DATA = {`, `ls public/app.html` → No such file |
 
 ⚠️ **단일 파일 HTML은 `data/seed.json`의 두 번째 사본이고, 동기화되지 않는다.** 시드에 있는 `t-open-5`가 이 파일에는 없고, 프렙 업무 id도 시드는 `p-1`인데 이 파일은 `p1`이다. 저장 키도 다르다(6-4절). 즉 **같은 데이터의 두 판본이 서로 모르는 채로 저장소에 들어 있다.**
 
@@ -998,12 +998,12 @@ CONSTRAINT shift_focus_shape CHECK (
 
 | 파일 | 크기 | 서빙 여부 |
 |---|---|---|
-| `presentation/프렙노트.html` | 76,749 B | 안 됨. `file://`로만 연다 |
+| `presentation/매장수첩.html` | 76,749 B | 안 됨. `file://`로만 연다 |
 | ~~**`public/app.html`**~~ | **삭제됨 (2026-09-04, `528a75b`)** | — |
 
 키 비교:
 
-| 용도 | Next 앱 | 단일 HTML (`presentation/app.html` = `presentation/프렙노트.html`) |
+| 용도 | Next 앱 | 단일 HTML (`presentation/app.html` = `presentation/매장수첩.html`) |
 |---|---|---|
 | 체크리스트 | `sop:{shareSlug}:{날짜}` | `list:{slug}:{날짜}` (단일 파일 `renderChecklist()`) |
 | 프렙 | `prep:{slug}:{날짜}` | **`prep:{slug}:{날짜}` — 같다** (단일 파일 `renderPrep()`) |
@@ -1132,7 +1132,7 @@ body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
 
 ```sql
 -- =====================================================================
---  프렙노트(가칭) 스키마 v1
+--  매장수첩 스키마 v1
 --  근거: src/lib/types.ts (데이터 모델 v2, 2026-08-31)
 --        src/lib/roster.ts (staff / assign)
 --  작성: 2026-09-03 · 상태: 초안
@@ -1733,7 +1733,7 @@ for (const s of data.staff) {
 | 7 | **주기 점검을 "관리된다"고 쓰면 안 된다.** 라벨은 뜨지만 마지막 수행일 저장이 없어 매일 리셋된다. 8절의 `prep_check` + `prep_task_last_done` 뷰가 그걸 고치는 제안이고, 아직 구현이 아니다 |
 | 8 | **2절 ERD는 현재 코드 구조 + 신설 테이블 3종이지, 8절 DDL의 최종 스키마가 아니다.** 코드에 없는 칸(`sort_order` 9곳, `SECTION.parent`, `INGREDIENT.id`, `SHIFT_FOCUS.id`, `store_id`, `RECIPE.origin`, `SHIFT.crosses_midnight`, `STAFF.deleted_at`)과 코드에 없는 테이블(`MEDIA_KEY`·`CHECKLIST_CHECK`·`PREP_CHECK`)이 함께 그려져 있고, **속성명은 TS·시드 이름 그대로다.** 그림에는 8-1절 #2·#3·#4·#5가 없애는 느슨한 문자열 참조 4건이 **변경 전 상태로** 남아 있다(`desc`, `recipeSlug`, `SHIFT_FOCUS.slug`, `ASSIGN.shift_name`). **그림대로 테이블을 만들면 안 된다 — 스키마의 정본은 8절 DDL이고, 지금 코드의 칸은 3절 속성 표다** |
 | 9 | **배포 전 조치를 이 문서에서 인용하지 말 것.** 10-5절은 데이터·개인정보 관점의 상태만 적는다. **정본은 `01_MVP기획서.md` §10.3이다** |
-| 10 | **`data/seed.json`의 사본이 하나 더 있다.** `presentation/app.html`(= `프렙노트.html`)에 시드 전체가 인라인돼 있고 **동기화되지 않는다.** 개수·id를 인용할 때는 `seed.json`만 근거로 쓴다. ~~배포 시 `/app.html`로 공개된다~~는 문제는 해소됐다(파일 삭제). **다만 스키마가 갈라져 2026-09-04에 실제 버그를 냈다** — 6-4절의 ★ 박스 |
+| 10 | **`data/seed.json`의 사본이 하나 더 있다.** `presentation/app.html`(= `매장수첩.html`)에 시드 전체가 인라인돼 있고 **동기화되지 않는다.** 개수·id를 인용할 때는 `seed.json`만 근거로 쓴다. ~~배포 시 `/app.html`로 공개된다~~는 문제는 해소됐다(파일 삭제). **다만 스키마가 갈라져 2026-09-04에 실제 버그를 냈다** — 6-4절의 ★ 박스 |
 
 ---
 
