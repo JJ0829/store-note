@@ -66,6 +66,7 @@ GitHub 비공개 저장소는 백업용이고 배포가 아니다.
 | 근무표 (계획) | `/roster` | 동작 |
 | 촬영 진행 | `/shoot` | 동작 |
 | **출퇴근·근태** (실제) | `/attendance` | 동작 · 인건비만 잠김 |
+| **내보내기·되돌리기** | `/backup` | 동작 · 🔒 |
 | **근로계약서** | `/contracts` | 동작 · 🔒 |
 | **매출** (남은 돈) | `/sales` | 동작 · 🔒 |
 | **원가** | `/cost` | 동작 · 🔒 |
@@ -184,7 +185,7 @@ GitHub 비공개 저장소는 백업용이고 배포가 아니다.
 | ~~1~~ | ~~V-12 — 단일 파일의 Google Fonts~~ | ✅ **완료 2026-09-07** | **(가) 링크 제거 + 시스템 폰트 스택.** 두 단일 파일 모두 **외부 요청 0건**이 됐다. 우려됐던 계량 표 열 정렬은 실측상 안 깨진다(`tabular-nums`가 폴백 서체에서도 산다) → `06` V-12 |
 | 2 | 발표 자료 자체 (13분 구성) | 발표 전 | 아직 착수 안 함 |
 | 3 | PIN 게이트를 **진짜** 접근 통제로 | 배포 후 | 지금 것은 가리개다 (`06` V-19). 서버가 있어야 한다. **★ 레시피 쪽은 더 약하다** — 서버가 HTML에 실어 보내므로 잠긴 상태에서도 페이지 소스에 재료가 들어 있다 (실측 2026-09-07) |
-| 4 | 출퇴근·계약 내보내기(백업) | 배포 전 | 근로기준법 3년 보존 대상인데 백업 수단이 0이다 |
+| ~~4~~ | ~~출퇴근·계약 내보내기(백업)~~ | ✅ **완료 2026-09-07** | `/backup` 신설. **CSV(엑셀 보관·제출용) + JSON(되돌리기용).** 되돌리기는 JSON만 받는다 — 엑셀에서 한 칸 고치면 시각·요일이 깨지고 근태·인건비가 조용히 틀린다. 덮어쓰기이므로 확인 두 번 + **잃는 건수를 그 순간 다시 읽어서** 보여준다 |
 | 5 | Supabase | D-007 확정 후 | `src/lib/repo.ts` 와 각 lib 의 load/save 만 고치면 된다 |
 
 **배포 전 조치의 정본은 [`docs/deliverables/01_MVP기획서.md` §10.3](docs/deliverables/01_MVP기획서.md)이다.**
@@ -265,13 +266,15 @@ src/lib/contracts.ts        ← 근로계약 조건 + 법정 점검. ★ 주민�
 src/lib/sales.ts            ← 매출 − 재료비 − 인건비
 src/lib/orders.ts           ← 발주 체크 (주문함 / 들어옴 두 단계)
 src/lib/settings.ts         ← 최저임금·5인이상·목표원가율·판매가·원가제외 재료
+src/lib/backup.ts           ← 내보내기·되돌리기. ★ CSV는 BOM 필수 + 수식 주입 차단
 src/lib/pinDigest.ts        ← PIN 단방향 요약값. 두 잠금이 공유 (소금은 다르게)
 src/lib/ownerGate.ts        ← 사장님 PIN. ★ 보안이 아니라 가리개다
 src/lib/storeGate.ts        ← ★ 매장 PIN (레시피). 사장님 PIN과 다른 것이다
 src/components/ui.tsx       ← Screen/Card/Row/Chip/NumField 공통
 src/components/OwnerGate.tsx← 화면 전체 잠금 + InlineUnlock(부분 가리기)
 src/components/StoreGate.tsx← 레시피 가림막 + StoreLockButton
-tests/                      ← 199개. units·cost·attendance·vendors·contracts·sales·pinGate
+src/components/BackupView.tsx← 내보내기·되돌리기
+tests/                      ← 218개. units·cost·attendance·vendors·contracts·sales·pinGate·backup
 ```
 
 ### 운영 기능에서 조심할 것 (테스트로 못 박아둠)
@@ -288,6 +291,13 @@ tests/                      ← 199개. units·cost·attendance·vendors·contra
 - **인건비는 추정이다.** 4대보험·소득세·수습감액·연차수당 없음. 급여 대장 아님.
 - **주민등록번호 칸을 만들지 않았다.** 개인정보보호법 제24조의2가 암호화를
   요구하는데 localStorage로는 못 맞춘다. 계약서 원본은 앱 밖에 둔다.
+- **★ CSV 맨 앞의 BOM을 지우지 말 것.** 없으면 엑셀이 UTF-8을 못 알아보고
+  한글이 전부 깨진다. 사장님이 "안 된다"고 판단하는 가장 흔한 지점이다.
+  (`Blob.text()`는 BOM을 떼고 디코딩하므로 테스트는 바이트로 봐야 한다)
+- **★ CSV 칸이 `= + - @`로 시작하면 앞에 `'`를 붙인다.** 엑셀·구글시트가
+  수식으로 실행한다. 직원이 메모를 입력하는 칸이 있어서 실제로 걸리는 경로다.
+- **되돌리기는 합치지 않고 덮어쓴다.** 같은 날짜 출퇴근이 양쪽에 다르면
+  어느 쪽이 맞는지 앱이 모른다. 조용히 고르면 급여가 틀린다.
 
 ## 쌓이는 지표
 
