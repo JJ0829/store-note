@@ -2,6 +2,7 @@ import Link from "next/link";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import NowPanel from "@/components/NowPanel";
 import { OwnerLockButton } from "@/components/OwnerGate";
+import { StoreLockButton } from "@/components/StoreGate";
 import {
   countCritical,
   countTasks,
@@ -279,6 +280,13 @@ export default function Home() {
             </li>
           ))}
         </ul>
+
+        {/*
+          매장 번호는 레시피 옆에 둔다.
+          사장님 잠금 버튼 옆에 나란히 두면 둘이 같은 것으로 읽힌다 —
+          하나는 직원에게 알려주는 번호이고 하나는 사장님만 아는 번호다.
+        */}
+        <StoreLockButton />
       </section>
     </main>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import LocalRecipeView from "@/components/LocalRecipeView";
+import StoreGate from "@/components/StoreGate";
 import { getStore } from "@/lib/repo";
 
 export const metadata: Metadata = {
@@ -16,8 +17,10 @@ export const metadata: Metadata = {
  */
 export default function MyRecipePage() {
   return (
-    <Suspense fallback={null}>
-      <LocalRecipeView storeName={getStore().name} />
-    </Suspense>
+    <StoreGate title="레시피">
+      <Suspense fallback={null}>
+        <LocalRecipeView storeName={getStore().name} />
+      </Suspense>
+    </StoreGate>
   );
 }

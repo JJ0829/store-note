@@ -18,23 +18,20 @@
  *      공용 태블릿이라 localStorage에 두면 영영 열린 채로 남는다.
  * ------------------------------------------------------------------ */
 
+import { digest as pinDigest } from "./pinDigest.ts";
+
 const PIN_KEY = "sop:ownerPin";
 const OPEN_KEY = "sop:ownerOpen";
 
 /**
- * 단방향 요약값.
+ * 소금은 `sop-owner` 그대로 둔다.
  *
- * 암호학적으로 안전한 해시가 아니다(브라우저에서 도는 이상 의미도 없다).
- * 목적은 딱 하나 — 저장소를 눈으로 훑었을 때 PIN이 그대로 보이지 않게.
+ * 계산 자체는 `pinDigest.ts`로 옮겼지만(매장 PIN과 공유),
+ * **소금을 바꾸면 이미 태블릿에 저장된 사장님 PIN이 안 맞게 된다.**
+ * 사장님은 다시 만들 수밖에 없고, 그 사이 매출 화면이 열린 채로 남는다.
  */
 function digest(pin: string): string {
-  let h = 2166136261;
-  const salted = `sop-owner:${pin}`;
-  for (let i = 0; i < salted.length; i++) {
-    h ^= salted.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(36);
+  return pinDigest("sop-owner", pin);
 }
 
 export function hasPin(): boolean {

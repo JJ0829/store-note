@@ -21,3 +21,6 @@ public/media/*
 # 추적도 무시도 안 된 채 있어서 `git add -A` 한 번이면 스테이징된다.
 # 그중 하나가 147MB라 GitHub 100MB 제한에 걸려 push가 통째로 실패한다.
 *.zip
+
+# Claude Code 로컬 설정 — 이 기기에서만 쓰는 권한 규칙. 공유하지 않는다
+.claude/settings.local.json
