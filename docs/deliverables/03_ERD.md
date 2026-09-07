@@ -110,6 +110,8 @@ function load(): SeedData {
 > ### 이 그림은 무엇인가
 > **현재 코드의 구조 + 8절 DDL이 신설하는 테이블 3종이다. 8절 DDL의 최종 스키마가 아니다.**
 >
+> **2026-09-07 갱신 — 운영 기능 8종을 그림에 넣었다.** 이전까지 `PUNCH`·`CONTRACT`·`VENDOR`·`VENDOR_ITEM`·`DAY_SALES`·`ORDER_STATE`·`ORDER_LINK`·`SETTINGS`는 **3-A절 표에만 있고 그림에는 없었다**(`00_진행표.md` 정합성 #3). 이제 그림 한 장이 전체를 덮는다.
+>
 > 한 문장으로: *"JSON 시드 · 브라우저 저장소 · 이벤트 파일에 흩어져 있는 지금의 데이터가 어떻게 물려 있는지"*를 한 장에 모으고, 거기에 **지금 대응물이 없어 8절 DDL이 새로 만드는 테이블 3종**(`MEDIA_KEY`·`CHECKLIST_CHECK`·`PREP_CHECK`)을 얹어 그린 것이다.
 > 그래서 ⓐ 코드에 없는 **칸**이 일부 들어 있고 ⓑ 코드에 없는 **테이블**도 그려져 있다. 속성명은 **TS 타입·시드의 이름 그대로**다.
 >
@@ -131,13 +133,15 @@ function load(): SeedData {
 |---|---|
 | `data/seed.json`에 있음 (서버 데이터) | `STORE` `POSITION` `SECTION` `STEP` `RECIPE` `INGREDIENT` `PREP_LIST` `PREP_TASK` `SHIFT` `SHIFT_FOCUS` |
 | 브라우저 localStorage에만 있음 | `STAFF` `ASSIGN` (`sop:roster`. 3-11·3-12절) |
-| **브라우저 localStorage에만 있음 (2026-09-04 추가)** | `PUNCH` `CONTRACT` `VENDOR` `VENDOR_ITEM` `DAY_SALES` `ORDER_STATE` `ORDER_LINK` `SETTINGS` `OWNER_PIN` (3-A절) |
+| **브라우저 localStorage에만 있음 (2026-09-04 추가)** | `PUNCH` `CONTRACT` `VENDOR` `VENDOR_ITEM` `DAY_SALES` `ORDER_STATE` `ORDER_LINK` `SETTINGS` — **8종 모두 그림에 있다 (2026-09-07 추가).** `OWNER_PIN`은 **일부러 뺐다** (엔티티가 아니고 서버로 안 옮긴다. 3-22절) |
 | 파일에만 있음 | `EVENT` (`data/events.jsonl` 무스키마 append. 7절) |
 | **코드에 대응물이 아예 없다 — DDL 신설** | `MEDIA_KEY` (지금은 파일명 규약이 대신한다. 3-13절) · **`CHECKLIST_CHECK`** · **`PREP_CHECK`** (지금은 localStorage 날짜 키뿐. **1-2절 한계 #4·#5·#6이 이 둘로 풀린다**) |
 
 **칸 수준에서 코드에 없는 것:** `sort_order`(9개 테이블) · `SECTION.parent` · `INGREDIENT.id` · `SHIFT_FOCUS.id` · 전 테이블의 `store_id` · `RECIPE.origin` · `SHIFT.crosses_midnight` · `STAFF.deleted_at`. 이유는 8-1절에 하나씩 적었다.
 
 `prep_task_last_done`(주기 점검의 마지막 수행일)은 **테이블이 아니라 뷰**라 그리지 않았다. `prep_check`를 집계한다 — 8절 DDL 참조.
+
+**`OWNER_PIN`도 그리지 않았다 — 9종 중 이것 하나만 뺐다.** 엔티티가 아니라 브라우저 키 두 개(`sop:ownerPin`·`sop:ownerOpen`)이고, **서버로 옮기지 않기로 이미 정해져 있다** — 잠금은 Supabase RLS + 실제 인증으로 대체된다(3-22절). 그림은 8절 DDL로 가는 길을 그린 것이므로, 옮기지 않을 것을 그리면 DDL을 만들 때 잘못 옮긴다.
 
 ```mermaid
 erDiagram
@@ -175,6 +179,23 @@ erDiagram
     PREP_TASK ||--o{ PREP_CHECK : "DDL신설"
 
     STORE     ||--o{ EVENT : "nullable DDL신설"
+
+    %% ── 운영 기능 9종 (2026-09-04 추가). 전부 브라우저 localStorage ──
+    STAFF     ||--o{ PUNCH    : "1:N 브라우저저장"
+    STAFF     ||--o{ CONTRACT : "1:N 최신 start_date가 현재계약"
+
+    STORE     ||--o{ VENDOR    : "1:N 브라우저저장"
+    VENDOR    ||--o{ VENDOR_ITEM : "1:N 거래처삭제시 함께삭제"
+    VENDOR_ITEM }o--o| INGREDIENT : "0..1 name 이름문자열 느슨한참조"
+
+    STORE     ||--o{ DAY_SALES : "1:N 날짜PK"
+
+    PREP_TASK ||--o{ ORDER_STATE : "kind=order 인 것만"
+    PREP_TASK ||--o| ORDER_LINK  : "0..1"
+    VENDOR    ||--o{ ORDER_LINK  : "다대일. 거래처삭제시 고아"
+
+    STORE     ||--o| SETTINGS : "1:1 단일행"
+    SETTINGS  }o--o{ RECIPE   : "prices 키. 앱은 id 단일파일은 slug"
 
     STORE {
         string id PK "store-1"
@@ -324,6 +345,82 @@ erDiagram
         int duration_sec "nullable"
         boolean recoverable "nullable. prep_check 이벤트"
         string payload "jsonb. 나머지 전부"
+    }
+
+    PUNCH {
+        string id PK "pu- 랜덤7자"
+        string staff_id FK "복합PK1. 개인정보"
+        string date "복합PK2 YYYY-MM-DD"
+        string in_at "빈문자열이면 출근 미기록"
+        string out_at "빈문자열이면 근무중. 0이 아니다"
+        int break_min "휴게시간 분"
+        string note
+    }
+
+    CONTRACT {
+        string id PK "ct- 랜덤7자"
+        string staff_id FK "개인정보"
+        string start_date "가장 늦은 것이 현재계약"
+        string end_date "빈문자열이면 기간의 정함 없음"
+        int hourly_wage "급여. 0은 미입력이며 경고 안 띄움"
+        int weekly_hours "15 이상이면 주휴수당"
+        string work_days "0=일 … 6=토 배열"
+        string start_time
+        string end_time
+        boolean handed_over "서면 교부. 근로기준법 제17조"
+        boolean insured "4대보험"
+        string note "주민번호 주소 계좌 칸 없음. 3-15절"
+    }
+
+    VENDOR {
+        string id PK "vd- 랜덤7자"
+        string name "업체명"
+        string phone "담당자 개인번호일 수 있음"
+        string contact "담당자 이름. 제3자 개인정보"
+        string how "전화 카톡 앱 홈페이지 방문"
+        string cutoff "주문 마감 시각. 넘기면 하루 밀림"
+        string deliver_days "배송요일 배열. 빈배열은 매일"
+        int lead_days "주문 후 며칠"
+        string note
+    }
+
+    VENDOR_ITEM {
+        string id PK "vi- 랜덤7자"
+        string vendor_id FK "거래처 삭제시 함께 삭제"
+        string name "ingredient.name과 글자 그대로 같아야 붙는다"
+        number pack_amount "0이면 단가 계산 안 함"
+        string pack_unit
+        int pack_price "영업비밀. 부가세 포함가"
+        string note
+    }
+
+    DAY_SALES {
+        string date PK "YYYY-MM-DD"
+        int total "총매출. 영업비밀"
+        int count "결제 건수. 0이면 객단가 계산 안 함"
+        int material "그날 재료비"
+        string note "인건비 칸 없음. PUNCH x CONTRACT로 계산"
+    }
+
+    ORDER_STATE {
+        string date PK "복합PK1"
+        string task_id PK "복합PK2. prep_task kind=order"
+        boolean ordered "주문을 넣었다"
+        boolean received "물건이 들어왔다"
+        string memo "수량. 사람이 읽는 문장"
+    }
+
+    ORDER_LINK {
+        string task_id PK "prep_task(id)"
+        string vendor_id FK "거래처 지우면 고아. 정리 코드 없음"
+    }
+
+    SETTINGS {
+        int min_wage "2026년 최저임금 기본값 10320"
+        boolean five_or_more "5인 이상 여부. 인건비 금액을 바꾼다"
+        number target_cost_rate "목표 원가율 퍼센트"
+        string prices "레시피별 판매가. 별도 테이블로 분해 대상"
+        string excluded "원가에 안 셀 재료명. 추출량 이중계산 방지"
     }
 ```
 
@@ -1743,4 +1840,5 @@ for (const s of data.staff) {
 |---|---|
 | 2026-09-04 (2차) | **검증 지적 3건 반영.** (1) **2절 다이어그램의 성격을 정정** — "8절 DDL이 만들 목표 스키마"라는 선언을 철회하고 **"현재 코드 + 신설 테이블 3종"**으로 다시 썼다. 그림에 남아 있는 느슨한 문자열 참조 4건(`desc`·`recipeSlug`·`SHIFT_FOCUS.slug`·`ASSIGN.shift_name`)이 8-1절 #2·#3·#4·#5의 **변경 전** 상태임을 표로 명시. 11절 #8도 같이 정정 (2) **`media_key`가 전역 유일성을 실제로 강제하도록 DDL 수정** — `key text primary key` 하나로는 `step`과 `prep_task`가 같은 key 행을 함께 참조할 수 있어 막으려던 파일명 충돌이 그대로 났다. `unique (key, owner_kind)` + 참조 쪽 고정값 `owner_kind` 컬럼 + `(id, owner_kind)` 복합 FK로 교체. 8-1절 #8, 3-4절·9절 단계 6 서술도 갱신 (3) **3-8절의 `PrepView.tsx:293`·`:309` → `:352`·`:368`** — 인용한 두 줄이 리드타임과 무관했다(HEAD `282c0a9` 기준 `:293`=체크박스 `<span`, `:309`=SVG `strokeLinecap`). 실제 분기는 `:352`/`:368` |
 | 2026-09-03 | 초안 작성. `types.ts` 전수 + `data/seed.json` 실측 기준. 엔티티 13종, DDL 16테이블 + 뷰 1개 |
+| **2026-09-07** | **정합성 #3 해소 — 2절 다이어그램에 운영 기능 8종을 그렸다.** `PUNCH`·`CONTRACT`·`VENDOR`·`VENDOR_ITEM`·`DAY_SALES`·`ORDER_STATE`·`ORDER_LINK`·`SETTINGS` — 지금까지 3-A절 표에만 있고 **그림에는 없어서 「심사에서 볼 그림 한 장」이 전체를 못 덮었다.** 속성은 3-14~3-21절에서 그대로 옮겼고, 느슨한 참조(`VENDOR_ITEM.name` ↔ `INGREDIENT.name`)와 고아 가능성(`ORDER_LINK` ↔ `VENDOR`)도 관계선의 라벨로 표시했다. **`OWNER_PIN`은 9종 중 유일하게 뺐다** — 엔티티가 아니라 브라우저 키 두 개이고 서버로 안 옮기기로 이미 정해져 있어(3-22절), 그리면 DDL을 잘못 만들게 된다. 뺀 이유를 2절 본문에 명시했다. **원가·근태는 계산 결과라 원래대로 안 그린다**(3-A절 머리). ✅ **`@mermaid-js/mermaid-cli@10.9.1`로 실제 렌더 확인 — 엔티티 24개 전부 그려진다** |
 | 2026-09-04 | **세 문서(01·02·03) 모순 5건 정리.** (1) **2절 머리에 "이 그림은 8절 DDL의 목표 스키마다"를 선언**하고, 코드에 있는 것/DDL 신설인 것을 표로 분리. 빠져 있던 **`CHECKLIST_CHECK`·`PREP_CHECK` 두 테이블을 다이어그램에 추가**(뷰인 `prep_task_last_done`은 제외 이유를 명시) (2) **`PrepTask.kind`를 죽은 필드로 등재** — 2-2절 #6, 3-8절, 11절 #1. 3축 개념 자체는 유지 (3) **PIN 등급 통일** — 10-5절 #1을 배포 전 필수로 명시하고, 9절 단계 9가 그 순서를 기다리지 않는다는 단서 추가 (4) **10-5절을 데이터·개인정보 관점으로 좁히고 배포 전 조치의 정본을 `01_MVP기획서.md` §10.3으로 넘김**(11절 #9) (5) 기준 커밋을 **`282c0a9`**로, 행 번호 기준(`4a9192d`)은 별도 행으로 분리. 이에 따라 `ShiftFocus`를 **4분기**(`training`/`checklist`/`prep`/`recipes`)로 갱신 — 2절 다이어그램·2-1절·3-10절·5-2절·8절 DDL CHECK·9절 검사표, 그리고 10-3·10-4절의 `copyForChat()` 개명과 화면 경고문 반영 |
