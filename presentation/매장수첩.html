@@ -8,9 +8,13 @@
 <title>매장수첩</title>
 </head>
 <body>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<!-- 외부 폰트를 쓰지 않는다 (2026-09-07, V-12).
+     이 파일의 존재 이유가 "발표장에 인터넷·개발환경이 없을 수 있어서"인데
+     글꼴을 CDN에서 받으면 그 전제가 깨진다. 오프라인에서 서체가 바뀌면
+     계량·수량 표의 열 폭과 제목 줄바꿈이 준비한 것과 달라진다.
+     겸해서 방문자 IP가 Google로 나가던 것도 사라진다 —
+     제출 문서의 "서버에 사용자 데이터를 저장하지 않는다"와 충돌하던 지점.
+     → docs/deliverables/06_보안설계.md V-12 -->
 
 <style>
 /* ------------------------------------------------------------------ *
@@ -39,8 +43,13 @@
   --warn-w:   #FBF3DE;
   --warn-t:   #7A5A16;
 
-  --sans: "IBM Plex Sans KR", system-ui, -apple-system, "Malgun Gothic", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+  /* 설치된 것만 쓴다. 앞에서부터 있는 것이 잡힌다 — Windows는 맑은 고딕,
+     Mac은 애플 SD 산돌고딕. 둘 다 한글 기본 탑재라 발표장에서 빠질 일이 없다. */
+  --sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI",
+          "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  /* 숫자 열을 맞추는 건 이쪽이다. 전부 고정폭이라 tabular-nums가 그대로 산다. */
+  --mono: ui-monospace, "Cascadia Mono", "Consolas", "SF Mono", Menlo,
+          "D2Coding", monospace;
 
   --r: 14px;
   --shadow: 0 1px 2px rgba(28,25,23,.05), 0 8px 24px -16px rgba(28,25,23,.22);
