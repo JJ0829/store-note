@@ -56,8 +56,17 @@ export const EMPTY_STATE: OrderState = {
   memo: "",
 };
 
+/**
+ * 그날 그 항목의 상태. 기록이 없으면 빈 상태.
+ *
+ * ★ 빈 상태를 **복사해서** 돌려준다. `EMPTY_STATE` 를 그대로 넘기면
+ *   호출부에서 `st.ordered = true` 한 줄만 써도 그 뒤 모든 항목의
+ *   기본값이 "주문함"으로 바뀐다 — 화면 전체가 조용히 틀어진다.
+ *   지금 호출부는 읽기만 하지만(`OrderView.tsx:109,237`), 한 줄로 터지는
+ *   종류라 막아둔다.
+ */
 export function stateOf(log: OrderLog, date: string, taskId: string): OrderState {
-  return log[date]?.[taskId] ?? EMPTY_STATE;
+  return log[date]?.[taskId] ?? { ...EMPTY_STATE };
 }
 
 export function putState(
