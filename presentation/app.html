@@ -21,8 +21,20 @@
   --line:     #E7E1DA;
   --ink:      #1C1917;
   --ink-2:    #57534E;
-  --ink-3:    #8A817A;
-  --accent:   #D9480F;
+  --ink-3:    #6E655E;   /* AA: sunken 5.02 / surface 5.70 (구 #8A817A 는 3.37~3.82 미달) */
+  --accent:   #D9480F;   /* 브랜드색. theme-color 와 같아야 한다 */
+  /* 작은 글씨에 쓰는 액센트. --accent 는 흰 배경에서 4.30 으로 AA 미달이다.
+     14px 굵은 글씨(큰글씨 기준 3:1)까지는 --accent 를 써도 되지만,
+     11~13px 본문에는 이쪽을 쓴다. surface 5.79 / sunken 5.11 */
+  --accent-t: #B8390B;
+  /* ★ 액센트로 꽉 채운 면(주 버튼·선택된 칩)과 그 위의 글자색.
+     라이트: 원색이 흰 글씨에 4.30 으로 미달이라 92% 로 어둡게 -> 4.95
+     다크:   --accent 가 밝은 주황이라 흰 글씨가 2.83 로 더 나쁘다.
+             그래서 다크에서는 글자를 어둡게 뒤집는다 -> 6.58
+     두 값을 쌍으로 묶어둔 이유가 이것이다. 한쪽만 고치면 반대 모드가 깨진다. */
+  --accent-fill:   color-mix(in srgb, var(--accent) 92%, #000);
+  --accent-fill-h: color-mix(in srgb, var(--accent) 84%, #000);
+  --accent-fill-t: #fff;
   --accent-w: #FDF1EA;
   --accent-b: #F3CDB8;
   --danger:   #B4232A;
@@ -33,6 +45,19 @@
   --ok-b:     #BCE0CA;
   --warn-w:   #FBF3DE;
   --warn-t:   #7A5A16;
+
+  /* 근무표 달력의 섹션 구분색. 예전에는 JS 안에 hex 로 박혀 있어서
+     다크모드에서 뒤집히지 않았다(#2563EB 가 다크 배경 대비 3.27 미달).
+     칩은 자기 색 8% 틴트 위에 같은 색 글씨를 올리므로 대비가 구조적으로
+     낮다 — 8% 는 전 색상이 4.5 를 넘는 최대 농도다(10% 는 4.49 로 미달). */
+  --sec-1:    #B8390B;
+  --sec-2:    #1F7A44;
+  --sec-3:    #2563EB;
+  --sec-4:    #7C3AED;
+  --sec-5:    #B4232A;
+  --sec-6:    #0E7490;
+  /* 달력 요일 머리글·날짜. 일요일은 --danger 를 쓴다 */
+  --sat:      #2563EB;
 
   /* 설치된 것만 쓴다. 앞에서부터 있는 것이 잡힌다 — Windows는 맑은 고딕,
      Mac은 애플 SD 산돌고딕. 둘 다 한글 기본 탑재라 발표장에서 빠질 일이 없다. */
@@ -56,6 +81,10 @@
     --ink-2:    #BDB4AA;
     --ink-3:    #8C837A;
     --accent:   #F2762F;
+    --accent-t: #F2762F;   /* 다크는 원래 5.97 로 통과하므로 --accent 와 같다 */
+    --accent-fill:   var(--accent);        /* 밝은 주황을 그대로 면색으로 */
+    --accent-fill-h: color-mix(in srgb, var(--accent) 88%, #fff);
+    --accent-fill-t: #15120F;              /* 글자를 어둡게. 6.58 */
     --accent-w: #34190D;
     --accent-b: #6B3417;
     --danger:   #F0757B;
@@ -66,6 +95,13 @@
     --ok-b:     #2C5740;
     --warn-w:   #2E2513;
     --warn-t:   #DFC177;
+    --sec-1:    #F2762F;
+    --sec-2:    #3DAE69;
+    --sec-3:    #5B8DEF;
+    --sec-4:    #A98BF5;
+    --sec-5:    #E8636A;
+    --sec-6:    #37A8C4;
+    --sat:      #5B8DEF;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
   }
 }
@@ -103,7 +139,10 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 108px; }
+/* 하단 여백 108px 은 고정 탭바(≈57px) 를 피하는 값이다.
+   안전영역만큼 탭바가 더 두꺼워지므로 여기도 같이 더해준다. */
+.wrap { max-width: 760px; margin: 0 auto;
+  padding: 0 16px calc(108px + env(safe-area-inset-bottom, 0px)); }
 
 /* ---------- 상단 ---------- */
 .top {
@@ -136,9 +175,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
 .btn-primary {
-  background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
+  background: var(--accent-fill); border-color: var(--accent-fill);
+  color: var(--accent-fill-t); font-weight: 600;
 }
-.btn-primary:hover { background: color-mix(in srgb, var(--accent) 88%, #000); }
+.btn-primary:hover { background: var(--accent-fill-h); border-color: var(--accent-fill-h); }
 .btn-ghost { background: transparent; }
 .back { padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--ink-2); flex: none; }
 
@@ -160,10 +200,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* .btn-primary가 위에서 정의돼 .nav-row에 덮인다. 조합 선택자로 되살린다 */
 .nav-row.btn-primary {
-  background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: none;
+  /* 더 구체적인 선택자라 .btn-primary 를 덮는다. 같은 토큰을 써야 한다 —
+     여기만 놓쳐서 홈 화면 주 버튼이 조용히 미달로 남아 있었다. */
+  background: var(--accent-fill); border-color: var(--accent-fill);
+  color: var(--accent-fill-t); box-shadow: none;
 }
-.nav-row.btn-primary:hover { background: color-mix(in srgb, var(--accent) 88%, #000); }
-.nav-row.btn-primary .chev { color: #fff; }
+.nav-row.btn-primary:hover { background: var(--accent-fill-h); border-color: var(--accent-fill-h); }
+.nav-row.btn-primary .chev { color: var(--accent-fill-t); }
 
 /* ---------- 라벨 ---------- */
 .eyebrow {
@@ -207,7 +250,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   border: 2px solid var(--line); display: grid; place-items: center;
   color: transparent; /* 체크 전에는 표시가 보이면 안 된다 */
 }
-.task.done .tick { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* 체크 표시는 글자가 아니라 아이콘이지만, 다크에서 흰 글리프가 2.83 이라
+   비텍스트 기준 3:1 도 못 넘는다. 같은 토큰 쌍을 쓴다. */
+.task.done .tick { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--accent-fill-t); }
 .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
 .task h3 { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.35; }
 .task.done h3 { text-decoration: line-through; }
@@ -225,7 +270,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .scaler { border-top: 1px solid var(--line); background: var(--sunken); padding: 12px 16px; }
 .scale-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 6px; }
 .scale-grid button { padding: 9px 0; font-family: var(--mono); font-weight: 600; font-size: 13px; }
-.scale-grid button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.scale-grid button[aria-pressed="true"] { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--accent-fill-t); }
 .yield { margin: 11px 0 6px; font-size: 12.5px; color: var(--ink-3); }
 .yield b { color: var(--accent); font-family: var(--mono); }
 
@@ -247,10 +292,21 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
 .row-in { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ---------- 표 ---------- */
+/* 화면에서만 숨긴다. display:none·visibility:hidden 은 스크린리더도 건너뛴다 */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+/* 포커스가 와도 테두리가 화면을 흔들지 않게 */
+#view:focus { outline: none; }
+#view:focus-visible { outline: none; }
 .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th, td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--line); }
 tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+/* 행 머리글을 <th scope="row"> 로 바꿨다. UA 기본 굵기가 붙으면 안쪽 보조문까지
+   굵어지므로 눌러둔다 — 이름은 <b> 가 굵히므로 화면은 그대로다. */
+tbody th { font-weight: 400; }
 thead th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-family: var(--mono); font-weight: 500; }
 td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .sticky-col { position: sticky; left: 0; background: var(--surface); min-width: 116px; }
@@ -260,14 +316,18 @@ td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: blur(10px); border-top: 1px solid var(--line);
+  /* viewport-fit=cover 를 켜놨으므로 홈 인디케이터 영역을 직접 비워야 한다.
+     없으면 아이패드·아이폰에서 탭 6개가 인디케이터에 깔린다. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .tabbar-in { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); }
 .tabbar button {
   border: 0; border-radius: 0; background: none; padding: 9px 4px 12px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  font-size: 10.5px; font-weight: 600; color: var(--ink-3);
+  /* 10.5px 은 프로젝터·주방 조명에서 판독이 어렵다. 11px 이 6칸 유지의 한계값 */
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
 }
-.tabbar button[aria-current="page"] { color: var(--accent); }
+.tabbar button[aria-current="page"] { color: var(--accent-t); }
 .tabbar .ic { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- 교육 모드 ---------- */
@@ -300,7 +360,15 @@ td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   <div class="top-in" id="top"></div>
 </header>
 
-<main class="wrap" id="view"></main>
+<!-- 라우트가 바뀌면 #view 를 통째로 갈아끼운다. 포커스를 여기로 옮기지 않으면
+     스크린리더 사용자는 화면이 바뀐 것을 모른다. tabindex=-1 은 그 때문이다
+     (Tab 순서에는 안 들어가고, 스크립트로만 포커스를 받는다). -->
+<main class="wrap" id="view" tabindex="-1"></main>
+
+<!-- 짧은 상태 알림. "저장됨" · "번호가 맞지 않습니다" 같은 것이 여기로 온다.
+     화면에는 안 보이지만(.sr-only) 스크린리더가 읽는다.
+     display:none 이면 낭독되지 않으므로 clip 방식으로 숨긴다. -->
+<p id="live" class="sr-only" role="status" aria-live="polite"></p>
 
 <nav class="tabbar" aria-label="주요 화면">
   <div class="tabbar-in" id="tabs"></div>
@@ -1020,14 +1088,34 @@ function parseHash() {
   return { name: name || "", arg: arg || "" };
 }
 
+/**
+ * 짧은 상태 알림을 스크린리더에 보낸다.
+ *
+ * 같은 문자열을 연달아 넣으면 낭독되지 않는다(내용이 안 바뀌었으니까).
+ * 그래서 일단 비우고 다음 틱에 채운다 — "저장됨"을 두 번 누르는 경우가 실제로 있다.
+ */
+function say(msg) {
+  const n = document.getElementById("live");
+  if (!n) return;
+  n.textContent = "";
+  setTimeout(() => { n.textContent = msg; }, 60);
+}
+
 function render() {
   const { name, arg } = parseHash();
   const fn = routes[name] || renderHome;
-  document.getElementById("view").innerHTML = "";
+  const view = document.getElementById("view");
+  view.innerHTML = "";
   document.getElementById("top").innerHTML = "";
   fn(arg);
   renderTabs(name);
   window.scrollTo(0, 0);
+  /* DOM 을 통째로 바꿨으므로 포커스가 사라진 요소에 남아 있다.
+     본문으로 옮겨야 다음 Tab 이 화면 처음부터 시작한다. */
+  view.focus({ preventScroll: true });
+  /* 제목은 topbar() 가 <h1> 으로 넣는다. 그걸 그대로 읽어준다 */
+  const h1 = document.querySelector("#top h1");
+  if (h1) say(h1.textContent + " 화면");
 }
 window.addEventListener("hashchange", render);
 
@@ -1063,7 +1151,7 @@ function renderTabs(active) {
     : OPS_KEYS.includes(active) ? "ops" : active;
   for (const t of TABS) {
     const b = el(`<button type="button" ${cur === t.key ? 'aria-current="page"' : ""}>
-      <svg class="ic" viewBox="0 0 24 24">${t.icon}</svg>${t.label}</button>`);
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${t.icon}</svg>${t.label}</button>`);
     b.onclick = () => go(t.key === "" ? "#/" : `#/${t.key}`);
     wrap.appendChild(b);
   }
@@ -1298,7 +1386,7 @@ function renderRecipes() {
 
     cats.innerHTML = "";
     [["전체", ""], ...[...new Set(all().map(r => r.category))].map(c => [c, c])].forEach(([lab, val]) => {
-      const b = el(`<button type="button" style="padding:6px 12px;font-size:13px;font-weight:600;${q.value === val ? "background:var(--accent);border-color:var(--accent);color:#fff" : ""}">${esc(lab)}</button>`);
+      const b = el(`<button type="button" style="padding:6px 12px;font-size:13px;font-weight:600;${q.value === val ? "background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-fill-t)" : ""}">${esc(lab)}</button>`);
       b.onclick = () => { q.value = val; draw(); };
       cats.appendChild(b);
     });
@@ -1340,9 +1428,9 @@ function renderRecipes() {
       </div></div>`);
     const ings = box.querySelector("#ings");
     const addRow = () => ings.appendChild(el(`<div class="row-in">
-      <input placeholder="재료" style="flex:2;min-width:110px" class="i-n">
-      <input placeholder="양" type="number" style="flex:1;min-width:70px" class="i-a">
-      <input placeholder="단위" value="g" style="width:76px" class="i-u"></div>`));
+      <input placeholder="재료" aria-label="재료 이름" style="flex:2;min-width:110px" class="i-n">
+      <input placeholder="양" aria-label="재료 양" type="number" style="flex:1;min-width:70px" class="i-a">
+      <input placeholder="단위" aria-label="재료 단위" value="g" style="width:76px" class="i-u"></div>`));
     addRow(); addRow();
     box.querySelector("#more").onclick = addRow;
     box.querySelector("#save").onclick = () => {
@@ -1423,7 +1511,9 @@ function renderRoster() {
   const shiftOf = (id, d) => (data.assign[id] || {})[dk(d)] || "";
 
   /* 섹션마다 색을 준다. 달력에서 누가 나오는지 색으로 먼저 읽히게. */
-  const SEC_COLORS = ["#D9480F", "#1F7A44", "#2563EB", "#7C3AED", "#B4232A", "#0E7490"];
+  /* 토큰을 가리키기만 한다. hex 를 여기 박으면 다크모드에서 안 뒤집힌다 */
+  const SEC_COLORS = ["var(--sec-1)", "var(--sec-2)", "var(--sec-3)",
+                      "var(--sec-4)", "var(--sec-5)", "var(--sec-6)"];
   const sections = () => [...new Set(data.staff.map(s => s.section.trim() || "미지정"))];
   const colorOf = sec => SEC_COLORS[sections().indexOf(sec) % SEC_COLORS.length];
   const secOf = s => s.section.trim() || "미지정";
@@ -1454,10 +1544,10 @@ function renderRoster() {
   /* ---------- 직원 추가 ---------- */
   const form = el(`<section class="sec"><h2>직원</h2>
     <div class="card" style="padding:14px 16px"><div class="row-in">
-      <input class="f-sec" placeholder="섹션 (예: 제빵)" style="width:130px">
-      <input class="f-name" placeholder="이름" style="width:110px">
-      <input class="f-mail" type="email" placeholder="이메일" style="flex:1;min-width:170px">
-      <input class="f-tel" type="tel" placeholder="전화번호" style="width:150px">
+      <input class="f-sec" placeholder="섹션 (예: 제빵)" aria-label="섹션" style="width:130px">
+      <input class="f-name" placeholder="이름" aria-label="직원 이름" style="width:110px">
+      <input class="f-mail" type="email" placeholder="이메일" aria-label="이메일" style="flex:1;min-width:170px">
+      <input class="f-tel" type="tel" placeholder="전화번호" aria-label="전화번호" style="width:150px">
       <button type="button" class="btn-primary f-add">추가</button>
     </div></div></section>`);
   form.querySelector(".f-add").onclick = () => {
@@ -1525,7 +1615,7 @@ function renderRoster() {
     const todayK = dk(new Date());
     const wrap = el(`<div class="card" style="overflow:hidden">
       <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)">
-        ${[1, 2, 3, 4, 5, 6, 0].map(dow => `<div style="padding:8px 0;text-align:center;font-size:12px;font-weight:600;color:${dow === 0 ? "var(--danger)" : dow === 6 ? "#2563EB" : "var(--ink-3)"}">${WD[dow]}</div>`).join("")}
+        ${[1, 2, 3, 4, 5, 6, 0].map(dow => `<div style="padding:8px 0;text-align:center;font-size:12px;font-weight:600;color:${dow === 0 ? "var(--danger)" : dow === 6 ? "var(--sat)" : "var(--ink-3)"}">${WD[dow]}</div>`).join("")}
       </div>
       <div id="cells" style="display:grid;grid-template-columns:repeat(7,1fr)"></div></div>`);
     const grid = wrap.querySelector("#cells");
@@ -1540,13 +1630,13 @@ function renderRoster() {
         padding:6px;text-align:left;display:flex;flex-direction:column;gap:3px;align-items:stretch;
         ${other ? "opacity:.38" : ""}${(i % 7 === 6) ? ";border-right:0" : ""}">
         <span style="font-family:var(--mono);font-size:12px;font-weight:${key === todayK ? 700 : 500};
-          color:${day.getDay() === 0 ? "var(--danger)" : day.getDay() === 6 ? "#2563EB" : "var(--ink-2)"}">${day.getDate()}</span>
+          color:${day.getDay() === 0 ? "var(--danger)" : day.getDay() === 6 ? "var(--sat)" : "var(--ink-2)"}">${day.getDate()}</span>
       </button>`);
 
       on.slice(0, 3).forEach(s => cell.appendChild(el(`<span style="
-        display:block;font-size:10.5px;font-weight:600;line-height:1.35;white-space:nowrap;overflow:hidden;
+        display:block;font-size:11px;font-weight:600;line-height:1.35;white-space:nowrap;overflow:hidden;
         text-overflow:ellipsis;border-radius:4px;padding:1px 4px;
-        background:${colorOf(secOf(s))}1a;color:${colorOf(secOf(s))}">${esc(s.name)}</span>`)));
+        background:color-mix(in srgb, ${colorOf(secOf(s))} 8%, transparent);color:${colorOf(secOf(s))}">${esc(s.name)}</span>`)));
       if (on.length > 3) cell.appendChild(el(`<span class="muted" style="font-size:10px">+${on.length - 3}</span>`));
 
       cell.onclick = () => paint(key);
@@ -1559,11 +1649,11 @@ function renderRoster() {
   function weekTable() {
     const D = weekDays(mondayOf(cursor));
     const tb = el(`<div class="tbl-wrap"><table>
-      <thead><tr><th class="sticky-col">직원</th>${D.map(d => `<th class="num" style="min-width:104px;${d.getDay() === 0 ? "color:var(--danger)" : d.getDay() === 6 ? "color:#2563EB" : ""}">${dayLabel(d)}</th>`).join("")}</tr></thead>
+      <thead><tr><th class="sticky-col" scope="col">직원</th>${D.map(d => `<th class="num" scope="col" style="min-width:104px;${d.getDay() === 0 ? "color:var(--danger)" : d.getDay() === 6 ? "color:var(--sat)" : ""}">${dayLabel(d)}</th>`).join("")}</tr></thead>
       <tbody></tbody></table></div>`);
     const tbody = tb.querySelector("tbody");
     data.staff.forEach(s => {
-      const tr = el(`<tr><th class="sticky-col">
+      const tr = el(`<tr><th class="sticky-col" scope="row">
         <b>${esc(s.name)}</b><br><span class="muted" style="font-size:11px">${esc(s.section || "—")}</span></th></tr>`);
       D.forEach(d => {
         const cur = shiftOf(s.id, d);
@@ -1648,7 +1738,7 @@ function renderRoster() {
     listSec.appendChild(el(`<h2>직원 명단</h2>`));
     listSec.appendChild(el(`<p class="hint">메일에 이 표가 그대로 들어갑니다.</p>`));
     listSec.appendChild(el(`<div class="tbl-wrap"><table>
-      <thead><tr><th>섹션</th><th>이름</th><th>이메일</th><th class="num">전화번호</th><th></th></tr></thead>
+      <thead><tr><th scope="col">섹션</th><th scope="col">이름</th><th scope="col">이메일</th><th class="num" scope="col">전화번호</th><th scope="col"><span class="sr-only">지우기</span></th></tr></thead>
       <tbody>${data.staff.map(s => `<tr>
         <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colorOf(secOf(s))};margin-right:6px"></span>${esc(s.section || "—")}</td>
         <td><b>${esc(s.name)}</b></td>
@@ -1871,7 +1961,7 @@ function textIn(value, onChange, ph, aria, width) {
 /** 눌러서 켜고 끄는 칩 */
 function chip(label, on, onClick) {
   const b = el(`<button type="button" aria-pressed="${on}"
-    style="padding:7px 13px;font-size:13px;font-weight:600;${on ? "background:var(--accent);border-color:var(--accent);color:#fff" : ""}">${esc(label)}</button>`);
+    style="padding:7px 13px;font-size:13px;font-weight:600;${on ? "background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-fill-t)" : ""}">${esc(label)}</button>`);
   b.onclick = onClick;
   return b;
 }
@@ -2596,7 +2686,7 @@ function renderAttend() {
 
         const btns = el(`<div class="grid2" style="margin-top:12px"></div>`);
         const bIn = el(`<button type="button" style="padding:15px;font-size:15px;font-weight:700;${
-          p && p.inAt ? "color:var(--ink-3)" : "background:var(--accent);border-color:var(--accent);color:#fff"}">${
+          p && p.inAt ? "color:var(--ink-3)" : "background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-fill-t)"}">${
           p && p.inAt ? `출근 ${esc(p.inAt)}` : "출근"}</button>`);
         bIn.onclick = () => {
           const cur = getPunch(punches, s.id, td) || newPunch(s.id, td);
@@ -2689,10 +2779,10 @@ function renderAttend() {
     const money = ownerOpen();
 
     const tw = el(`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr>
-      <th class="sticky-col" style="text-align:left">직원</th>
-      ${days.map(d => `<th>${d.getMonth()+1}/${d.getDate()}</th>`).join("")}
-      <th style="text-align:right">근로</th>
-      ${money ? '<th style="text-align:right">인건비(추정)</th>' : ""}
+      <th class="sticky-col" style="text-align:left" scope="col">직원</th>
+      ${days.map(d => `<th scope="col">${d.getMonth()+1}/${d.getDate()}</th>`).join("")}
+      <th style="text-align:right" scope="col">근로</th>
+      ${money ? '<th style="text-align:right" scope="col">인건비(추정)</th>' : ""}
       </tr></thead><tbody></tbody></table></div>`);
     const tb = tw.querySelector("tbody");
 
@@ -2704,9 +2794,9 @@ function renderAttend() {
         : `<td style="text-align:center;font-family:var(--mono);font-variant-numeric:tabular-nums;${
             r.lateMin > 0 ? "color:var(--danger)" : ""}">${(r.workedMin/60).toFixed(1)}</td>`).join("");
       tb.appendChild(el(`<tr>
-        <td class="sticky-col"><b>${esc(s.name)}</b>${money
+        <th class="sticky-col" scope="row"><b>${esc(s.name)}</b>${money
           ? `<span style="display:block;font-size:11px;color:var(--ink-3)">${
-              c && c.hourlyWage > 0 ? `${won(c.hourlyWage)}원/시` : "시급 없음"}</span>` : ""}</td>
+              c && c.hourlyWage > 0 ? `${won(c.hourlyWage)}원/시` : "시급 없음"}</span>` : ""}</th>
         ${cells}
         <td style="text-align:right;font-family:var(--mono)">${hoursLabel(pay.workedMin)}${
           pay.overtimeMin > 0 ? `<span style="display:block;font-size:11px;color:var(--accent)">연장 ${hoursLabel(pay.overtimeMin)}</span>` : ""}</td>
@@ -2911,9 +3001,9 @@ function renderSales() {
       v.appendChild(card);
 
       const tw = el(`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr>
-        <th style="text-align:left">날짜</th><th style="text-align:right">매출</th>
-        <th style="text-align:right">재료비</th><th style="text-align:right">인건비</th>
-        <th style="text-align:right">남은 돈</th></tr></thead><tbody></tbody></table></div>`);
+        <th style="text-align:left" scope="col">날짜</th><th style="text-align:right" scope="col">매출</th>
+        <th style="text-align:right" scope="col">재료비</th><th style="text-align:right" scope="col">인건비</th>
+        <th style="text-align:right" scope="col">남은 돈</th></tr></thead><tbody></tbody></table></div>`);
       const tb = tw.querySelector("tbody");
       for (const d of week) {
         const date = dk(d);
