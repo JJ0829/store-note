@@ -274,7 +274,7 @@ src/components/ui.tsx       ← Screen/Card/Row/Chip/NumField 공통
 src/components/OwnerGate.tsx← 화면 전체 잠금 + InlineUnlock(부분 가리기)
 src/components/StoreGate.tsx← 레시피 가림막 + StoreLockButton
 src/components/BackupView.tsx← 내보내기·되돌리기
-tests/                      ← 218개. units·cost·attendance·vendors·contracts·sales·pinGate·backup
+tests/                      ← 288개. lib 21개 전부 덮음 (2026-09-08)
 ```
 
 ### 운영 기능에서 조심할 것 (테스트로 못 박아둠)
