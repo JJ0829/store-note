@@ -44,7 +44,7 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
 
   const cur = minutesOfDay(now);
   // 겹치는 시간대에는 방금 시작한 조를 위에 둔다 (`onDutyNow`).
-  // ★ 자정을 넘는 조(마감조 17:00~01:00)를 여기서 직접 비교하면 안 된다 —
+  // ★ 자정을 넘는 조(연장된 날의 마감조 14:30~01:00)를 직접 비교하면 안 된다 —
   //   `cur >= start && cur < end` 는 그런 조에서 절대 참이 안 된다.
   const active = onDutyNow(shifts, cur);
 

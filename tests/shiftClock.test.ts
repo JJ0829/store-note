@@ -1,11 +1,14 @@
 /* ------------------------------------------------------------------ *
  * 근무조가 지금 근무 중인가 — 자정을 넘는 조가 있다.
  *
- * ★ 이 파일이 막는 사고: **마감조가 홈 화면에서 영영 안 뜨는 것.**
- *   마감조는 17:00 에 시작해 다음날 01:00 에 끝난다(영업이 새벽 1시까지).
- *   예전 판정 `cur >= start && cur < end` 는 start=1020, end=60 이라
- *   **어느 시각에도 참이 안 된다.** 18:00 에도 00:30 에도 안 잡혔다.
- *   정작 마감조가 이 앱을 가장 많이 여는 조인데 그랬다.
+ * ★ 이 파일이 막는 사고: **자정을 넘긴 조가 홈 화면에서 영영 안 뜨는 것.**
+ *   옛 판정 `cur >= start && cur < end` 는 끝이 시작보다 이르면
+ *   **어느 시각에도 참이 안 된다.**
+ *
+ *   평소 마감조는 `14:30~22:30` 이라 자정을 안 넘는다. 그런데
+ *   **01:00 퇴근이 "특별한 경우"로 실제 있다**(사장님 확인 2026-09-09).
+ *   그날 근무조를 `14:30~01:00` 으로 잡으면 옛 판정에서 통째로 사라졌다.
+ *   **예외인 날일수록 화면이 죽으면 안 된다.**
  * ------------------------------------------------------------------ */
 
 import test from "node:test";
@@ -18,47 +21,72 @@ import {
   onDutyNow,
 } from "../src/lib/shiftClock.ts";
 
-/** 시드의 실제 근무조 4개 (2026-09-09 기준) */
+/** 시드의 실제 근무조 4개 (2026-09-09 확정) */
 const BAKE = { name: "제빵", start: "05:00", end: "13:00" };
 const OPEN = { name: "오픈조", start: "07:30", end: "15:30" };
 const MID = { name: "미들", start: "11:00", end: "19:00" };
-const CLOSE = { name: "마감조", start: "17:00", end: "01:00" };
+const CLOSE = { name: "마감조", start: "14:30", end: "22:30" };
 const ALL = [BAKE, OPEN, MID, CLOSE];
+
+/**
+ * ★ 자정을 넘는 조 — **평소 시드에는 없다.**
+ *
+ * 영업은 22:00 에 끝나고 마감은 22:30 에 완료된다(사장님 확인 2026-09-09).
+ * 그런데 **01:00 퇴근이 "특별한 경우"로 실제 있다.** 그날의 근무조를
+ * `14:30~01:00` 으로 잡으면 옛 판정(`cur >= start && cur < end`)에서는
+ * 그 조가 **어느 시각에도 안 잡힌다.**
+ *
+ * 즉 이 지원은 평상시가 아니라 **예외인 날을 위한 것**이다.
+ * 예외인 날일수록 화면이 죽으면 안 된다.
+ */
+const CLOSE_LATE = { name: "마감조(연장)", start: "14:30", end: "01:00" };
 
 const hm = (h: number, m = 0) => h * 60 + m;
 
 /* ---------- 자정 넘김 판별 ---------- */
 
-test("마감조는 자정을 넘는 조다", () => {
-  assert.equal(crossesMidnight(CLOSE), true);
+test("평소 마감조는 자정을 안 넘는다 (22:30 종료)", () => {
+  assert.equal(crossesMidnight(CLOSE), false);
 });
 
-test("보통 조는 자정을 안 넘는다", () => {
+test("★ 연장된 날의 마감조는 자정을 넘는 조다 (01:00 퇴근)", () => {
+  assert.equal(crossesMidnight(CLOSE_LATE), true);
+});
+
+test("나머지 조도 자정을 안 넘는다", () => {
   for (const s of [BAKE, OPEN, MID]) assert.equal(crossesMidnight(s), false, s.name);
 });
 
 /* ---------- ★ 마감조 — 이 파일의 존재 이유 ---------- */
 
-test("★★ 18:00 에 마감조가 근무 중이다", () => {
-  assert.equal(isOnDuty(CLOSE, hm(18)), true, "저녁에 마감조가 안 잡힌다");
+test("18:00 에 마감조가 근무 중이다 (마감 준비 시작 19:00 전)", () => {
+  assert.equal(isOnDuty(CLOSE, hm(18)), true);
 });
 
-test("★★ 00:30 에도 마감조가 근무 중이다 (자정 넘김)", () => {
-  assert.equal(isOnDuty(CLOSE, hm(0, 30)), true, "새벽에 마감조가 안 잡힌다");
+test("★ 19:00 마감 준비 시작 시각에 마감조가 근무 중이다", () => {
+  assert.equal(isOnDuty(CLOSE, hm(19)), true);
 });
 
-test("17:00 정각에 시작한다", () => {
-  assert.equal(isOnDuty(CLOSE, hm(17)), true);
-  assert.equal(isOnDuty(CLOSE, hm(16, 59)), false);
+test("22:00 영업 종료 시각에도 아직 근무 중이다 (마감 30분)", () => {
+  assert.equal(isOnDuty(CLOSE, hm(22)), true);
+  assert.equal(isOnDuty(CLOSE, hm(22, 29)), true);
+  assert.equal(isOnDuty(CLOSE, hm(22, 30)), false);
 });
 
-test("01:00 에 끝난다 — 그 시각은 이미 근무 밖", () => {
-  assert.equal(isOnDuty(CLOSE, hm(0, 59)), true);
-  assert.equal(isOnDuty(CLOSE, hm(1, 0)), false);
+test("★★ 연장된 날 00:30 에도 마감조가 잡힌다 — 예외인 날일수록 화면이 죽으면 안 된다", () => {
+  assert.equal(isOnDuty(CLOSE_LATE, hm(0, 30)), true, "연장된 날 새벽에 마감조가 안 잡힌다");
+  // 평소 조는 당연히 아니다
+  assert.equal(isOnDuty(CLOSE, hm(0, 30)), false);
 });
 
-test("새벽 3시는 아무도 근무 중이 아니다", () => {
-  assert.deepEqual(onDutyNow(ALL, hm(3)), []);
+test("14:30 정각에 시작한다", () => {
+  assert.equal(isOnDuty(CLOSE, hm(14, 30)), true);
+  assert.equal(isOnDuty(CLOSE, hm(14, 29)), false);
+});
+
+test("연장된 날은 01:00 에 끝난다 — 그 시각은 이미 근무 밖", () => {
+  assert.equal(isOnDuty(CLOSE_LATE, hm(0, 59)), true);
+  assert.equal(isOnDuty(CLOSE_LATE, hm(1, 0)), false);
 });
 
 /* ---------- 보통 조 ---------- */
@@ -88,19 +116,22 @@ test("18:00 에는 마감조가 미들보다 앞이다", () => {
   );
 });
 
-test("★ 00:30 의 마감조는 '방금 시작한 조'가 아니다 — 어제 17:00 에 시작했다", () => {
-  // 자정을 넘긴 상태에서 start(1020) 를 그대로 쓰면 미래에 시작한 것처럼 보인다.
-  // 지금은 마감조 혼자지만, 새벽에 다른 조가 겹치면 순서가 뒤집힌다
-  const on = onDutyNow(ALL, hm(0, 30));
-  assert.deepEqual(on.map((s) => s.name), ["마감조"]);
+test("22:00 에는 마감조만 남는다 (미들 19:00 퇴근)", () => {
+  assert.deepEqual(onDutyNow(ALL, hm(22)).map((s) => s.name), ["마감조"]);
+});
+
+test("★ 연장된 날 00:30 의 마감조는 '방금 시작한 조'가 아니다 — 어제 14:30 에 시작했다", () => {
+  // 자정을 넘긴 상태에서 start 를 그대로 쓰면 미래에 시작한 것처럼 보인다
+  const on = onDutyNow([BAKE, OPEN, MID, CLOSE_LATE], hm(0, 30));
+  assert.deepEqual(on.map((s) => s.name), ["마감조(연장)"]);
 });
 
 test("겹치는 조가 새벽에 둘이면 먼저 시작한 쪽이 뒤로 간다", () => {
   const NIGHT = { name: "야간", start: "23:00", end: "07:00" }; // 마감조보다 늦게 시작
-  const on = onDutyNow([CLOSE, NIGHT], hm(0, 30));
+  const on = onDutyNow([CLOSE_LATE, NIGHT], hm(0, 30));
   assert.deepEqual(
     on.map((s) => s.name),
-    ["야간", "마감조"],
+    ["야간", "마감조(연장)"],
     "새벽에 시작 순서가 뒤집혔다",
   );
 });
@@ -114,6 +145,10 @@ test("근무 시간이 아니면 다음 조를 알려준다", () => {
 test("★ 오늘 남은 조가 없으면 내일 첫 조로 넘어간다", () => {
   // 예전에는 `shifts[0]`(시드 등록 순서)로 떨어져 엉뚱한 조를 알려줬다
   assert.equal(nextShift(ALL, hm(23, 30))?.name, "제빵");
+});
+
+test("22:30 마감 후 새벽 3시는 아무도 근무 중이 아니다", () => {
+  assert.deepEqual(onDutyNow(ALL, hm(3)), []);
 });
 
 test("근무조가 없으면 null", () => {

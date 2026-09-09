@@ -401,7 +401,7 @@ const DATA = {
       focus:[{kind:"checklist", slug:"cafe-open", label:"오픈 체크리스트"},{kind:"prep", slug:"afternoon", label:"오후 프렙"}] },
     { id:"sh-middle", name:"미들",   start:"11:00", end:"19:00", note:"피크 커버",
       focus:[{kind:"recipes", label:"레시피 찾기"}] },
-    { id:"sh-close",  name:"마감조", start:"17:00", end:"01:00", note:"저녁 영업부터 마감까지. 자정을 넘깁니다",
+    { id:"sh-close",  name:"마감조", start:"14:30", end:"22:30", note:"오후 영업 → 19시부터 마감 준비 → 22시 영업 종료 → 22:30 마감 완료",
       focus:[{kind:"prep", slug:"afternoon", label:"오후 프렙 (내일 것 걸기)"},{kind:"checklist", slug:"cafe-close", label:"마감 체크리스트"}] }
   ],
 
@@ -606,7 +606,7 @@ const pad = n => String(n).padStart(2, "0");
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
 /* ★ 매장의 하루는 자정이 아니라 새벽 4시에 바뀐다.
    (5시로 잡았다가 제빵조 출근 05:00 과 겹쳐서 04:00 으로 내렸다)
-   마감조는 17:00 에 시작해 다음날 01:00 에 끝난다. 달력 날짜로 체크 키를 만들면
+   마감조는 평소 14:30~22:30 이지만 01:00 퇴근이 특별한 경우로 있다. 달력 날짜로 체크 키를 만들면
    23:50 에 찍은 체크가 00:10 에 사라져 보인다. 출퇴근은 자정 넘김을 이미
    처리하고 있었는데 체크리스트·프렙만 그대로 맞고 있었다.
    Next 앱의 src/lib/businessDay.ts 와 같은 규칙이어야 한다.
@@ -1221,7 +1221,7 @@ function renderHome() {
   // 등록 순서로 두면 07:30에 제빵(05:00 시작)이 먼저 떠서,
   // 그 시각에 막 출근한 오픈조가 자기 화면을 아래에서 찾아야 한다.
   const active = DATA.shifts
-    /* ★ 자정을 넘는 조(마감조 17:00~01:00)는 두 구간으로 나눠 본다.
+    /* ★ 자정을 넘는 조(연장된 날의 마감조 14:30~01:00)는 두 구간으로 나눠 본다.
        cur >= start && cur < end 로 하면 그런 조가 절대 안 잡힌다.
        Next 앱의 src/lib/shiftClock.ts 와 같은 규칙이어야 한다. */
     .filter(s => onDuty(s, cur))

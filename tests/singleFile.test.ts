@@ -49,18 +49,23 @@ test("두 파일의 스크립트가 같다 (사본이 갈리면 한쪽만 고치
   assert.equal(a, b, "매장수첩.html 과 app.html 의 스크립트가 달라졌다");
 });
 
-test("★ 마감조가 자정을 넘는 설정으로 들어 있다", () => {
+test("★ 단일 파일의 마감조 시각이 시드와 같다", () => {
+  // 두 앱의 시드가 갈리면 시연 화면과 제품이 다른 것을 보여준다.
+  // 영업 22:00 종료 · 마감 22:30 완료 (사장님 확인 2026-09-09).
+  // 01:00 퇴근은 특별한 경우라 근무조 설정에는 안 넣는다.
   const js = scriptOf(FILES[0]);
   assert.match(
     js,
-    /name:"마감조",\s*start:"17:00",\s*end:"01:00"/,
+    /name:"마감조",\s*start:"14:30",\s*end:"22:30"/,
     "단일 파일의 마감조 시각이 시드와 어긋났다",
   );
 });
 
 test("★ 자정 넘김을 다루는 onDuty 가 있다", () => {
+  // 평소에는 안 쓰이지만 01:00 퇴근 예외인 날에 필요하다.
+  // 없으면 그날 근무조가 홈에서 통째로 사라진다
   const js = scriptOf(FILES[0]);
-  assert.match(js, /function onDuty\(/, "onDuty 가 사라졌다 — 마감조가 화면에서 안 뜬다");
+  assert.match(js, /function onDuty\(/, "onDuty 가 사라졌다 — 연장된 날 근무조가 안 뜬다");
   // 옛 판정이 되살아나면 마감조가 다시 안 잡힌다
   assert.doesNotMatch(
     js,
