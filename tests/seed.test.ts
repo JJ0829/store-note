@@ -387,16 +387,22 @@ test("★★ 진행률 분모 — 묶음 머리는 안 세고 그 안의 항목�
   assert.equal(countedOf(ev).length, 3);
 });
 
-test("주기 점검 묶음 안은 주기가 짧은 것부터다", () => {
-  // 저울 영점(7일)이 머신 정기점검(365일)보다 아래 있으면 매주 할 일을 못 찾는다
+test("★★ 주기 숫자를 시드에 박아두지 않는다 — 매장마다 다르다", () => {
+  // 사장님 지적 2026-09-08: "제빙기 청소 1개월마다 체크도 지우지 — 더럽게.
+  // 매일 청소하는 곳도 있는데. 6개월마다 이런 거도 쓰는 곳마다 다 달라서
+  // 굳이 없어도 될 거 같은데"
+  //
+  // 제빙기를 매일 닦는 매장에 "1개월마다" 를 띄우면 그 화면은 처음부터
+  // 틀린 말을 한다. 내가 모르는 숫자를 박아놓으면 사장님이 그걸 믿는다.
   const cy = getPrepListBySlug("cycle");
   assert.ok(cy);
-  for (const head of cy.tasks.filter((t) => t.optionOf === null)) {
-    const days: number[] = cy.tasks
-      .filter((t) => t.optionOf === head.id)
-      .map((t) => (t.trigger.type === "cycle" ? t.trigger.everyDays : 0));
-    const sorted: number[] = [...days].sort((a, b) => a - b);
-    assert.deepEqual(days, sorted, `${head.title}: 주기 순서가 뒤섞였다`);
+  for (const t of cy.tasks) {
+    if (t.trigger.type !== "cycle") continue;
+    assert.equal(
+      t.trigger.everyDays,
+      null,
+      `${t.id} (${t.title}): 주기 숫자가 시드에 박혀 있다`,
+    );
   }
 });
 

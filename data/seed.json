@@ -1411,7 +1411,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 7
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1433,7 +1433,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 7
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1450,12 +1450,12 @@
         },
         {
           "id": "c-1",
-          "title": "정수 필터 교체",
-          "desc": "커피 맛의 절반은 물입니다. 교체일을 적어두지 않으면 아무도 모릅니다.",
+          "title": "정수 필터 (렌탈이면 담당자 연락)",
+          "desc": "커피 맛의 절반은 물입니다. 렌탈이면 교체는 업체가 하니 연락만 하면 됩니다. 직접 쓰면 필터를 갈아 끼웁니다. 언제 갈았는지를 적어두는 게 이 항목의 목적입니다.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 120
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1477,7 +1477,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 180
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1499,7 +1499,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 180
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1521,7 +1521,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 180
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1543,7 +1543,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 365
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1565,7 +1565,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 7
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1587,7 +1587,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 7
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1605,11 +1605,11 @@
         {
           "id": "c-3",
           "title": "제빙기 청소",
-          "desc": "안 보이는 곳이라 제일 잘 잊습니다. 위생 점검에서 자주 걸리는 항목입니다.",
+          "desc": "안 보이는 곳이라 제일 잘 잊습니다. 위생 점검에서 자주 걸리는 항목입니다. 매일 닦는 매장도 있습니다 — 주기는 매장에서 정해 주세요.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 30
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1631,7 +1631,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 30
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1653,7 +1653,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 90
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1675,7 +1675,7 @@
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 7
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1693,11 +1693,11 @@
         {
           "id": "c-4",
           "title": "보건증 갱신 확인",
-          "desc": "직원 전원. 만료되면 과태료 대상입니다.",
+          "desc": "직원 전원. 만료되면 과태료 대상입니다. ★ 유효기간은 업종에 따라 다릅니다 — 발급받은 결과서에 적힌 날짜를 보고 주기를 넣어 주세요.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 365
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1715,11 +1715,11 @@
         {
           "id": "c-10",
           "title": "소화기·소방시설 점검",
-          "desc": "압력계 바늘이 초록 범위에 있는지 봅니다. 축압식은 바늘이 내려가면 교체입니다.",
+          "desc": "소화기 압력계 바늘이 초록 칸에 있는지, 유도등이 켜지는지. ★ 자체점검 주기와 대상은 건물 규모·용도에 따라 다릅니다 — 관할 소방서에 확인한 값을 넣어 주세요.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 365
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
@@ -1737,11 +1737,11 @@
         {
           "id": "c-11",
           "title": "위생교육 이수",
-          "desc": "영업주는 매년 받아야 합니다. 온라인으로 됩니다.",
+          "desc": "영업자와 종업원의 교육이 다릅니다. ★ 대상과 주기는 업종에 따라 다릅니다 — 확인한 값을 넣어 주세요.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 365
+            "everyDays": null
           },
           "leadTimeHours": null,
           "leadTimeDays": null,

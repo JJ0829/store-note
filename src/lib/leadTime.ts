@@ -99,6 +99,8 @@ export function triggerLabel(t: Trigger): string {
     case "condition":
       return t.when;
     case "cycle":
+      // 주기를 안 정했으면 숫자를 지어내지 않는다
+      if (t.everyDays === null) return "주기 미정";
       return t.everyDays >= 365
         ? "1년마다"
         : t.everyDays >= 30

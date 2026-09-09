@@ -8,14 +8,17 @@ import { SCALES, scaled } from "@/lib/scale";
 import { businessDay, dayKey, pruneDayKeys } from "@/lib/businessDay";
 import { arrivesIn, readyAt, triggerLabel } from "@/lib/leadTime";
 import {
-  leftLabel,
   loadCycleDone,
+  loadCycleEvery,
   saveCycleDone,
-  shortDay,
+  saveCycleEvery,
+  setDone as setCycleDay,
+  setEvery as setCycleEvery,
   sortByUrgency,
+  statusLine,
   toggleDone as toggleCycleDone,
-  daysLeft as cycleDaysLeft,
   type CycleDone,
+  type CycleEvery,
 } from "@/lib/cycleDone";
 import type { PrepList, PrepTask, Recipe } from "@/lib/types";
 
@@ -210,6 +213,9 @@ export default function PrepView({
      예전에는 `prep:cycle:{영업일}` 이라서 다음 날 지워졌고, 그러면
      `4개월마다` 를 앱이 세지 못했다. → src/lib/cycleDone.ts */
   const [cycleDone, setCycleDone] = useState<CycleDone>({});
+  /* 주기는 **매장이 정한다.** 시드에는 없다 — 제빙기를 매일 닦는 매장에
+     `1개월마다` 를 띄우면 처음부터 틀린 말이다 (사장님 지적 2026-09-08) */
+  const [cycleEvery, setCycleEveryState] = useState<CycleEvery>({});
 
   const recipeBySlug = useMemo(
     () => new Map(recipes.map((r) => [r.slug, r])),
@@ -266,6 +272,7 @@ export default function PrepView({
       /* 사생활 보호 모드 등 — 빈 상태로 시작 */
     }
     setCycleDone(loadCycleDone());
+    setCycleEveryState(loadCycleEvery());
     log("prep_view", { prepSlug: list.slug });
   }, [storageKey, keyPrefix, list.slug]);
 
@@ -313,18 +320,19 @@ export default function PrepView({
     [cycleDone, list.slug],
   );
 
-  /** 주기(일). 주기 항목이 아니면 null */
-  const everyOf = useCallback(
-    (t: PrepTask) => (t.trigger.type === "cycle" ? t.trigger.everyDays : null),
+  /** 주기 항목인가 */
+  const isCycleTask = useCallback(
+    (t: PrepTask) => t.trigger.type === "cycle",
     [],
   );
-  /** 다음 점검까지 남은 날. 기록이 없으면 null (모른다는 뜻) */
-  const leftOf = useCallback(
-    (t: PrepTask) => {
-      const every = everyOf(t);
-      if (every === null) return null;
-      return cycleDaysLeft(cycleDone, t.id, every, today);
-    },
+  /** 매장이 정한 주기(일). 안 정했으면 null — 기한을 지어내지 않는다 */
+  const everyOf = useCallback(
+    (t: PrepTask) => (isCycleTask(t) ? (cycleEvery[t.id] ?? null) : null),
+    [cycleEvery, isCycleTask],
+  );
+  /** 화면에 그대로 쓰는 한 줄 + 빨갛게 할지 */
+  const statusOf = useCallback(
+    (t: PrepTask) => statusLine(cycleDone, t.id, everyOf(t), today),
     [cycleDone, everyOf, today],
   );
 
@@ -335,10 +343,30 @@ export default function PrepView({
     () => list.tasks.filter((t) => t.trigger.type === "cycle" && t.optionOf),
     [list.tasks],
   );
-  const overdue = cycleItems.filter((t) => {
-    const left = leftOf(t);
-    return left === null || left < 0;
-  });
+  /* "지금 해야 할 것" = 기록이 없거나 기한이 지난 것.
+     주기를 안 정한 항목은 **기한을 판단하지 않는다** — 기록만 있으면 넘어간다 */
+  const overdue = cycleItems.filter((t) => statusOf(t).late);
+
+  /** 마지막으로 한 날을 직접 넣는다 (지난 날짜를 채울 때) */
+  const putCycleDay = useCallback(
+    (id: string, day: string) => {
+      const next = setCycleDay(cycleDone, id, day || null);
+      setCycleDone(next);
+      saveCycleDone(next);
+    },
+    [cycleDone],
+  );
+
+  /** 매장이 정하는 주기(일). 비우면 "안 정함" 이 되고 기한 판단을 멈춘다 */
+  const putCycleEvery = useCallback(
+    (id: string, raw: string) => {
+      const n = raw.trim() === "" ? null : Number(raw);
+      const next = setCycleEvery(cycleEvery, id, n);
+      setCycleEveryState(next);
+      saveCycleEvery(next);
+    },
+    [cycleEvery],
+  );
 
   const setScale = useCallback(
     (taskId: string, s: number) => {
@@ -362,10 +390,7 @@ export default function PrepView({
   /* 주기 목록에서 "오늘 체크한 개수" 는 뜻이 없다 — 4개월 주기를 매일 체크할
      일이 없으니 늘 0/13 이 된다. 그래서 **기한 안에 있는 것**을 센다. */
   const doneCount = isCycleList
-    ? counted.filter((t) => {
-        const left = leftOf(t);
-        return left !== null && left >= 0;
-      }).length
+    ? counted.filter((t) => !statusOf(t).late).length
     : counted.filter((t) => done.has(t.id)).length;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
@@ -666,7 +691,7 @@ export default function PrepView({
                       ? sortByUrgency(
                           (optionsBy.get(task.id) ?? []).map((t) => ({
                             id: t.id,
-                            everyDays: everyOf(t) ?? 0,
+                            everyDays: everyOf(t),
                             t,
                           })),
                           cycleDone,
@@ -674,29 +699,28 @@ export default function PrepView({
                         ).map((x) => x.t)
                       : (optionsBy.get(task.id) ?? [])
                     ).map((opt) => {
-                      const optEvery = everyOf(opt);
-                      const optLeft = leftOf(opt);
+                      const optCycle = isCycleTask(opt);
+                      const optStatus = optCycle ? statusOf(opt) : null;
                       // 주기 항목의 체크는 "오늘 했다" 다. 그날 체크가 아니라
                       // 마지막으로 한 날을 남긴다
-                      const optDone =
-                        optEvery !== null
-                          ? cycleDone[opt.id] === today
-                          : done.has(opt.id);
+                      const optDone = optCycle
+                        ? cycleDone[opt.id] === today
+                        : done.has(opt.id);
                       return (
                         <li key={opt.id}>
                           <button
                             type="button"
                             onClick={() =>
-                              optEvery !== null ? toggleCycle(opt) : toggle(opt)
+                              optCycle ? toggleCycle(opt) : toggle(opt)
                             }
                             aria-pressed={optDone}
                             className={[
                               "flex w-full items-start gap-2.5 rounded-xl border-2 bg-white p-3 text-left active:bg-zinc-100 dark:bg-zinc-900 dark:active:bg-zinc-800",
                               optDone
                                 ? "border-zinc-200 opacity-55 dark:border-zinc-800"
-                                : optEvery !== null
+                                : optStatus
                                   ? // 주기 항목은 기한이 지났거나 기록이 없으면 빨강
-                                    optLeft === null || optLeft < 0
+                                    optStatus.late
                                     ? "border-red-300 dark:border-red-900"
                                     : "border-zinc-200 dark:border-zinc-800"
                                   : opt.recoverable
@@ -734,9 +758,15 @@ export default function PrepView({
                                     꼭 지키기
                                   </span>
                                 )}
-                                <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                                  {triggerLabel(opt.trigger)}
-                                </span>
+                                {/* ★ 주기 항목은 발동 뱃지를 안 그린다.
+                                    `1개월마다` 는 매장마다 다르고, 내가 모르는
+                                    숫자를 띄우면 사장님이 그걸 믿는다.
+                                    주기는 아래 입력칸에서 매장이 정한다 */}
+                                {!optCycle && (
+                                  <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                                    {triggerLabel(opt.trigger)}
+                                  </span>
+                                )}
                               </span>
                               <span
                                 className={[
@@ -762,19 +792,16 @@ export default function PrepView({
                               )}
                               {/* ★ 마지막으로 한 날. 이게 없어서 이 화면이
                                   아무 기능을 못 했다 (2026-09-08 고침) */}
-                              {optEvery !== null && (
+                              {optStatus && (
                                 <span
                                   className={[
                                     "mt-1.5 block rounded-lg px-2 py-1.5 text-[12.5px] font-semibold",
-                                    optLeft === null || optLeft < 0
+                                    optStatus.late
                                       ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200"
                                       : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200",
                                   ].join(" ")}
                                 >
-                                  {cycleDone[opt.id]
-                                    ? `마지막 ${shortDay(cycleDone[opt.id])} · `
-                                    : ""}
-                                  {leftLabel(optLeft)}
+                                  {optStatus.text}
                                 </span>
                               )}
 
@@ -795,6 +822,39 @@ export default function PrepView({
                                 )}
                             </span>
                           </button>
+
+                          {/* ★ 주기와 마지막 날짜는 **매장이 넣는다** (2026-09-08).
+                              시드에 박아두면 제빙기를 매일 닦는 매장에
+                              `1개월마다` 라는 틀린 말을 하게 된다.
+                              날짜 칸이 있어야 **지난 기록도 채워 넣을 수 있다** */}
+                          {optCycle && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 pb-1 pt-2">
+                              <label className="flex items-center gap-1.5 text-[12px] text-zinc-500 dark:text-zinc-400">
+                                마지막
+                                <input
+                                  type="date"
+                                  value={cycleDone[opt.id] ?? ""}
+                                  onChange={(e) => putCycleDay(opt.id, e.target.value)}
+                                  className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-[13px] dark:border-zinc-700 dark:bg-zinc-900"
+                                  aria-label={`${opt.title} 마지막으로 한 날`}
+                                />
+                              </label>
+                              <label className="flex items-center gap-1.5 text-[12px] text-zinc-500 dark:text-zinc-400">
+                                주기
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  placeholder="미정"
+                                  value={cycleEvery[opt.id] ?? ""}
+                                  onChange={(e) => putCycleEvery(opt.id, e.target.value)}
+                                  className="w-[5.5rem] rounded-lg border border-zinc-300 bg-white px-2 py-1 text-[13px] tabular-nums dark:border-zinc-700 dark:bg-zinc-900"
+                                  aria-label={`${opt.title} 주기 (일)`}
+                                />
+                                일
+                              </label>
+                            </div>
+                          )}
 
                           {/* ★ 옵션 안에서도 레시피를 바로 보고 만들 수 있어야 한다
                               (사장님 요청 2026-09-09). 부모 카드와 같은 부품을 쓴다 */}

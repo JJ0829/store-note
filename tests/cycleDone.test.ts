@@ -43,9 +43,14 @@ const {
   daysSince,
   leftLabel,
   loadCycleDone,
+  loadCycleEvery,
   saveCycleDone,
+  saveCycleEvery,
+  setDone,
+  setEvery,
   shortDay,
   sortByUrgency,
+  statusLine,
   toggleDone,
 } = await import("../src/lib/cycleDone.ts");
 const { pruneDayKeys } = await import("../src/lib/businessDay.ts");
@@ -170,9 +175,9 @@ test("shortDay: 화면에는 5/11 로", () => {
 /* ---------- 정렬 ---------- */
 
 const ITEMS = [
-  { id: "filter", everyDays: 120 },
-  { id: "scale", everyDays: 7 },
-  { id: "fire", everyDays: 365 },
+  { id: "filter", everyDays: 120 as number | null },
+  { id: "scale", everyDays: 7 as number | null },
+  { id: "fire", everyDays: 365 as number | null },
 ];
 
 test("★★ 기록 없는 것이 맨 앞이다 — 모르는 것이 가장 위험하다", () => {
@@ -207,10 +212,26 @@ test("★ 지난 것이 아직 안 지난 것보다 앞이다", () => {
   );
 });
 
-test("기록이 하나도 없으면 주기가 짧은 것부터", () => {
+test("★ 주기를 안 정한 것은 맨 아래다 — 기한을 판단할 수 없다", () => {
+  // 판단 못 하는 것을 위에 올리면 실제로 급한 것이 밀린다
+  const items = [
+    { id: "noEvery", everyDays: null },
+    { id: "late", everyDays: 7 },
+    { id: "none", everyDays: 30 },
+  ];
+  const done = { noEvery: "2020-01-01", late: "2026-08-01" };
+  assert.deepEqual(
+    sortByUrgency(items, done, "2026-09-08").map((x) => x.id),
+    ["none", "late", "noEvery"],
+  );
+});
+
+test("기록이 하나도 없으면 시드 순서를 지킨다", () => {
+  // 주기가 매장 설정으로 빠졌으므로 "주기 짧은 것부터" 를 기본값으로
+  // 쓸 수 없다. 사장님이 정렬해둔 시드 순서가 그대로 기준이 된다
   assert.deepEqual(
     sortByUrgency(ITEMS, {}, "2026-09-08").map((x) => x.id),
-    ["scale", "filter", "fire"],
+    ["filter", "scale", "fire"],
   );
 });
 
@@ -221,6 +242,99 @@ test("원본 배열을 건드리지 않는다", () => {
     ITEMS.map((x) => x.id),
     before,
   );
+});
+
+/* ---------- 매장이 정하는 주기 ---------- */
+
+test("★★ 주기를 안 정하면 기한을 지어내지 않는다", () => {
+  const done = { x: "2026-01-01" }; // 250일 전
+  assert.equal(daysSince(done, "x", "2026-09-08"), 250);
+  assert.equal(daysLeft(done, "x", null, "2026-09-08"), null, "없는 기한을 만들었다");
+});
+
+test("주기를 넣고 지운다", () => {
+  assert.deepEqual(setEvery({}, "c-1", 120), { "c-1": 120 });
+  assert.deepEqual(setEvery({ "c-1": 120 }, "c-1", null), {});
+});
+
+test("★ 0 이나 음수 주기는 안 정한 것으로 본다", () => {
+  // 0 이면 늘 "오늘까지" 로 계산돼 매일 빨갛게 뜬다
+  assert.deepEqual(setEvery({}, "c-1", 0), {});
+  assert.deepEqual(setEvery({}, "c-1", -5), {});
+  assert.deepEqual(setEvery({}, "c-1", Number.NaN), {});
+});
+
+test("소수는 반올림해서 넣는다", () => {
+  assert.deepEqual(setEvery({}, "c-1", 29.6), { "c-1": 30 });
+});
+
+test("저장한 주기를 다시 읽는다. 깨진 값은 버린다", () => {
+  local.clear();
+  local.setItem(
+    "sop:cycleEvery",
+    JSON.stringify({ a: 30, b: "30", c: 0, d: -1, e: null, f: 7 }),
+  );
+  assert.deepEqual(loadCycleEvery(), { a: 30, f: 7 });
+  assert.ok(saveCycleEvery({ a: 90 }));
+  assert.deepEqual(loadCycleEvery(), { a: 90 });
+});
+
+/* ---------- 마지막 날짜 직접 입력 ---------- */
+
+test("★ 지난 날짜를 직접 채울 수 있다 — 사장님이 한 번 채워야 하는 것", () => {
+  assert.deepEqual(setDone({}, "c-1", "2026-05-11"), { "c-1": "2026-05-11" });
+});
+
+test("빈 값·깨진 값을 넣으면 기록을 지운다", () => {
+  const cur = { "c-1": "2026-05-11" };
+  assert.deepEqual(setDone(cur, "c-1", ""), {});
+  assert.deepEqual(setDone(cur, "c-1", null), {});
+  assert.deepEqual(setDone(cur, "c-1", "2026-5-11"), {});
+});
+
+/* ---------- 화면 한 줄 ---------- */
+
+test("★★ 화면 한 줄 — 세 가지뿐이다", () => {
+  const day = "2026-09-08";
+
+  // ① 기록 없음 → 빨강
+  assert.deepEqual(statusLine({}, "x", 30, day), {
+    text: "기록 없음 — 언제 했는지 모릅니다",
+    late: true,
+  });
+  // 주기까지 없어도 같은 말이다. 마지막 날이 없으면 주기는 뜻이 없다
+  assert.deepEqual(statusLine({}, "x", null, day), {
+    text: "기록 없음 — 언제 했는지 모릅니다",
+    late: true,
+  });
+
+  // ② 기록 있고 주기 없음 → 며칠 전만. **기한을 판단하지 않는다**
+  assert.deepEqual(statusLine({ x: "2026-05-11" }, "x", null, day), {
+    text: "마지막 5/11 · 120일 전",
+    late: false,
+  });
+
+  // ③ 기록 있고 주기 있음 → 남았거나 지났다
+  assert.deepEqual(statusLine({ x: "2026-05-11" }, "x", 150, day), {
+    text: "마지막 5/11 · 30일 남음",
+    late: false,
+  });
+  assert.deepEqual(statusLine({ x: "2026-05-11" }, "x", 90, day), {
+    text: "마지막 5/11 · 30일 지났습니다",
+    late: true,
+  });
+  assert.deepEqual(statusLine({ x: "2026-05-11" }, "x", 120, day), {
+    text: "마지막 5/11 · 오늘까지입니다",
+    late: false,
+  });
+});
+
+test("★ 주기를 안 정한 항목은 아무리 오래돼도 빨갛지 않다", () => {
+  // 앱이 모르는 기한으로 사장님을 재촉하지 않는다.
+  // 그래도 "3000일 전" 이라는 사실은 그대로 보여준다
+  const r = statusLine({ x: "2018-01-01" }, "x", null, "2026-09-08");
+  assert.equal(r.late, false);
+  assert.match(r.text, /마지막 1\/1 · \d+일 전/);
 });
 
 /* ---------- 저장소가 막혀 있을 때 ---------- */

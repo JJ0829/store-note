@@ -34,7 +34,52 @@ import { loadJson, saveJson } from "./store.ts";
 export type CycleDone = Record<string, string>;
 
 const KEY = "sop:cycleDone";
+const EVERY_KEY = "sop:cycleEvery";
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * 매장이 정한 주기 (일). `{ "c-1": 120 }`
+ *
+ * ★ **시드에는 주기가 없다** (2026-09-08). 사장님 지적 —
+ * *"제빙기 청소 1개월마다 체크도 지우지. 매일 청소하는 곳도 있는데.
+ * 6개월마다 이런 거도 쓰는 곳마다 다 달라서 굳이 없어도 될 거 같은데"*
+ *
+ * 제빙기를 매일 닦는 매장에 `1개월마다` 를 띄우면 처음부터 틀린 말이다.
+ * 법정 항목도 업종·규모에 따라 다르다. **모르는 숫자를 앱이 단정하면
+ * 사장님이 그걸 믿는다.** 그래서 여기 없으면 기한을 판단하지 않고
+ * `마지막 5/11 · 120일 전` 만 보여준다.
+ */
+export type CycleEvery = Record<string, number>;
+
+export function loadCycleEvery(): CycleEvery {
+  const raw = loadJson<Record<string, unknown>>(EVERY_KEY, {});
+  const out: CycleEvery = {};
+  for (const [id, v] of Object.entries(raw)) {
+    // 0 이나 음수가 들어오면 "오늘까지" 나 과거로 계산돼서 늘 빨갛게 뜬다
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[id] = Math.round(v);
+  }
+  return out;
+}
+
+export function saveCycleEvery(data: CycleEvery): boolean {
+  return saveJson(EVERY_KEY, data);
+}
+
+/** 주기를 넣거나 지운다. 0 이하·빈 값은 "안 정함"으로 본다 */
+export function setEvery(data: CycleEvery, id: string, days: number | null): CycleEvery {
+  const next = { ...data };
+  if (days === null || !Number.isFinite(days) || days <= 0) delete next[id];
+  else next[id] = Math.round(days);
+  return next;
+}
+
+/** 마지막으로 한 날을 직접 넣는다. 빈 값이면 지운다 (과거 날짜를 채울 때 쓴다) */
+export function setDone(data: CycleDone, id: string, day: string | null): CycleDone {
+  const next = { ...data };
+  if (!day || !YMD.test(day)) delete next[id];
+  else next[id] = day;
+  return next;
+}
 
 export function loadCycleDone(): CycleDone {
   const raw = loadJson<Record<string, unknown>>(KEY, {});
@@ -83,12 +128,40 @@ export function daysSince(
 export function daysLeft(
   data: CycleDone,
   id: string,
-  everyDays: number,
+  everyDays: number | null,
   day: string = businessDay(),
 ): number | null {
+  if (everyDays === null) return null; // 주기를 안 정했으면 기한이 없다
   const since = daysSince(data, id, day);
   if (since === null) return null;
   return everyDays - since;
+}
+
+/**
+ * 화면에 그대로 쓰는 한 줄. 세 가지뿐이다.
+ *
+ *   기록 없음         → `기록 없음 — 언제 했는지 모릅니다`      (빨강)
+ *   기록 있고 주기 없음 → `마지막 5/11 · 120일 전`             (보통)
+ *   기록 있고 주기 있음 → `마지막 5/11 · 27일 남음` / `13일 지났습니다`
+ *
+ * ★ 주기를 모를 때 기한을 지어내지 않는다. 그래도 **마지막으로 한 날**만으로
+ *   충분히 값이 있다 — 아무도 기억 못 하던 것을 대신 기억하는 게 목적이다.
+ */
+export function statusLine(
+  data: CycleDone,
+  id: string,
+  everyDays: number | null,
+  day: string = businessDay(),
+): { text: string; late: boolean } {
+  const last = data[id];
+  if (!last) return { text: "기록 없음 — 언제 했는지 모릅니다", late: true };
+  const head = `마지막 ${shortDay(last)} · `;
+  if (everyDays === null) {
+    const since = daysSince(data, id, day) ?? 0;
+    return { text: `${head}${since}일 전`, late: false };
+  }
+  const left = daysLeft(data, id, everyDays, day);
+  return { text: `${head}${leftLabel(left)}`, late: left !== null && left < 0 };
 }
 
 /** 화면에 그대로 쓰는 문장. `null` 이면 아직 기록이 없다는 뜻 */
@@ -113,19 +186,27 @@ export function shortDay(day: string): string {
  * 소화기 점검을 3년 전에 했는지 어제 했는지 모르는 상태가 그렇다.
  * 뒤로 밀면 사장님이 영영 안 채운다.
  */
-export function sortByUrgency<T extends { id: string; everyDays: number }>(
+export function sortByUrgency<T extends { id: string; everyDays: number | null }>(
   items: T[],
   data: CycleDone,
   day: string = businessDay(),
 ): T[] {
+  // 기록이 아예 없는 것 → 기한이 급한 것 → 주기를 안 정해 판단 못 하는 것
+  const rank = (x: T): number => {
+    if (!data[x.id]) return 0; // 기록 없음: 가장 위험하다
+    if (x.everyDays === null) return 2; // 판단 불가: 맨 아래
+    return 1;
+  };
   return [...items].sort((a, b) => {
-    const la = daysLeft(data, a.id, a.everyDays, day);
-    const lb = daysLeft(data, b.id, b.everyDays, day);
-    if (la === null && lb === null) return a.everyDays - b.everyDays;
-    if (la === null) return -1;
-    if (lb === null) return 1;
-    if (la !== lb) return la - lb;
-    return a.everyDays - b.everyDays;
+    const ra = rank(a);
+    const rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    if (ra === 1) {
+      const la = daysLeft(data, a.id, a.everyDays, day) as number;
+      const lb = daysLeft(data, b.id, b.everyDays, day) as number;
+      if (la !== lb) return la - lb;
+    }
+    return 0;
   });
 }
 

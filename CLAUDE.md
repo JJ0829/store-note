@@ -271,7 +271,7 @@ src/lib/sales.ts            ← 매출 − 재료비 − 인건비
 src/lib/orders.ts           ← 발주 체크 (주문함 / 들어옴 두 단계)
 src/lib/settings.ts         ← 최저임금·5인이상·목표원가율·판매가·원가제외 재료
 src/lib/businessDay.ts      ← ★ 매장의 하루. 경계는 자정이 아니라 새벽 4시
-src/lib/cycleDone.ts        ← ★ 주기 점검의 **마지막으로 한 날**. 날짜 키가 아니라서 안 지워진다
+src/lib/cycleDone.ts        ← ★ 주기 점검의 **마지막으로 한 날 + 매장이 정한 주기**
 src/lib/shiftClock.ts       ← ★ 자정을 넘는 근무조 판정 (연장된 날의 마감조)
 src/lib/backup.ts           ← 내보내기·되돌리기. ★ CSV는 BOM 필수 + 수식 주입 차단
 src/lib/pinDigest.ts        ← PIN 단방향 요약값. 두 잠금이 공유 (소금은 다르게)
@@ -281,7 +281,7 @@ src/components/ui.tsx       ← Screen/Card/Row/Chip/NumField 공통
 src/components/OwnerGate.tsx← 화면 전체 잠금 + InlineUnlock(부분 가리기)
 src/components/StoreGate.tsx← 레시피 가림막 + StoreLockButton
 src/components/BackupView.tsx← 내보내기·되돌리기
-tests/                      ← 385개. lib 24개 전부 + 단일 파일 구문 검사 (2026-09-08)
+tests/                      ← 395개. lib 24개 전부 + 단일 파일 구문 검사 (2026-09-08)
 ```
 
 ### 운영 기능에서 조심할 것 (테스트로 못 박아둠)
@@ -338,6 +338,14 @@ tests/                      ← 385개. lib 24개 전부 + 단일 파일 구문 
   **리드타임이 없는 일**에 저 중 아무거나 붙이면 화면이 "몇 시부터 사용 가능"을
   계산해서 **없는 약속**을 만든다. 2026-09-09 에 `routine` 을 더했고,
   `tests/seed.test.ts` 가 리드타임 칸이 둘 다 비어 있는지 확인한다.
+- **★ 주기 숫자(`everyDays`)를 시드에 박아두지 않는다. 매장이 정한다.**
+  `1개월마다`·`6개월마다` 는 **쓰는 곳마다 다르다** — 제빙기를 매일 닦는 매장에
+  `1개월마다` 를 띄우면 그 화면은 처음부터 틀린 말을 한다. 법정 항목도 업종·규모에
+  따라 다르다. **모르는 숫자를 앱이 단정하면 사장님이 그걸 믿는다.**
+  시드는 전부 `null` 이고 매장이 `sop:cycleEvery` 에 넣는다(화면의 입력칸).
+  안 넣으면 기한을 판단하지 않고 **`마지막 5/11 · 121일 전`** 만 보여준다 —
+  그것만으로도 아무도 기억 못 하던 것을 대신 기억해 준다.
+  (사장님 지적 2026-09-08 · `src/lib/cycleDone.ts`)
 - **★ 주기 점검은 "그날 체크" 가 아니라 "마지막으로 한 날" 을 남긴다.**
   `prep:{slug}:{영업일}` 에 넣으면 **다음 날 지워져서 주기를 아예 못 센다.**
   `4개월마다` 라고 적어놓고 앱이 그 4개월을 세지 않으면 그 화면은 읽을 거리다.
