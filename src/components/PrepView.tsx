@@ -418,7 +418,7 @@ export default function PrepView({
         </Link>
         <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
           체크 상태는 이 기기에만 저장되며 <b>영업일이 바뀌면 초기화됩니다</b>.
-          하루의 경계는 <b>새벽 5시</b>입니다.
+          하루의 경계는 <b>새벽 4시</b>입니다.
         </p>
       </div>
     </div>

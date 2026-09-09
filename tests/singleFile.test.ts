@@ -69,9 +69,9 @@ test("★ 자정 넘김을 다루는 onDuty 가 있다", () => {
   );
 });
 
-test("★ 영업일 경계(새벽 5시)가 들어 있다", () => {
+test("★ 영업일 경계(새벽 4시)가 들어 있다", () => {
   const js = scriptOf(FILES[0]);
-  assert.match(js, /DAY_START_HOUR = 5/);
+  assert.match(js, /DAY_START_HOUR = 4/);
   assert.match(js, /function pruneDayKeys\(/);
 });
 
