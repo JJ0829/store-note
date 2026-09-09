@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>매장수첩 · 와이어프레임 (핵심 화면 5)</title>
+<!--
+  매장수첩 — 저충실도 와이어프레임
+  2026-09-09. docs/deliverables/21_화면명세.md 의 §3 을 그림으로 내린 것.
+
+  ★ 규칙
+    - 외부 요청 0건. 폰트·이미지·스크립트 전부 안 불러온다 (앱과 같은 규율).
+    - 색을 쓰지 않는다. 빨강만 예외 — 이 제품에서 빨강은 "되돌릴 수 없음" 하나뿐이다.
+    - 이건 디자인이 아니라 **배치·상태·이동의 합의문**이다. 예쁘게 만들지 않는다.
+-->
+<style>
+  :root{
+    --ink:#1a1a1a; --ink2:#555; --ink3:#888;
+    --line:#c9c9c9; --line2:#e3e3e3;
+    --paper:#fff; --bg:#f4f4f2;
+    --red:#b42318; --redbg:#fdf3f2;
+    --pin:#1a1a1a;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","맑은 고딕",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 var(--sans)}
+  .wrap{max-width:1400px;margin:0 auto;padding:32px 20px 80px}
+
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--ink2);margin:0 0 24px;font-size:13px}
+  h2{font-size:16px;margin:48px 0 4px;padding-top:20px;border-top:2px solid var(--ink)}
+  h2 .code{font-family:var(--mono);font-size:13px;color:var(--ink2);font-weight:400}
+  .why{margin:6px 0 18px;color:var(--ink2);font-size:13px;max-width:70ch}
+
+  /* ---- 범례 ---- */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 22px;padding:14px 16px;background:var(--paper);
+          border:1px solid var(--line);border-radius:8px;font-size:12.5px;margin-bottom:8px}
+  .legend b{font-family:var(--mono)}
+
+  /* ---- 아트보드 ---- */
+  .boards{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+  .board{width:340px;flex:0 0 auto}
+  .board > .cap{font-family:var(--mono);font-size:11.5px;color:var(--ink2);
+                margin-bottom:6px;letter-spacing:.02em}
+  .screen{background:var(--paper);border:1.5px solid var(--ink);border-radius:10px;
+          padding:0;overflow:hidden}
+  .statusbar{height:20px;background:var(--line2);border-bottom:1px solid var(--line)}
+
+  .top{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line)}
+  .top .back{font-family:var(--mono);font-size:11px;border:1px solid var(--line);
+             border-radius:5px;padding:2px 6px;color:var(--ink2)}
+  .top .ttl{font-weight:700;font-size:15px}
+  .top .store{font-size:10.5px;color:var(--ink3);margin-left:auto;font-family:var(--mono)}
+
+  .body{padding:12px}
+  .blk{border:1px dashed var(--line);border-radius:7px;padding:9px 10px;margin-bottom:9px;background:#fcfcfc}
+  .blk.solid{border-style:solid}
+  .blk.red{border:1.5px solid var(--red);background:var(--redbg)}
+  .blk.flat{border:none;background:none;padding:0;margin-bottom:9px}
+  .blk h4{margin:0 0 3px;font-size:12.5px;font-weight:700}
+  .blk p{margin:0;font-size:11.5px;color:var(--ink2);line-height:1.5}
+  .blk p + p{margin-top:3px}
+
+  .eyebrow{font-family:var(--mono);font-size:10px;color:var(--ink3);
+           text-transform:uppercase;letter-spacing:.06em;margin:0 0 5px}
+
+  .row{display:flex;align-items:center;gap:8px}
+  .row + .row{margin-top:7px;padding-top:7px;border-top:1px solid var(--line2)}
+  .grow{flex:1;min-width:0}
+  .chk{width:16px;height:16px;border:1.5px solid var(--ink2);border-radius:4px;flex:0 0 auto}
+  .chk.on{background:var(--ink2);position:relative}
+  .chk.on::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+                 border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg)}
+
+  .btn{font-family:var(--mono);font-size:11px;border:1px solid var(--ink2);border-radius:6px;
+       padding:4px 9px;display:inline-block;background:#fff;white-space:nowrap}
+  .btn.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn.wide{display:block;text-align:center;padding:9px;font-size:12px;margin-top:6px}
+
+  .pill{font-family:var(--mono);font-size:9.5px;border:1px solid var(--line);border-radius:20px;
+        padding:1px 7px;display:inline-block;color:var(--ink2);background:#fff;margin:0 3px 3px 0}
+  .pill.crit{border-color:var(--red);color:var(--red)}
+
+  .bar{height:6px;background:var(--line2);border-radius:3px;overflow:hidden;margin-bottom:9px}
+  .bar i{display:block;height:100%;background:var(--ink2)}
+
+  .skel{height:14px;background:var(--line2);border-radius:4px;margin-bottom:7px}
+  .skel.w60{width:60%} .skel.w40{width:40%} .skel.w80{width:80%} .skel.tall{height:52px}
+
+  .tabbar{display:flex;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px}
+  .tabbar span{flex:1;text-align:center;padding:8px 0;color:var(--ink3);border-right:1px solid var(--line2)}
+  .tabbar span:last-child{border-right:none}
+  .tabbar span.on{color:var(--ink);font-weight:700;box-shadow:inset 0 2px 0 var(--ink)}
+
+  .mono{font-family:var(--mono)}
+  .dim{color:var(--ink3)}
+  .num{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--pin);
+       width:17px;height:17px;line-height:17px;text-align:center;border-radius:50%;
+       display:inline-block;flex:0 0 auto}
+
+  /* ---- 주석 ---- */
+  .notes{margin-top:14px;background:var(--paper);border:1px solid var(--line);border-radius:8px;
+         padding:14px 16px}
+  .notes ol{margin:0;padding:0;list-style:none;counter-reset:n}
+  .notes li{display:flex;gap:9px;padding:7px 0;font-size:12.5px;line-height:1.55;
+            border-bottom:1px solid var(--line2)}
+  .notes li:last-child{border-bottom:none}
+  .notes li b{font-weight:700}
+  .notes code{font-family:var(--mono);font-size:11.5px;background:var(--bg);
+              padding:1px 4px;border-radius:3px}
+
+  table{border-collapse:collapse;width:100%;margin-top:14px;background:var(--paper);font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:#efefec;font-size:11.5px}
+  td code, th code{font-family:var(--mono);font-size:11px}
+
+  .callout{border-left:3px solid var(--ink);background:var(--paper);padding:12px 16px;
+           margin:16px 0;font-size:13px}
+  .callout.warn{border-left-color:var(--red)}
+  .callout b{font-weight:700}
+
+  @media print{
+    body{background:#fff}
+    h2{page-break-before:always}
+    .board{width:300px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>매장수첩 · 와이어프레임 — 핵심 화면 5</h1>
+<p class="sub">
+  2026-09-09 · 저충실도 · 배치와 상태와 이동만 정한다 (색·서체·여백은 정하지 않는다)<br>
+  기준 문서 <span class="mono">docs/deliverables/21_화면명세.md §3</span> ·
+  클릭 흐름 <span class="mono">docs/deliverables/22_클릭흐름.md</span>
+</p>
+
+<div class="legend">
+  <span><b>실선</b> 실제로 구현돼 있는 것</span>
+  <span><b>점선</b> 영역 구분 (선 자체는 화면에 없다)</span>
+  <span><b style="color:var(--red)">빨강</b> 되돌릴 수 없음 — 이 제품에서 빨강은 이 뜻 하나뿐</span>
+  <span><b>회색 막대</b> 로딩 (아직 못 읽음)</span>
+  <span><b>①②③</b> 아래 주석 번호</span>
+</div>
+<div class="callout">
+  <b>기기 기준은 태블릿이다.</b> 매장에 이미 깔려 있고, 주방에서 개인폰은 젖은 손·위생 규정 때문에 불리하다.
+  아래 아트보드는 좁은 쪽(<span class="mono">375px</span>)으로 그렸다 — <b>좁은 쪽이 되면 넓은 쪽은 된다.</b>
+  카카오톡으로 받은 링크를 폰으로 여는 경로(S-03)가 실제로 있으므로 좁은 쪽이 기준이어야 한다.
+</div>
+
+
+<!-- ============================================================ -->
+<h2>S-01 <span class="code">/</span> — 오늘 (허브)</h2>
+<p class="why">
+  이 화면이 하는 일은 하나다. <b>메뉴를 뒤지지 않게 하는 것.</b>
+  지금 시각에 근무 중인 조를 찾아서, <b>그 조가 열 화면만</b> 맨 위에 올린다.
+  나머지는 아래로 밀어둔다.
+</p>
+
+<div class="boards">
+
+  <div class="board">
+    <div class="cap">N-a · 근무 중 (14:45 · 마감조)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="ttl">매장수첩</span><span class="store">○○ 베이커리 카페</span></div>
+      <div class="body">
+
+        <div class="blk solid">
+          <div class="row" style="margin-bottom:6px">
+            <span class="num">1</span>
+            <span class="grow mono" style="font-size:11px">지금 14:45 · 근무 중</span>
+          </div>
+          <h4>마감조 <span class="dim mono" style="font-weight:400">14:30–22:30</span></h4>
+          <p>오후 영업 → 19시부터 마감 준비 → 22시 영업 종료 → 22:30 마감 완료</p>
+          <span class="num" style="float:right;margin-top:-14px">2</span>
+          <a class="btn wide pri">오후 프렙 (내일 것 걸기) ›</a>
+          <a class="btn wide">마감 준비 (19시부터) ›</a>
+          <a class="btn wide">마감 체크리스트 ›</a>
+        </div>
+
+        <div class="blk">
+          <p class="eyebrow">같은 시간대 <span class="num" style="vertical-align:-3px">3</span></p>
+          <h4>오픈조 <span class="dim mono" style="font-weight:400">07:30–15:30</span></h4>
+          <a class="btn wide">오픈 체크리스트 ›</a>
+          <a class="btn wide">오후 프렙 ›</a>
+        </div>
+
+        <div class="blk">
+          <p class="eyebrow">프렙 <span class="num" style="vertical-align:-3px">4</span></p>
+          <div class="row"><span class="grow">오후 프렙 <span class="dim mono">6개 · 까먹지 말 것 4개</span></span><span class="dim">›</span></div>
+          <div class="row"><span class="grow">마감 준비 <span class="dim mono">3개</span></span><span class="dim">›</span></div>
+          <div class="row"><span class="grow">주기 점검 <span class="dim mono">13개 · 까먹지 말 것 1개</span></span><span class="dim">›</span></div>
+        </div>
+
+        <div class="blk">
+          <p class="eyebrow">바로 가기</p>
+          <div class="row"><span class="grow">레시피 찾기 <span class="pill">🔑 매장</span></span><span class="dim">›</span></div>
+          <div class="row"><span class="grow">출퇴근 · 근태</span><span class="dim">›</span></div>
+          <div class="row"><span class="grow">발주</span><span class="dim">›</span></div>
+          <div class="row"><span class="grow">운영 (원가·매출·거래처·계약서) <span class="pill">🔒 사장님</span></span><span class="dim">›</span></div>
+        </div>
+
+        <div class="blk">
+          <p class="eyebrow">포지션별 <span class="num" style="vertical-align:-3px">5</span></p>
+          <div class="row">
+            <span class="grow">오픈조 <span class="dim mono">9개 · 꼭 지키기 4개</span></span>
+            <span class="btn pri">교육 모드</span><span class="btn">체크리스트</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="tabbar"><span class="on">오늘 <sup>8</sup></span><span>프렙</span><span>레시피</span><span>근무표</span><span>교육</span><span>운영</span></div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">N-b · 근무 시간 아님 (03:20)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="ttl">매장수첩</span><span class="store">○○ 베이커리 카페</span></div>
+      <div class="body">
+        <div class="blk solid">
+          <div class="row" style="margin-bottom:6px">
+            <span class="num">6</span>
+            <span class="grow mono" style="font-size:11px">지금 03:20 · 근무 시간이 아닙니다</span>
+          </div>
+          <h4>다음 — 제빵 <span class="dim mono" style="font-weight:400">05:00</span></h4>
+          <p>어제 걸어둔 것 받고, 내일 것 다시 걸어두기</p>
+          <a class="btn wide">제빵 순서 보기 ›</a>
+        </div>
+        <div class="blk"><p class="eyebrow">프렙</p>
+          <div class="row"><span class="grow dim">…아래는 N-a 와 같다</span></div></div>
+      </div>
+      <div class="tabbar"><span class="on">오늘</span><span>프렙</span><span>레시피</span><span>근무표</span><span>교육</span><span>운영</span></div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">L · 로딩 (시각을 아직 못 읽음)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="ttl">매장수첩</span><span class="store">○○ 베이커리 카페</span></div>
+      <div class="body">
+        <div class="skel tall"></div>
+        <div class="skel w60"></div>
+        <div class="blk" style="margin-top:12px">
+          <p class="eyebrow">프렙</p>
+          <div class="row"><span class="grow">오후 프렙</span><span class="dim">›</span></div>
+          <div class="row"><span class="grow">마감 준비</span><span class="dim">›</span></div>
+          <div class="row"><span class="grow">주기 점검</span><span class="dim">›</span></div>
+        </div>
+        <div class="row"><span class="num">7</span><span class="grow dim" style="font-size:11.5px">아래쪽은 서버가 이미 그려서 보낸다 — 로딩이 없다</span></div>
+      </div>
+      <div class="tabbar"><span class="on">오늘</span><span>프렙</span><span>레시피</span><span>근무표</span><span>교육</span><span>운영</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes"><ol>
+  <li><span class="num">1</span><span><b>시각은 클라이언트에서 읽는다.</b> 서버가 렌더할 때는 몇 시인지 모른다 —
+      그래서 이 블록만 로딩(L) 상태가 있다. 시각은 <code>30~60초</code>마다 다시 읽는다.</span></li>
+  <li><span class="num">2</span><span><b>버튼 순서는 <code>shift.focus[]</code> 순서 그대로다.</b> 첫 번째가 대표(진하게).
+      마감조는 <code>오후 프렙 → 마감 준비 → 마감 체크리스트</code> — <b>하루가 흘러가는 순서</b>다.</span></li>
+  <li><span class="num">3</span><span><b>겹치는 조는 "방금 시작한 조"가 위.</b> 07:30 에 제빵(05:00 시작)이 위에 오면
+      막 출근한 오픈조가 자기 화면을 아래에서 찾아야 한다. ⚠️ <b>자정을 넘긴 조는 시작 분에서 1440 을 뺀다</b> —
+      안 그러면 새벽 00:30 의 마감조가 "제일 늦게 시작한 조"로 잡혀 맨 위로 올라온다.</span></li>
+  <li><span class="num">4</span><span><b>프렙이 근무조 카드 바로 아래.</b> 매일 열리는 것 중 가장 강한 훅이라서.
+      개수와 <code>까먹지 말 것 n개</code>를 여기서 미리 보여준다 — 들어가기 전에 오늘 무게를 안다.</span></li>
+  <li><span class="num">5</span><span><b>포지션 카드에는 버튼이 두 개다</b> — <code>교육 모드</code>(첫날, 한 장씩)와
+      <code>체크리스트</code>(매일, 스크롤). <b>저장 방식이 달라서 화면을 나눈 것</b>이지 취향이 아니다.</span></li>
+  <li><span class="num">6</span><span><b>"근무 시간이 아닙니다"에서 끝내지 않는다.</b> 다음 조를 알려준다.
+      오늘 남은 조가 없으면 <b>내일 첫 조</b>로 넘어간다 (예전엔 시드 등록 순서로 떨어져 엉뚱한 조를 알려줬다).</span></li>
+  <li><span class="num">7</span><span><b>로딩은 위쪽 한 블록뿐이다.</b> 목록·포지션은 서버 데이터라 처음부터 그려져 있다.
+      화면 전체를 회색으로 덮으면 안 된다 — 태블릿에서 매번 깜빡인다.</span></li>
+  <li><span class="num">8</span><span>⛔ <b>아래 탭바는 지금 단일 파일(<code>presentation/app.html</code>)에만 있고
+      Next 앱에는 없다.</b> 두 앱의 이동이 갈려 있는 유일한 지점이다.<br>
+      <b>오늘 정한 기준: 탭바를 표준으로 삼는다.</b> 매장 태블릿은 전체화면 키오스크라
+      <b>주소창이 없는 경우가 많다.</b> 지금 Next 앱에서 홈으로 한 번에 가는 길은
+      <code>/r</code>·프렙·교육 모드 <b>세 곳의 "처음으로" 뿐</b>이고, 나머지는 <code>‹ 뒤로</code>를
+      여러 번 눌러야 한다. <b>구현은 오늘 안 한다</b> — 오늘은 기준만 정한다.</span></li>
+</ol></div>
+
+
+<!-- ============================================================ -->
+<h2>S-04 <span class="code">/prep/[slug]</span> — 프렙</h2>
+<p class="why">
+  이 제품이 <b>종이를 확실히 이긴다</b>고 주장하는 화면. 근거는 둘이다 —
+  ① 오늘 안 하면 내일 아침에 <b>돈으로도 못 되돌리는</b> 것이 있다(<code>recoverable:false</code>),
+  ② <b>수량이 매일 바뀐다</b>(<code>quantityVaries</code>). 벽에 붙인 코팅 체크리스트로는 둘 다 안 된다.
+</p>
+
+<div class="boards">
+
+  <div class="board">
+    <div class="cap">N · /prep/afternoon (오후 프렙)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">오후 프렙</span><span class="store">2 / 6</span></div>
+      <div class="body">
+
+        <div class="bar"><i style="width:33%"></i></div>
+        <span class="num" style="float:right;margin-top:-26px">1</span>
+
+        <div class="blk red">
+          <h4 style="color:var(--red)">까먹지 말고 해야 할 것 2개 <span class="num">2</span></h4>
+          <p>빨간 테두리로 표시된 것들입니다. 오늘 안 하면 내일 아침에 되돌릴 방법이 없습니다.</p>
+        </div>
+
+        <p class="blk flat dim" style="font-size:11.5px">14:00~15:30. 대부분 내일을 위한 일입니다.</p>
+
+        <div class="blk red">
+          <div class="row">
+            <span class="chk"></span>
+            <span class="grow">
+              <span class="pill crit">꼭 지키기</span><span class="pill">매일 14:00</span><span class="pill">수량 매일 다름</span>
+              <h4 style="margin-top:4px">내일용 콜드브루 걸기</h4>
+              <p>원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.</p>
+              <p class="mono" style="margin-top:5px"><b>지금 걸면 → 내일 07:43 부터 사용 가능</b> <span class="dim">(16시간)</span> <span class="num">3</span></p>
+              <p style="color:var(--red);margin-top:4px">안 하면 — 내일 콜드브루 못 팝니다. 사올 수도 없습니다.</p>
+            </span>
+          </div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">
+            <p class="eyebrow">오늘 몇 배? <span class="num" style="vertical-align:-3px">4</span></p>
+            <span class="btn">0.5배</span> <span class="btn pri">1배</span> <span class="btn">1.5배</span> <span class="btn">2배</span> <span class="btn">3배</span>
+            <p style="margin-top:6px" class="mono">콜드브루 · 1배합 2000ml → <b>2000ml</b></p>
+            <div class="row"><span class="grow">원두</span><span class="mono">200g</span></div>
+            <div class="row"><span class="grow">물</span><span class="mono">2000ml</span></div>
+          </div>
+        </div>
+
+        <div class="blk">
+          <div class="row">
+            <span class="chk on"></span>
+            <span class="grow" style="opacity:.55">
+              <span class="pill">월·화·수·목·금 15:00</span>
+              <h4 style="margin-top:4px">우유·식자재 발주</h4>
+              <p class="mono"><b>오늘 주문 → 내일 도착</b></p>
+              <p>안 하면 — 쿠팡으로 메울 수 있습니다. 다만 값이 더 나갑니다. <span class="num">5</span></p>
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">N · /prep/evening (마감 준비 · 2026-09-09 신설)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">마감 준비</span><span class="store">0 / 3</span></div>
+      <div class="body">
+        <div class="bar"><i style="width:0%"></i></div>
+        <p class="blk flat dim" style="font-size:11.5px">19:00~22:00. 영업하면서 같이 합니다.
+          22시 영업이 끝난 뒤의 마감 작업은 마감 체크리스트에 있습니다. <span class="num">6</span></p>
+
+        <div class="blk">
+          <div class="row"><span class="chk"></span><span class="grow">
+            <span class="pill">매일 19:00</span><span class="pill">수량 매일 다름</span>
+            <h4 style="margin-top:4px">재료 준비</h4>
+            <p>영업하면서 떨어진 것을 채우고, 내일 아침 오픈조가 바로 쓸 수 있게 미리 꺼내둡니다.</p>
+            <p>안 하면 — 내일 아침 오픈조가 그만큼 늦게 엽니다.</p>
+          </span></div>
+        </div>
+        <div class="blk">
+          <div class="row"><span class="chk"></span><span class="grow">
+            <span class="pill">매일 19:00</span>
+            <h4 style="margin-top:4px">홀 정리</h4>
+            <p>테이블·의자·바닥 순서로. 아직 영업 중이라 자리 비는 대로 합니다.</p>
+          </span></div>
+        </div>
+        <div class="blk">
+          <div class="row"><span class="chk"></span><span class="grow">
+            <span class="pill crit">꼭 지키기</span><span class="pill">매일 19:00</span>
+            <h4 style="margin-top:4px">화장실 청소</h4>
+            <p>변기·세면대·바닥, 휴지·비누 보충.</p>
+          </span></div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <span class="num">7</span>
+          <span class="grow dim" style="font-size:11.5px">리드타임 줄이 <b>한 줄도 없다</b> — <code>kind:"routine"</code></span>
+        </div>
+
+        <p class="blk flat dim" style="font-size:10.5px;margin-top:12px;border-top:1px solid var(--line2);padding-top:8px">
+          체크 상태는 이 기기에만 저장되며 <b>영업일이 바뀌면 초기화됩니다</b>.
+          하루의 경계는 <b>새벽 4시</b>입니다. <span class="num">8</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes"><ol>
+  <li><span class="num">1</span><span><b>진행률과 <code>n/전체</code>가 맨 위.</b> 들어오자마자 "얼마나 남았나"가 보여야 한다.</span></li>
+  <li><span class="num">2</span><span><b>빨간 안내는 <code>recoverable:false</code>인 것만 센다.</b> 전부 빨갛게 하면 사람은 무시한다.
+      다 하면 <b>초록으로 바뀐다</b> — 끝났다는 신호가 있어야 한다.</span></li>
+  <li><span class="num">3</span><span><b>리드타임을 시각으로 바꿔서 보여준다.</b> "16시간"이 아니라 <b>"내일 07:43부터"</b>.
+      신입은 16시간을 07:43으로 못 바꾼다. 이 한 줄이 이 화면의 값이다.</span></li>
+  <li><span class="num">4</span><span><b>배수 계산기는 <code>recipeSlug</code>가 있는 항목에만 붙는다.</b>
+      ⚠️ 지금 <b>19개 중 2개</b>뿐이다. 시연에서 다른 항목을 먼저 열면 <b>없는 기능처럼 보인다.</b></span></li>
+  <li><span class="num">5</span><span><b>발주 항목은 여기와 <code>/order</code>에 같이 뜬다.</b> 목록을 두 벌 만들지 않는다 —
+      프렙의 <code>kind:"order"</code>를 그대로 가져다 쓴다.</span></li>
+  <li><span class="num">6</span><span><b>목록 안내문이 경계를 말한다.</b> 이 목록은 19:00~22:00,
+      마감 체크리스트는 22:00 이후. <b>안 적으면 둘 다 22시에 열린다.</b></span></li>
+  <li><span class="num">7</span><span><b><code>routine</code>은 리드타임 줄을 안 그린다.</b> 홀 정리에 "몇 시부터 사용 가능"은
+      <b>없는 약속</b>이다. 그래서 타입에 네 번째 값을 만들었다.</span></li>
+  <li><span class="num">8</span><span><b>화면이 하는 약속은 코드가 지켜야 한다.</b> "초기화됩니다"라고 써놓고 안 지우던 버그가 있었다.
+      지금은 <code>pruneDayKeys()</code>가 지난 영업일 키를 실제로 지운다.</span></li>
+</ol></div>
+
+
+<!-- ============================================================ -->
+<h2>S-03 <span class="code">/p/[slug]</span> — 체크리스트 <span class="code">· vs ·</span> S-02 <span class="code">/t/[slug]</span> 교육 모드</h2>
+<p class="why">
+  같은 데이터를 쓰는 두 화면. <b>나눈 이유는 저장 방식이다</b> — 공용 태블릿이라
+  앞사람 진도가 다음 신입에게 보이면 안 된다.
+</p>
+
+<div class="boards">
+
+  <div class="board">
+    <div class="cap">S-03 · 체크리스트 (매일 · 스크롤)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">마감조</span><span class="store">3 / 9</span></div>
+      <div class="body">
+        <div class="bar"><i style="width:33%"></i></div>
+        <p class="blk flat dim" style="font-size:11.5px">영업 끝나고 하는 마감입니다. 내일 아침 오픈조가 바로
+          시작할 수 있는 상태로 만들어두는 게 목표예요. <b>빠르게보다 빠짐없이</b>가 중요합니다. <span class="num">1</span></p>
+
+        <p class="eyebrow">기계</p>
+        <div class="blk">
+          <div class="row"><span class="chk on"></span><span class="grow" style="opacity:.55">
+            <span class="pill crit">꼭 지키기</span>
+            <h4 style="margin-top:3px">에스프레소 머신 백플러시 + 세제 청소</h4>
+            <p>세제 넣고 백플러시 5회, 헹굼 5회.</p></span></div>
+          <div class="row"><span class="chk"></span><span class="grow">
+            <h4>그라인더 청소</h4><p>호퍼 원두 비우고 안쪽까지 닦습니다.</p>
+            <div class="skel tall" style="margin-top:6px"></div>
+            <p class="dim" style="font-size:10.5px">사진/영상 자리 — <b>지금 실사 0장</b> <span class="num">2</span></p>
+          </span></div>
+        </div>
+
+        <p class="eyebrow">내일 준비 확인 · 문단속</p>
+        <p class="blk flat dim" style="font-size:11px">여기서 빠뜨리면 내일 아침에 터집니다</p>
+        <div class="blk">
+          <div class="row"><span class="chk"></span><span class="grow">
+            <span class="pill crit">꼭 지키기</span>
+            <h4 style="margin-top:3px">내일 제빵용 반죽·재료 걸려 있는지 확인</h4>
+            <p>냉장고에 내일 쓸 반죽이 실제로 들어 있는지 눈으로 봅니다.</p></span></div>
+        </div>
+
+        <p class="blk flat dim" style="font-size:10.5px;margin-top:10px">
+          체크 상태는 이 기기에만 저장되며 영업일이 바뀌면 초기화됩니다. <span class="num">3</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">S-02 · 교육 모드 (첫날 · 한 장씩)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 나가기</span><span class="ttl">오픈조 교육</span><span class="store">4 / 9</span></div>
+      <div class="body">
+        <div class="bar"><i style="width:44%"></i></div>
+        <div class="blk solid" style="min-height:300px">
+          <span class="pill crit">꼭 지키기</span>
+          <h4 style="font-size:16px;margin-top:6px">냉장·냉동고 온도 확인 후 기록</h4>
+          <div class="skel tall" style="height:110px;margin:10px 0"></div>
+          <p style="font-size:12.5px">냉장 0~5℃, 냉동 −18℃ 이하. 벗어나 있으면 사장님께 바로 알립니다.</p>
+          <p class="dim" style="margin-top:6px">💬 선배 한마디 — 문을 오래 열어두면 아침엔 늘 높게 나옵니다.</p>
+          <div style="margin-top:14px;padding:10px;border:1.5px solid var(--red);border-radius:7px;background:var(--redbg)">
+            <p style="color:var(--red);font-weight:700;font-size:12px">이 항목은 확인이 필요합니다 <span class="num">4</span></p>
+            <a class="btn wide pri" style="border-color:var(--red);background:var(--red)">확인했습니다</a>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <span class="btn" style="flex:1;text-align:center;padding:10px">‹ 이전</span>
+          <span class="btn pri" style="flex:1;text-align:center;padding:10px">다음 ›</span>
+        </div>
+        <div class="row" style="margin-top:10px"><span class="num">5</span>
+          <span class="grow dim" style="font-size:11.5px">진도는 <code>sessionStorage</code> + <code>runId</code>.
+          <b>끝나면 지운다</b></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">S-02 끝 · 완료 설문</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="ttl">오픈조 교육</span><span class="store">9 / 9</span></div>
+      <div class="body">
+        <div class="blk solid" style="text-align:center;padding:22px 12px">
+          <h4 style="font-size:16px">다 봤습니다</h4>
+          <p style="margin-top:6px">소요 시간 <b class="mono">14분 20초</b></p>
+        </div>
+        <div class="blk">
+          <h4>하는 동안 선배에게 몇 번 물어봤나요? <span class="num">6</span></h4>
+          <div class="row" style="margin-top:8px">
+            <span class="btn">0번</span><span class="btn">1~2번</span><span class="btn">3~5번</span><span class="btn">6번+</span>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px"><span class="num">7</span>
+          <span class="grow dim" style="font-size:11.5px">이 두 값이 <b>가설을 검증하는 유일한 자료</b>다</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes"><ol>
+  <li><span class="num">1</span><span><b>맨 위 문장에 시간 압박을 넣지 않는다.</b> 한때 "30분 안에 끝냅니다"라고 썼다가 뺐다 —
+      일하는 사람 입장에서 그건 압박이다. 이 제품이 파는 것은 <b>속도가 아니라 누락 방지</b>다.</span></li>
+  <li><span class="num">2</span><span><b>사진·영상 자리가 항목마다 있다.</b> 핵심 가치 셋 중 하나인데
+      <b>지금 실사가 0장</b>이라 회색 네모다. 사장님 촬영이 필요하다.</span></li>
+  <li><span class="num">3</span><span><b>저장 키는 <code>sop:{shareSlug}:{영업일}</code></b>. 달력 날짜가 아니라 <b>영업일</b>이라
+      23:50에 찍은 체크가 00:10에 사라지지 않는다.</span></li>
+  <li><span class="num">4</span><span><b>필수 항목은 확인 버튼을 눌러야 넘어간다.</b> 체크리스트는 그냥 체크지만
+      교육 모드는 <b>게이트</b>다. 신입이 안 보고 넘기는 걸 막는 유일한 장치.</span></li>
+  <li><span class="num">5</span><span><b><code>sessionStorage</code> + 매번 새 <code>runId</code>.</b>
+      <code>localStorage</code>에 남기면 <b>앞 신입의 체크가 다음 신입 화면에 보인다.</b> 공용 태블릿이라서.</span></li>
+  <li><span class="num">6</span><span><b>설문은 한 문항이다.</b> 여러 개 물으면 아무도 안 한다.</span></li>
+  <li><span class="num">7</span><span><b><code>durationSec</code> + 설문 = 가설 검증 자료.</b>
+      가설은 <i>"신입이 체크리스트+영상만 봐도 선배가 붙어있는 시간이 줄어든다"</i>.
+      ⚠️ 붙어있는 시간은 <b>가르치는 시간 + 지켜보는 시간</b>인데 보통 뒤엣것이 더 길다.
+      <b>지켜보는 시간을 줄이는 기능은 아직 없다.</b></span></li>
+</ol></div>
+
+
+<!-- ============================================================ -->
+<h2>S-11 <span class="code">/order</span> — 발주</h2>
+<p class="why">
+  ★ <b>쿠팡이 이 화면의 논리를 바꿨다.</b> 웬만한 건 쿠팡에서 다 판다 —
+  그래서 "발주 깜빡함 방지"는 약한 가치다(돈으로 메운다).
+  <b>진짜 값은 "주문은 했는데 안 들어온 것"</b>이다. 종이 체크리스트는 "주문함"까지만 적는다.
+</p>
+
+<div class="boards">
+
+  <div class="board">
+    <div class="cap">N · 거래처 있음 (아침 08:10)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">발주</span><span class="store">○○ 베이커리 카페</span></div>
+      <div class="body">
+
+        <div class="blk red">
+          <h4 style="color:var(--red)">주문했는데 아직 안 들어온 것 2개 <span class="num">1</span></h4>
+          <p>들어왔으면 눌러서 표시해 주세요. 안 들어왔으면 거래처에 확인이 필요합니다.</p>
+          <div class="row" style="margin-top:8px">
+            <span class="grow"><b style="font-size:12.5px">우유·식자재 발주</b>
+              <p class="dim mono" style="font-size:10.5px">2026-09-06 주문 · 우유 12팩</p></span>
+            <span class="btn">들어왔음</span>
+          </div>
+        </div>
+
+        <div class="blk solid">
+          <h4>오늘 주문 마감 <span class="num">2</span></h4>
+          <p>마감을 넘기면 그 주문은 다음 배송일로 밀립니다.</p>
+          <div class="row" style="margin-top:6px">
+            <span class="grow"><b style="font-size:12.5px">우유 대리점</b>
+              <p class="dim" style="font-size:10.5px">카톡 · 김대리 · 지금 주문하면 <b>화(9/8)</b> 도착</p></span>
+            <span class="mono" style="font-size:12px"><b>6시간 50분</b></span>
+            <span class="btn">전화</span><span class="btn">발주서</span>
+          </div>
+          <div class="row">
+            <span class="grow"><b style="font-size:12.5px">원두 로스터리</b>
+              <p class="dim" style="font-size:10.5px">홈페이지 · 지금 주문하면 <b>금(9/11)</b> 도착</p></span>
+            <span class="mono" style="font-size:12px;color:var(--red)"><b>0시간 40분</b></span>
+            <span class="btn">발주서</span>
+          </div>
+          <div class="row">
+            <span class="grow dim"><b style="font-size:12.5px">제과 부자재</b>
+              <p style="font-size:10.5px">전화 · 지금 주문하면 <b>수(9/9)</b> 도착</p></span>
+            <span class="mono dim" style="font-size:12px">마감</span>
+            <span class="btn">전화</span>
+          </div>
+          <div class="row"><span class="num">3</span><span class="grow dim" style="font-size:11px">
+            ⛔ <b>오늘 주문 안 하는 거래처도 여기 선다</b> — 결정 대기 (§6)</span></div>
+        </div>
+
+        <div class="blk">
+          <h4>주문할 것 <span class="num">4</span></h4>
+          <p>프렙 목록의 발주 항목을 그대로 가져옵니다.</p>
+          <div class="row" style="margin-top:8px">
+            <span class="grow"><b style="font-size:12.5px">우유·식자재 발주</b>
+              <p class="dim" style="font-size:10.5px">거래처 <u>우유 대리점</u> ▾ · 메모 [ 우유 12팩 ]</p></span>
+          </div>
+          <div class="row" style="border:none;padding-top:4px">
+            <span class="btn pri" style="flex:1;text-align:center">주문함</span>
+            <span class="btn" style="flex:1;text-align:center">들어옴</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">Z · 거래처 0건 (처음 켠 매장)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">발주</span><span class="store">○○ 베이커리 카페</span></div>
+      <div class="body">
+        <div class="blk"><h4>주문할 것</h4>
+          <div class="blk" style="text-align:center;padding:22px 10px;margin-top:8px">
+            <p>프렙 목록에 발주 항목이 없습니다.</p>
+          </div>
+        </div>
+        <div class="row"><span class="num">5</span><span class="grow dim" style="font-size:11.5px">
+          "오늘 주문 마감" 섹션은 <b>아예 안 뜬다</b> — 빈 표를 보여주지 않는다</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">G · 잠김 (S-12·13·14·15·16 공통)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">거래처</span></div>
+      <div class="body">
+        <div class="blk solid" style="text-align:center;padding:26px 14px">
+          <h4 style="font-size:15px">🔒 사장님 번호</h4>
+          <p style="margin-top:6px">돈과 사람에 관한 화면입니다.</p>
+          <div class="skel" style="height:38px;margin:14px 0 8px"></div>
+          <a class="btn wide pri">열기</a>
+          <p style="color:var(--red);margin-top:8px" class="mono">번호가 다릅니다 <span class="num">6</span></p>
+        </div>
+        <p class="blk flat dim" style="font-size:10.5px">
+          이건 <b>가림막이지 잠금이 아닙니다.</b> 같은 기기를 쓰는 사람이 못 보게 하는 정도입니다. <span class="num">7</span></p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes"><ol>
+  <li><span class="num">1</span><span><b>1번 섹션이 맨 위인 게 이 화면의 설계 전부다.</b>
+      지난 <b>7영업일</b>에서 <code>주문함 ∧ ¬들어옴</code>인 것을 끌어온다. 0건이면 섹션이 사라진다.</span></li>
+  <li><span class="num">2</span><span><b>마감이 임박한 순으로 정렬.</b> 1시간 이하면 빨강, 지났으면 회색 + "마감".
+      <code>지금 주문하면 → 언제 도착</code>은 <b>마감·리드타임·배송요일 셋을 다 계산한 값</b>이다.</span></li>
+  <li><span class="num">3</span><span>⛔ <b>미해결.</b> <code>Vendor</code>에 "우리가 주문하는 요일"이 없어서
+      <b>모든 거래처가 매일 선다.</b> 6곳이면 아침마다 5줄이 관계없는 줄 → 사람은 곧 안 읽는다.
+      <b>사장님 답(거래처 6칸)이 있어야 고친다.</b></span></li>
+  <li><span class="num">4</span><span><b>발주 목록을 새로 만들지 않는다.</b> 프렙의 <code>kind:"order"</code>를 가져온다.
+      <b>"주문함 / 들어옴" 두 칸</b>이 핵심 — 종이가 못 잡는 게 정확히 그 사이다.</span></li>
+  <li><span class="num">5</span><span><b>빈 표를 보여주지 않는다.</b> 조건이 없으면 섹션째로 없앤다.
+      빈 표는 "고장난 것"처럼 보인다.</span></li>
+  <li><span class="num">6</span><span><b>PIN 틀림은 <code>role="alert"</code></b> — 스크린리더가 즉시 읽는다.
+      화면을 안 보고 있어도 알아야 한다.</span></li>
+  <li><span class="num">7</span><span>★ <b>이 문구를 약하게 쓰면 거짓말이 된다.</b> 서버가 HTML에 레시피를 실어 보내므로
+      <b>잠긴 상태에서도 페이지 소스에 재료가 들어 있다</b>(실측). 한때 "링크만으로는 열리지 않습니다"라고
+      썼다가 되돌렸다. <b>진짜 잠금은 서버가 생긴 뒤다.</b></span></li>
+</ol></div>
+
+
+<!-- ============================================================ -->
+<h2>S-09 <span class="code">/attendance</span> — 출퇴근 · 근태</h2>
+<p class="why">
+  하루에 두 번, 전 직원이 누른다. <b>가장 자주 눌리는 화면</b>이면서
+  동시에 <b>가장 조심해야 하는 화면</b>이다 — 여기 숫자가 급여로 이어진다.
+</p>
+
+<div class="boards">
+
+  <div class="board">
+    <div class="cap">N · 직원이 볼 때 (잠금 안 풀림)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">출퇴근</span><span class="store">9/8(월) 14:32</span></div>
+      <div class="body">
+
+        <div class="blk solid">
+          <h4>오늘 <span class="num">1</span></h4>
+          <div class="row" style="margin-top:6px">
+            <span class="grow"><b style="font-size:13px">김제빵</b>
+              <p class="dim mono" style="font-size:10.5px">05:02 출근 · 근무 중</p></span>
+            <span class="btn">퇴근</span>
+          </div>
+          <div class="row">
+            <span class="grow"><b style="font-size:13px">이오픈</b>
+              <p class="dim mono" style="font-size:10.5px">07:28 출근 · 15:30 퇴근 · 8시간 2분</p></span>
+            <span class="dim mono" style="font-size:11px">완료</span>
+          </div>
+          <div class="row">
+            <span class="grow"><b style="font-size:13px">박마감</b>
+              <p class="dim mono" style="font-size:10.5px">아직</p></span>
+            <span class="btn pri">출근</span>
+          </div>
+        </div>
+
+        <div class="blk">
+          <h4>이번 주 <span class="num">2</span></h4>
+          <div class="row" style="margin-top:4px">
+            <span class="grow">김제빵 <span class="dim mono" style="font-size:10.5px">계획 40h / 실제 41h 12m</span></span>
+            <span class="pill crit">연장 1h 12m</span>
+          </div>
+          <div class="row">
+            <span class="grow">이오픈 <span class="dim mono" style="font-size:10.5px">계획 40h / 실제 39h 05m</span></span>
+            <span class="pill">지각 2회</span>
+          </div>
+        </div>
+
+        <div class="blk" style="background:var(--line2);border-style:solid">
+          <h4>인건비 <span class="num">3</span></h4>
+          <p>🔒 사장님 번호를 넣으면 보입니다</p>
+          <a class="btn wide">번호 넣기</a>
+        </div>
+
+        <p class="blk flat dim" style="font-size:10.5px">
+          인건비는 <b>추정</b>입니다. 4대보험·소득세·수습감액·연차수당이 빠져 있어
+          <b>급여 대장이 아닙니다</b>. <span class="num">4</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">N · 사장님이 볼 때 (잠금 풀림)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">출퇴근</span><span class="store">9/8(월) 14:32</span></div>
+      <div class="body">
+        <div class="blk"><p class="dim">…위쪽은 같다</p></div>
+        <div class="blk solid">
+          <h4>인건비 <span class="dim mono" style="font-weight:400;font-size:11px">이번 주 (추정)</span></h4>
+          <div class="row" style="margin-top:4px">
+            <span class="grow">김제빵 <span class="dim mono" style="font-size:10.5px">12,000원 × 41h 12m</span></span>
+            <span class="mono">494,400원</span>
+          </div>
+          <div class="row">
+            <span class="grow"><b>합계</b></span><span class="mono"><b>1,428,000원</b></span>
+          </div>
+          <div class="row"><span class="num">5</span><span class="grow" style="color:var(--red);font-size:11px">
+            연장 가산 <b>미적용</b> — 5인 미만으로 설정돼 있습니다</span></div>
+        </div>
+        <p class="blk flat dim" style="font-size:10.5px">
+          ⛔ 조별 인원 합은 6~7명입니다. <b>상시 근로자 5인 이상이면 가산수당이 붙습니다</b>
+          (근로기준법 제56조). 설정을 확인해 주세요. <span class="num">6</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="cap">⛔ X · 저장 실패 (지금은 이 화면이 없다)</div>
+    <div class="screen">
+      <div class="statusbar"></div>
+      <div class="top"><span class="back">‹ 뒤로</span><span class="ttl">출퇴근</span></div>
+      <div class="body">
+        <div class="blk red">
+          <h4 style="color:var(--red)">저장에 실패했습니다 <span class="num">7</span></h4>
+          <p>브라우저 저장 공간을 확인해 주세요. <b>이 기록은 아직 남지 않았습니다.</b></p>
+          <a class="btn wide" style="border-color:var(--red);color:var(--red)">다시 시도</a>
+        </div>
+        <div class="blk"><p class="dim">…아래는 같다</p></div>
+        <div class="row" style="margin-top:10px"><span class="num">8</span>
+          <span class="grow dim" style="font-size:11.5px">
+          <b>지금은 실패해도 아무 말이 없다.</b> 화면은 바뀌어 있어서 저장된 줄 안다.
+          이 아트보드는 <b>현황이 아니라 명세</b>다.</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes"><ol>
+  <li><span class="num">1</span><span><b>버튼 두 개.</b> 이름 옆에 <code>출근</code> 아니면 <code>퇴근</code>, 하나만 뜬다.
+      두 개 다 띄우면 젖은 손으로 잘못 누른다.</span></li>
+  <li><span class="num">2</span><span><b>근태는 계산이 아니라 비교다.</b> <code>근무표(계획)</code>와
+      <code>출퇴근(실제)</code>의 차이. 근무표가 없으면 지각·연장을 아예 못 만든다.</span></li>
+  <li><span class="num">3</span><span><b>화면 전체가 아니라 이 블록만 잠근다</b>(<code>InlineUnlock</code>).
+      출퇴근은 직원이 찍는데 전체를 잠그면 매번 사장님을 불러야 한다. <b>시급은 옆 사람이 보면 안 된다.</b></span></li>
+  <li><span class="num">4</span><span><b>C(주의)는 지우지 말 것.</b> 이 숫자를 급여로 쓰면 사고다.</span></li>
+  <li><span class="num">5</span><span>⚠️ <b>자정을 넘는 퇴근.</b> <code>23:00 → 01:00</code>을 그냥 빼면 −22시간이고
+      <b>인건비가 깎인다.</b> <code>workedMinutes()</code>가 처리한다.</span></li>
+  <li><span class="num">6</span><span>⛔ <b>미해결.</b> <code>settings.fiveOrMore</code> 기본값이 <code>false</code>인데
+      조별 인원 합은 6~7명이다. 다만 <b>조별 인원 합 ≠ 상시 근로자 수</b>라서 내가 못 정한다 — <b>사장님 결정.</b></span></li>
+  <li><span class="num">7</span><span><b>이 문구는 <code>RecipeForm</code>이 이미 쓰고 있는 것</b>을 그대로 가져온다.
+      화면마다 다른 말을 쓰지 않는다.</span></li>
+  <li><span class="num">8</span><span><b>기준(오늘 정함):</b> 나중에 다시 읽어야 하는 기록
+      (<code>punch</code>·<code>contracts</code>·<code>vendors</code>·<code>sales</code>·<code>roster</code>)은
+      <b>실패를 반드시 알린다.</b> 체크리스트·프렙처럼 그날 지나면 지워질 것은 조용해도 된다.</span></li>
+</ol></div>
+
+
+<!-- ============================================================ -->
+<h2>정리 — 이 다섯 화면이 지키는 규칙</h2>
+
+<table>
+  <tr><th style="width:16%">규칙</th><th style="width:42%">무엇</th><th>안 지키면</th></tr>
+  <tr><td><b>하루의 경계</b></td>
+      <td>모든 날짜 키는 <code>businessDay()</code>. 자정이 아니라 <b>새벽 4시</b></td>
+      <td>23:50에 찍은 체크가 00:10에 사라진다</td></tr>
+  <tr><td><b>빨강의 뜻</b></td>
+      <td><code>recoverable:false</code> 하나뿐. "중요함"에 빨강을 쓰지 않는다</td>
+      <td>전부 빨개지고 사람은 전부 무시한다</td></tr>
+  <tr><td><b>없는 약속 금지</b></td>
+      <td>리드타임이 없으면 리드타임 줄을 안 그린다(<code>routine</code>).
+          잠금은 "가림막"이라고 쓴다</td>
+      <td>화면이 거짓말을 한다. 한 번 들키면 나머지도 안 믿는다</td></tr>
+  <tr><td><b>빈 것은 숨긴다</b></td>
+      <td>조건이 안 맞으면 섹션째로 없앤다. 빈 표를 그리지 않는다</td>
+      <td>고장난 화면처럼 보인다</td></tr>
+  <tr><td><b>추정은 추정이라고</b></td>
+      <td>인건비·원가는 <code>Caveat</code>를 항상 같이 띄운다</td>
+      <td>사장님이 틀린 숫자로 가격과 급여를 정한다</td></tr>
+  <tr><td><b>공용 태블릿</b></td>
+      <td>교육 진도는 <code>sessionStorage</code>, 잠금 해제도 <code>sessionStorage</code></td>
+      <td>앞사람 흔적이 다음 사람에게 보인다</td></tr>
+</table>
+
+<div class="callout">
+  <b>Figma 는 1/5 에서 막혔다.</b>
+  <a href="https://www.figma.com/design/3beANZEtkFcdfgaan2ZJZR">매장수첩 · 핵심 화면 5</a> 파일에
+  제목 블록과 <b>S-01 오늘</b> 아트보드까지 만들고 <b>Starter 요금제의 MCP 호출 한도</b>에 걸렸다.
+  나머지 네 화면은 못 만들었고, <b>S-01 이 눈으로 제대로 나왔는지도 확인 못 했다</b>(스크린샷도 한도에 걸림).
+  <b>이 HTML 에는 다섯 화면이 전부 들어 있다.</b> 자세한 것은
+  <span class="mono">21_화면명세.md §8</span>.
+</div>
+
+<div class="callout warn">
+  <b>이 문서가 정하지 않은 것</b> — 색·서체·아이콘·여백·애니메이션.
+  그리고 <b>실제 사진·영상</b>(회색 네모 자리). 데이터베이스와 배포도 오늘 대상이 아니다.
+</div>
+
+</div>
+</body>
+</html>
