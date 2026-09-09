@@ -200,6 +200,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .opts { border-top: 1px dashed var(--line); background: var(--sunken); padding: 12px 14px; }
 .scaler-sm { border-top: 1px solid var(--line); padding: 10px 12px; }
+.slot.late { background: var(--danger-w); color: var(--danger); }
 .scaler-sm .ing li { font-size: 13px; }
 .opts-note { font-size: 11px; color: var(--ink-3); margin: 2px 0 8px; line-height: 1.5; }
 .task.opt { margin: 0 0 8px; }
@@ -601,98 +602,98 @@ const DATA = {
   prepLists: [
     { slug:"afternoon", name:"오후 프렙", note:"14:00~15:30. 점심 손님이 빠진 뒤 한꺼번에 확인하고 만듭니다. 대부분 내일을 위한 일입니다.", tasks:[
       { id:"p1", title:"내일용 콜드브루 걸기", desc:"원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.",
-        trigger:"매일 14:00", hours:16, days:null, recoverable:false, critical:true, varies:true,
+        trigger:"매일 14:00", every:null, hours:16, days:null, recoverable:false, critical:true, varies:true,
         option:null, optional:false, conseq:"내일 콜드브루 못 팝니다. 사올 수도 없습니다.", recipe:"cold-brew" },
       { id:"p2", title:"내일용 반죽 제조 후 냉장", desc:"내일 아침 구울 분량만큼. 판매량 보고 배수를 정합니다.",
-        trigger:"매일 14:00", hours:15, days:null, recoverable:false, critical:true, varies:true,
+        trigger:"매일 14:00", every:null, hours:15, days:null, recoverable:false, critical:true, varies:true,
         option:null, optional:false, conseq:"내일 아침 빵이 없습니다. 사올 수도 없습니다.", recipe:"shokupan" },
       { id:"p3", title:"르방 갱신", desc:"매일 같은 시간에. 거르면 되살리는 데 2~3일 걸립니다.",
-        trigger:"매일 14:00", hours:24, days:null, recoverable:false, critical:true, varies:false,
+        trigger:"매일 14:00", every:null, hours:24, days:null, recoverable:false, critical:true, varies:false,
         option:"p2", optional:true, conseq:"복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.", recipe:"levain" },
       { id:"pbar", title:"바 부재료 점검 · 제조", desc:"점심 손님이 빠진 뒤 아래를 한꺼번에 확인합니다. 남아 있으면 넘어가고, 부족한 것만 지금 만듭니다.",
-        trigger:"매일 14:00", hours:null, days:null, recoverable:true, critical:false, varies:false,
-        option:null, optional:false, conseq:"무엇이 떨어졌는지 모르고 넘어갑니다. 아래 빨간 항목은 오늘 안 걸면 내일 못 씁니다.", recipe:null },
+        trigger:"매일 14:00", every:null, hours:null, days:null, recoverable:true, critical:false, varies:false,
+        option:null, optional:false, conseq:"", recipe:null },
       { id:"p7", title:"에이드 청 만들기", desc:"과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다.",
-        trigger:"매일 14:00", hours:72, days:null, recoverable:false, critical:false, varies:true,
+        trigger:"매일 14:00", every:null, hours:72, days:null, recoverable:false, critical:false, varies:true,
         option:"pbar", optional:true, conseq:"떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.", recipe:"cheong" },
       { id:"p9", title:"냉침차(콜드티) 우리기", desc:"찬물에 8~12시간 우립니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 맛이 옅습니다.",
-        trigger:"매일 14:00", hours:12, days:null, recoverable:false, critical:false, varies:true,
+        trigger:"매일 14:00", every:null, hours:12, days:null, recoverable:false, critical:false, varies:true,
         option:"pbar", optional:true, conseq:"내일 아이스티 못 팝니다. 찬물에 우리는 8~12시간을 되돌릴 방법이 없습니다.", recipe:"cold-tea" },
       { id:"p10", title:"밀크티 베이스 침출", desc:"찻잎을 4~12시간 침출합니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 싱겁습니다.",
-        trigger:"매일 14:00", hours:12, days:null, recoverable:false, critical:false, varies:true,
+        trigger:"매일 14:00", every:null, hours:12, days:null, recoverable:false, critical:false, varies:true,
         option:"pbar", optional:true, conseq:"내일 밀크티 못 팝니다. 침출 시간을 되돌릴 방법이 없습니다.", recipe:"milk-tea-base" },
       { id:"p4", title:"시럽 제조", desc:"잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
-        trigger:"매일 14:00", hours:4, days:null, recoverable:true, critical:false, varies:true,
-        option:"pbar", optional:true, conseq:"당장은 남은 걸로 버팁니다. 다만 피크에 떨어지면 곤란합니다.", recipe:"simple-syrup" },
+        trigger:"매일 14:00", every:null, hours:4, days:null, recoverable:true, critical:false, varies:true,
+        option:"pbar", optional:true, conseq:"", recipe:"simple-syrup" },
       { id:"p8", title:"크림폼 만들기", desc:"생크림을 그날 쓸 만큼만 올립니다. 미리 많이 만들어두면 분리됩니다. 아인슈페너·크림라떼 판매량 보고 배수를 정합니다.",
-        trigger:"매일 14:00", hours:null, days:null, recoverable:true, critical:false, varies:true,
-        option:"pbar", optional:true, conseq:"그 자리에서 다시 만들 수 있습니다. 다만 피크에 떨어지면 줄이 섭니다.", recipe:"cream-foam" },
+        trigger:"매일 14:00", every:null, hours:null, days:null, recoverable:true, critical:false, varies:true,
+        option:"pbar", optional:true, conseq:"피크에 떨어지면 줄이 섭니다.", recipe:"cream-foam" },
       { id:"p5", title:"우유·식자재 발주", desc:"재고 확인하고 주문합니다. 금요일에는 주말치까지 함께 넣습니다.",
-        trigger:"월·화·수·목·금 15:00", hours:null, days:1, recoverable:true, critical:false, varies:true,
-        option:null, optional:false, conseq:"쿠팡으로 메울 수 있습니다. 다만 값이 더 나갑니다.", recipe:null },
+        trigger:"월·화·수·목·금 15:00", every:null, hours:null, days:1, recoverable:true, critical:false, varies:true,
+        option:null, optional:false, conseq:"", recipe:null },
       { id:"p6", title:"원두 발주", desc:"볶은 뒤 며칠 두어야 쓸 수 있으므로 넉넉히 앞서 주문합니다.",
-        trigger:"원두 재고가 3일치 이하일 때", hours:null, days:4, recoverable:false, critical:true, varies:true,
+        trigger:"원두 재고가 3일치 이하일 때", every:null, hours:null, days:4, recoverable:false, critical:true, varies:true,
         option:null, optional:false, conseq:"거래처 원두는 다른 데서 못 삽니다. 맛이 바뀝니다.", recipe:null }
     ]},
     { slug:"evening", name:"마감 준비", note:"19:00~22:00. 영업하면서 같이 합니다. 22시 영업이 끝난 뒤의 마감 작업은 마감 체크리스트에 있습니다.", tasks:[
       { id:"e1", title:"재료 준비", desc:"영업하면서 떨어진 것을 채우고, 내일 아침 오픈조가 바로 쓸 수 있게 미리 꺼내둡니다. 양은 그날 판매량 보고 정합니다.",
-        trigger:"매일 19:00", hours:null, days:null, recoverable:true, critical:false, varies:true,
+        trigger:"매일 19:00", every:null, hours:null, days:null, recoverable:true, critical:false, varies:true,
         option:null, optional:false, conseq:"내일 아침 오픈조가 그만큼 늦게 엽니다. 되돌릴 수는 있지만 아침에 몰립니다.", recipe:null },
       { id:"e2", title:"홀 정리", desc:"테이블·의자·바닥 순서로. 아직 영업 중이라 한 번에 몰아서 하지 않고 자리 비는 대로 합니다.",
-        trigger:"매일 19:00", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"매일 19:00", every:null, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:null, optional:false, conseq:"22시 뒤로 밀립니다. 마감이 그만큼 늦어집니다.", recipe:null },
       { id:"e3", title:"화장실 청소", desc:"변기·세면대·바닥, 그리고 휴지·비누 보충. 손님이 있는 시간이라 문 앞에 표시를 걸고 합니다.",
-        trigger:"매일 19:00", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        trigger:"매일 19:00", every:null, hours:null, days:null, recoverable:true, critical:true, varies:false,
         option:null, optional:false, conseq:"손님이 바로 봅니다. 내일 아침에 치워도 오늘 본 사람에게는 늦습니다.", recipe:null }
     ]},
     { slug:"cycle", name:"주기 점검", note:"며칠 걸러도 티가 안 납니다. 그래서 아무도 기억 못 합니다. 세 묶음으로 나눠 뒀습니다.", tasks:[
       { id:"cmachine", title:"기계 · 설비 점검", desc:"커피 맛과 수리비가 여기서 갈립니다. 갈아줄 때를 적어두지 않으면 아무도 모릅니다.",
-        trigger:"1주마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"1주마다", every:7, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:null, optional:false, conseq:"아래 항목을 하나씩 봅니다.", recipe:null },
       { id:"c5", title:"저울 영점 확인", desc:"베이킹은 g 단위입니다. 저울이 틀어지면 배합이 전부 어긋나는데 아무도 모릅니다.",
-        trigger:"1주마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"1주마다", every:7, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:"cmachine", optional:false, conseq:"빵 상태가 이유 없이 흔들립니다. 원인 찾기가 제일 어려운 종류입니다.", recipe:null },
       { id:"c1", title:"정수 필터 교체", desc:"커피 맛의 절반은 물입니다. 교체일을 적어두지 않으면 아무도 모릅니다.",
-        trigger:"4개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"4개월마다", every:120, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:"cmachine", optional:false, conseq:"맛이 서서히 나빠지고, 오래 두면 머신에 스케일이 껴서 수리비가 나옵니다.", recipe:null },
       { id:"c2", title:"그룹헤드 개스킷·샤워스크린 점검", desc:"추출 중 옆으로 물이 새면 교체 시기입니다.",
-        trigger:"6개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"6개월마다", every:180, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:"cmachine", optional:false, conseq:"추출 불량과 누수. 방치하면 부품이 더 상합니다.", recipe:null },
       { id:"c8", title:"그라인더 날 마모 점검", desc:"날이 닳으면 입자가 고르지 않게 갈립니다. 원두를 바꿔도 맛이 안 잡히면 날을 의심합니다.",
-        trigger:"6개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"6개월마다", every:180, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:"cmachine", optional:false, conseq:"추출이 계속 흔들립니다. 원인을 원두에서만 찾다가 시간을 버립니다.", recipe:null },
       { id:"c7", title:"냉장·냉동고 고무 가스켓 점검", desc:"문에 붙은 고무가 헐거워지면 찬 기운이 새고 전기료가 오릅니다. 종이 한 장 끼워서 당겨보면 압니다.",
-        trigger:"6개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"6개월마다", every:180, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:"cmachine", optional:false, conseq:"온도가 서서히 안 맞고, 결국 재료가 상합니다.", recipe:null },
       { id:"c13", title:"에스프레소 머신 정기 점검", desc:"보일러·펌프·밸브. 업체 점검을 받는 항목입니다.",
-        trigger:"1년마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"1년마다", every:365, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:"cmachine", optional:false, conseq:"고장은 항상 피크 시간에 납니다. 그날 장사를 못 합니다.", recipe:null },
       { id:"cclean", title:"안 보이는 곳 청소", desc:"며칠 걸러도 티가 안 납니다. 그래서 위생 점검에서 제일 자주 걸립니다.",
-        trigger:"1주마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"1주마다", every:7, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:null, optional:false, conseq:"아래 항목을 하나씩 봅니다.", recipe:null },
       { id:"c6", title:"배수구·트렌치 청소", desc:"주방 냄새의 대부분이 여기서 납니다. 눈에 안 보이니 미룹니다.",
-        trigger:"1주마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"1주마다", every:7, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:"cclean", optional:false, conseq:"냄새와 벌레. 위생 점검에서도 걸립니다.", recipe:null },
       { id:"c3", title:"제빙기 청소", desc:"안 보이는 곳이라 제일 잘 잊습니다. 위생 점검에서 자주 걸리는 항목입니다.",
-        trigger:"1개월마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        trigger:"1개월마다", every:30, hours:null, days:null, recoverable:true, critical:true, varies:false,
         option:"cclean", optional:false, conseq:"위생 사고로 이어질 수 있습니다.", recipe:null },
       { id:"c12", title:"방충·방역", desc:"업체 정기 방문. 여름 전에 한 번 더 하는 게 좋습니다.",
-        trigger:"1개월마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"1개월마다", every:30, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:"cclean", optional:false, conseq:"한 번 들어오면 빼는 데 몇 배로 듭니다.", recipe:null },
       { id:"c9", title:"후드·덕트 청소", desc:"기름이 쌓이는 곳입니다. 업체를 불러야 하므로 미리 예약해야 합니다.",
-        trigger:"3개월마다", hours:null, days:null, recoverable:false, critical:true, varies:false,
+        trigger:"3개월마다", every:90, hours:null, days:null, recoverable:false, critical:true, varies:false,
         option:"cclean", optional:false, conseq:"화재 위험입니다. 보험에서도 관리 이력을 봅니다.", recipe:null },
       { id:"clegal", title:"서류 · 법정", desc:"빠뜨리면 돈이 나갑니다. 과태료는 맛이나 손님과 무관하게 그냥 나갑니다.",
-        trigger:"1주마다", hours:null, days:null, recoverable:true, critical:false, varies:false,
+        trigger:"1주마다", every:7, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:null, optional:false, conseq:"아래 항목을 하나씩 봅니다.", recipe:null },
       { id:"c4", title:"보건증 갱신 확인", desc:"직원 전원. 만료되면 과태료 대상입니다.",
-        trigger:"1년마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        trigger:"1년마다", every:365, hours:null, days:null, recoverable:true, critical:true, varies:false,
         option:"clegal", optional:false, conseq:"법정 의무입니다. 적발되면 과태료가 나옵니다.", recipe:null },
       { id:"c10", title:"소화기·소방시설 점검", desc:"압력계 바늘이 초록 범위에 있는지 봅니다. 축압식은 바늘이 내려가면 교체입니다.",
-        trigger:"1년마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        trigger:"1년마다", every:365, hours:null, days:null, recoverable:true, critical:true, varies:false,
         option:"clegal", optional:false, conseq:"법정 의무입니다. 그리고 정작 필요한 순간에 안 나갑니다.", recipe:null },
       { id:"c11", title:"위생교육 이수", desc:"영업주는 매년 받아야 합니다. 온라인으로 됩니다.",
-        trigger:"1년마다", hours:null, days:null, recoverable:true, critical:true, varies:false,
+        trigger:"1년마다", every:365, hours:null, days:null, recoverable:true, critical:true, varies:false,
         option:"clegal", optional:false, conseq:"법정 의무입니다. 미이수 시 과태료입니다.", recipe:null }
     ]}
   ]
@@ -745,6 +746,50 @@ function pruneDayKeys(prefix, keep) {
     doomed.forEach(k => localStorage.removeItem(k));
   } catch { /* 파일로 열면 저장소가 막힌다. 화면은 계속 돌아야 한다 */ }
 }
+/* ------------------------------------------------------------------ *
+   주기 점검 — 마지막으로 한 날
+
+   ★ 2026-09-08 고침. 예전에는 주기 점검 체크도 prep:cycle:{영업일} 에
+     저장돼서 다음 날 지워졌다. "4개월마다" 라고 적혀 있는데 앱은 그 4개월을
+     세지 않았다 — 마지막으로 언제 했는지를 아무데도 안 남겼기 때문이다.
+     그래서 저장 키를 날짜와 무관하게 둔다 (pruneDayKeys 에 안 걸린다).
+ * ------------------------------------------------------------------ */
+const loadCycleDone = () => {
+  const raw = store.get("cycleDone", {}) || {};
+  const out = {};
+  // 깨진 값이 들어오면 아래 계산이 전부 NaN 이 되고 화면에 "NaN일 남음" 이 뜬다
+  Object.keys(raw).forEach(k => { if (DAY_RE.test(raw[k])) out[k] = raw[k]; });
+  return out;
+};
+const saveCycleDone = v => store.set("cycleDone", v);
+const dSince = (a, b) => {
+  const da = new Date(`${a}T12:00:00`), db = new Date(`${b}T12:00:00`);
+  if (isNaN(da) || isNaN(db)) return 0;
+  return Math.round((db - da) / 86400000);
+};
+/* 기록이 없으면 null 이다. 0 으로 채우면 "오늘 해야 함", 큰 수로 채우면
+   "여유 있음" 으로 보인다 — 둘 다 거짓이다. 모른다고 말해야 한다. */
+const dLeft = (doneMap, id, every, day) =>
+  doneMap[id] ? every - dSince(doneMap[id], day) : null;
+const leftLabel = left =>
+  left === null ? "기록 없음 — 언제 했는지 모릅니다"
+  : left < 0 ? `${-left}일 지났습니다`
+  : left === 0 ? "오늘까지입니다"
+  : `${left}일 남음`;
+const shortDay = day => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  return m ? `${+m[2]}/${+m[3]}` : day;
+};
+/* 급한 것부터. 기록 없는 것이 맨 앞이다 — 3년 전에 했는지 어제 했는지
+   모르는 상태가 가장 위험하고, 뒤로 밀면 영영 안 채운다. */
+const byUrgency = (items, doneMap, day) => [...items].sort((a, b) => {
+  const la = dLeft(doneMap, a.id, a.every, day), lb = dLeft(doneMap, b.id, b.every, day);
+  if (la === null && lb === null) return a.every - b.every;
+  if (la === null) return -1;
+  if (lb === null) return 1;
+  return la !== lb ? la - lb : a.every - b.every;
+});
+
 const dayLabel = d => `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;
 /* 자정을 넘는 근무조 판정. 끝이 시작보다 이르면 [start,24:00) + [00:00,end)
    ⚠ `mins` 는 렌더 함수 안에 있는 지역 변수라 여기서 못 쓴다. 직접 판다.
@@ -1466,8 +1511,20 @@ function renderPrep(slug) {
   };
   const counted = list.tasks.filter(t => (t.option ? !t.optional : !isHeader(t.id)));
 
+  /* ★ 주기 목록은 다른 것을 묻는다 — "오늘 몇 개 체크했나" 가 아니라
+     "지금 해야 할 게 몇 개인가". 4개월 주기를 매일 체크할 일이 없으니
+     예전 방식이면 늘 0/13 이 된다. */
+  const isCycle = list.tasks.some(t => t.every != null);
+  let cycleDone = loadCycleDone();
+  const cycleItems = list.tasks.filter(t => t.every != null && t.option);
+  const overdueOf = () => cycleItems.filter(t => {
+    const l = dLeft(cycleDone, t.id, t.every, bizDay());
+    return l === null || l < 0;
+  });
+
   const keepAll = list.tasks.filter(t => !t.recoverable);
-  const notice = keepAll.length ? el(`<div class="notice red" style="margin-top:14px"></div>`) : null;
+  const notice = (isCycle || keepAll.length)
+    ? el(`<div class="notice red" style="margin-top:14px"></div>`) : null;
   if (notice) v.appendChild(notice);
 
   if (list.note) v.appendChild(el(`<p class="muted" style="margin:10px 2px 0">${esc(list.note)}</p>`));
@@ -1476,11 +1533,22 @@ function renderPrep(slug) {
   v.appendChild(rows);
 
   function refresh() {
-    const dnCount = counted.filter(t => done.has(t.id)).length;
+    const dnCount = isCycle
+      ? counted.filter(t => {
+          const l = dLeft(cycleDone, t.id, t.every, bizDay());
+          return l !== null && l >= 0;
+        }).length
+      : counted.filter(t => done.has(t.id)).length;
     right.textContent = `${dnCount}/${counted.length}`;
     barWrap.querySelector("i").style.width =
       `${counted.length ? Math.round(dnCount / counted.length * 100) : 0}%`;
-    if (notice) {
+    if (notice && isCycle) {
+      const n = overdueOf().length;
+      notice.className = `notice ${n ? "red" : "green"}`;
+      notice.innerHTML = n
+        ? `<b>지금 해야 할 것 ${n}개</b><p>기한이 지났거나 <b>언제 했는지 기록이 없는</b> 것들입니다. 기록이 없으면 3년 전에 했는지 어제 했는지 알 수 없습니다.</p>`
+        : `<b>기한 지난 것이 없습니다</b>`;
+    } else if (notice) {
       const left = keepAll.filter(t => !done.has(t.id)).length;
       notice.className = `notice ${left ? "red" : "green"}`;
       notice.innerHTML = left
@@ -1516,8 +1584,15 @@ function renderPrep(slug) {
       const a = arrivesIn(t.days);
       body.appendChild(el(`<p class="slot">오늘 주문 → <b>${a.label}</b> 도착${a.overWeekend ? ` <span class="dim">(주말 배송 없음)</span>` : ""}</p>`));
     }
-    // 묶음 머리는 할 일이 아니라 이름표다. "안 하면 —" 이 붙으면 할 일로 읽힌다
-    if (!head) body.appendChild(el(`<p class="conseq">안 하면 — ${esc(t.conseq)}</p>`));
+    /* ★ "안 하면 —" 은 리드타임이 없는 항목에만 띄운다.
+       "지금 걸면 → 내일 07:43 부터" 가 이미 같은 말을 하고,
+       "쿠팡으로 메울 수 있습니다" 같은 문장은 안 해도 괜찮다고 알려주는
+       셈이라 해롭다 (사장님 지적 2026-09-08).
+       묶음 머리는 할 일이 아니라 이름표라서 역시 안 띄운다. */
+    const tHasLead = t.hours != null || t.days != null;
+    if (!head && !tHasLead && (t.conseq || "").trim() !== "") {
+      body.appendChild(el(`<p class="conseq">안 하면 — ${esc(t.conseq)}</p>`));
+    }
 
     if (head) {
       hit.append(body);
@@ -1579,8 +1654,10 @@ function renderPrep(slug) {
         <span class="eyebrow">추가 옵션</span>
         <p class="opts-note">매장에 따라 안 하기도 합니다. <b>하는 매장만</b> 체크하세요 — 위의 진행률에는 안 들어갑니다.</p>
         </div>`);
-      opts.forEach(o => {
-        const oc = el(`<div class="task opt ${o.recoverable ? "" : "keep"}"></div>`);
+      (isCycle ? byUrgency(opts, cycleDone, bizDay()) : opts).forEach(o => {
+        const oLeft = o.every != null ? dLeft(cycleDone, o.id, o.every, bizDay()) : null;
+        const oLate = o.every != null && (oLeft === null || oLeft < 0);
+        const oc = el(`<div class="task opt ${o.every != null ? (oLate ? "keep" : "") : (o.recoverable ? "" : "keep")}"></div>`);
         const oh = el(`<button type="button" class="task-hit"></button>`);
         const ot = el(`<span class="tick" aria-hidden="true">${CHECK}</span>`);
         const ob = el(`<div style="min-width:0;flex:1"></div>`);
@@ -1592,18 +1669,51 @@ function renderPrep(slug) {
         if (o.hours != null) {
           ob.appendChild(el(`<p class="slot">지금 걸면 → <b>${readyAt(o.hours)}</b>부터 사용 가능</p>`));
         }
-        ob.appendChild(el(`<p class="conseq">안 하면 — ${esc(o.conseq)}</p>`));
+        /* ★ 마지막으로 한 날. 이게 없어서 이 화면이 아무 기능을 못 했다 */
+        let oSlot = null;
+        const paintSlot = () => {
+          if (!oSlot) return;
+          const l = dLeft(cycleDone, o.id, o.every, bizDay());
+          const late = l === null || l < 0;
+          const last = cycleDone[o.id] ? `마지막 ${shortDay(cycleDone[o.id])} · ` : "";
+          oSlot.textContent = `${last}${leftLabel(l)}`;
+          oSlot.className = `slot${late ? " late" : ""}`;
+          oc.classList.toggle("keep", late);
+        };
+        if (o.every != null) {
+          oSlot = el(`<p class="slot"></p>`);
+          ob.appendChild(oSlot);
+          paintSlot();
+        }
+        // 부모 카드와 같은 규칙
+        if (o.hours == null && o.days == null && (o.conseq || "").trim() !== "") {
+          ob.appendChild(el(`<p class="conseq">안 하면 — ${esc(o.conseq)}</p>`));
+        }
         oh.append(ot, ob);
         const orec = o.recipe && recipeBy(o.recipe);
+        const isOn = () => o.every != null
+          ? cycleDone[o.id] === bizDay()
+          : done.has(o.id);
         oh.onclick = () => {
-          done.has(o.id) ? done.delete(o.id) : done.add(o.id);
-          store.set(key, [...done]);
-          oc.classList.toggle("done", done.has(o.id));
-          oh.setAttribute("aria-pressed", String(done.has(o.id)));
+          if (o.every != null) {
+            // 주기 항목은 "오늘 했다" 를 남긴다. 오늘 것을 다시 누르면 취소
+            const next = { ...cycleDone };
+            if (next[o.id] === bizDay()) delete next[o.id];
+            else next[o.id] = bizDay();
+            cycleDone = next;
+            saveCycleDone(next);
+          } else {
+            done.has(o.id) ? done.delete(o.id) : done.add(o.id);
+            store.set(key, [...done]);
+          }
+          oc.classList.toggle("done", isOn());
+          oh.setAttribute("aria-pressed", String(isOn()));
+          // 줄도 같이 고쳐야 한다. 안 그러면 눌러도 "기록 없음" 이 그대로 남는다
+          paintSlot();
           refresh();
         };
-        oh.setAttribute("aria-pressed", String(done.has(o.id)));
-        if (done.has(o.id)) oc.classList.add("done");
+        oh.setAttribute("aria-pressed", String(isOn()));
+        if (isOn()) oc.classList.add("done");
         oc.appendChild(oh);
         if (orec) oc.appendChild(scalerFor(o.id, orec, true));
         optWrap.appendChild(oc);

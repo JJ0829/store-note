@@ -399,3 +399,44 @@ test("주기 점검 묶음 안은 주기가 짧은 것부터다", () => {
     assert.deepEqual(days, sorted, `${head.title}: 주기 순서가 뒤섞였다`);
   }
 });
+
+test("★ 리드타임이 있는 항목에는 \"안 하면\" 문장을 화면이 안 띄운다 — 시드도 비워둔다", () => {
+  // 사장님 지적 2026-09-08: "안 하면 쿠팡으로 메울 수 있습니다 이딴
+  // 안 해도 될 말은 왜 하냐. 그냥 만드는 데 드는 시간만 있어도 될 것 같은데"
+  //
+  // 화면이 안 띄우는 것과 별개로, **되돌릴 수 있는 데다 리드타임까지 있는**
+  // 항목에 문장을 남겨두면 아무도 안 보는 글이 시드에 쌓인다.
+  // 되돌릴 수 없는 것(recoverable:false)은 나중에 쓰일 수 있으니 그대로 둔다.
+  for (const list of listPrepLists()) {
+    for (const t of list.tasks) {
+      const hasLead = t.leadTimeHours !== null || t.leadTimeDays !== null;
+      if (!hasLead || !t.recoverable) continue;
+      assert.equal(
+        t.consequence,
+        "",
+        `${list.slug}/${t.id} (${t.title}): 아무데도 안 뜨는 문장이 남아 있다`,
+      );
+    }
+  }
+});
+
+test("★ 리드타임이 없는 항목에는 \"안 하면\" 문장이 있어야 한다", () => {
+  // 주기 점검·홀 정리처럼 리드타임이 없는 일은 이 문장 말고
+  // 왜 하는지 설명할 방법이 없다. 묶음 머리는 할 일이 아니라 예외다
+  const heads = new Set(
+    listPrepLists().flatMap((l) =>
+      l.tasks.filter((t) => t.optionOf).map((t) => t.optionOf as string),
+    ),
+  );
+  for (const list of listPrepLists()) {
+    for (const t of list.tasks) {
+      const hasLead = t.leadTimeHours !== null || t.leadTimeDays !== null;
+      if (hasLead || heads.has(t.id)) continue;
+      assert.notEqual(
+        t.consequence.trim(),
+        "",
+        `${list.slug}/${t.id} (${t.title}): 왜 해야 하는지가 화면에 없다`,
+      );
+    }
+  }
+});

@@ -7,6 +7,16 @@ import MediaSlot from "@/components/MediaSlot";
 import { SCALES, scaled } from "@/lib/scale";
 import { businessDay, dayKey, pruneDayKeys } from "@/lib/businessDay";
 import { arrivesIn, readyAt, triggerLabel } from "@/lib/leadTime";
+import {
+  leftLabel,
+  loadCycleDone,
+  saveCycleDone,
+  shortDay,
+  sortByUrgency,
+  toggleDone as toggleCycleDone,
+  daysLeft as cycleDaysLeft,
+  type CycleDone,
+} from "@/lib/cycleDone";
 import type { PrepList, PrepTask, Recipe } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -191,10 +201,15 @@ export default function PrepView({
   storeName: string;
 }) {
   const keyPrefix = `prep:${list.slug}:`;
-  const storageKey = dayKey(keyPrefix, businessDay());
+  const today = businessDay();
+  const storageKey = dayKey(keyPrefix, today);
   const [done, setDone] = useState<Set<string>>(() => new Set());
   const [scales, setScales] = useState<Record<string, number>>({});
   const [now, setNow] = useState<Date | null>(null);
+  /* ★ 주기 점검은 **그날 체크가 아니라 마지막으로 한 날**을 남긴다.
+     예전에는 `prep:cycle:{영업일}` 이라서 다음 날 지워졌고, 그러면
+     `4개월마다` 를 앱이 세지 못했다. → src/lib/cycleDone.ts */
+  const [cycleDone, setCycleDone] = useState<CycleDone>({});
 
   const recipeBySlug = useMemo(
     () => new Map(recipes.map((r) => [r.slug, r])),
@@ -250,6 +265,7 @@ export default function PrepView({
     } catch {
       /* 사생활 보호 모드 등 — 빈 상태로 시작 */
     }
+    setCycleDone(loadCycleDone());
     log("prep_view", { prepSlug: list.slug });
   }, [storageKey, keyPrefix, list.slug]);
 
@@ -277,6 +293,53 @@ export default function PrepView({
     [storageKey, list.slug],
   );
 
+  /** 이 목록이 주기 점검인가. 주기 항목은 체크 방식이 다르다 */
+  const isCycleList = useMemo(
+    () => list.tasks.some((t) => t.trigger.type === "cycle"),
+    [list.tasks],
+  );
+
+  const toggleCycle = useCallback(
+    (task: PrepTask) => {
+      const next = toggleCycleDone(cycleDone, task.id, businessDay());
+      setCycleDone(next);
+      saveCycleDone(next);
+      log("prep_check", {
+        prepSlug: list.slug,
+        taskId: task.id,
+        recoverable: task.recoverable,
+      });
+    },
+    [cycleDone, list.slug],
+  );
+
+  /** 주기(일). 주기 항목이 아니면 null */
+  const everyOf = useCallback(
+    (t: PrepTask) => (t.trigger.type === "cycle" ? t.trigger.everyDays : null),
+    [],
+  );
+  /** 다음 점검까지 남은 날. 기록이 없으면 null (모른다는 뜻) */
+  const leftOf = useCallback(
+    (t: PrepTask) => {
+      const every = everyOf(t);
+      if (every === null) return null;
+      return cycleDaysLeft(cycleDone, t.id, every, today);
+    },
+    [cycleDone, everyOf, today],
+  );
+
+  /* ★ 주기 점검 화면이 답해야 하는 질문은 "오늘 몇 개 체크했나" 가 아니라
+     **"지금 해야 할 게 몇 개인가"** 다. 기록이 없는 것도 여기 들어간다 —
+     언제 했는지 모르는 것이 가장 위험하다. */
+  const cycleItems = useMemo(
+    () => list.tasks.filter((t) => t.trigger.type === "cycle" && t.optionOf),
+    [list.tasks],
+  );
+  const overdue = cycleItems.filter((t) => {
+    const left = leftOf(t);
+    return left === null || left < 0;
+  });
+
   const setScale = useCallback(
     (taskId: string, s: number) => {
       setScales((prev) => ({ ...prev, [taskId]: s }));
@@ -296,7 +359,14 @@ export default function PrepView({
     [list.tasks, isHeader],
   );
   const total = counted.length;
-  const doneCount = counted.filter((t) => done.has(t.id)).length;
+  /* 주기 목록에서 "오늘 체크한 개수" 는 뜻이 없다 — 4개월 주기를 매일 체크할
+     일이 없으니 늘 0/13 이 된다. 그래서 **기한 안에 있는 것**을 센다. */
+  const doneCount = isCycleList
+    ? counted.filter((t) => {
+        const left = leftOf(t);
+        return left !== null && left >= 0;
+      }).length
+    : counted.filter((t) => done.has(t.id)).length;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
   return (
@@ -330,8 +400,40 @@ export default function PrepView({
         </div>
       </header>
 
+      {/* ---------- 주기 목록: 지금 해야 할 것 ---------- *
+          "되돌릴 수 없는 것" 안내는 여기서 뜻이 약하다(13개 중 1개).
+          이 화면이 답해야 하는 질문은 **지금 해야 할 게 몇 개인가** 다. */}
+      {isCycleList && (
+        <div className="px-4 pt-4">
+          <div
+            className={[
+              "rounded-2xl border-2 px-4 py-3.5",
+              overdue.length > 0
+                ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/40"
+                : "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40",
+            ].join(" ")}
+          >
+            {overdue.length > 0 ? (
+              <>
+                <p className="text-[15px] font-bold text-red-800 dark:text-red-200">
+                  지금 해야 할 것 {overdue.length}개
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-red-700/90 dark:text-red-200/80">
+                  기한이 지났거나 <b>언제 했는지 기록이 없는</b> 것들입니다.
+                  기록이 없으면 3년 전에 했는지 어제 했는지 알 수 없습니다.
+                </p>
+              </>
+            ) : (
+              <p className="text-[15px] font-bold text-emerald-800 dark:text-emerald-200">
+                기한 지난 것이 없습니다
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ---------- 되돌릴 수 없는 것 요약 ---------- */}
-      {irreversible.length > 0 && (
+      {!isCycleList && irreversible.length > 0 && (
         <div className="px-4 pt-4">
           <div
             className={[
@@ -373,6 +475,8 @@ export default function PrepView({
         {tops.map((task) => {
           const checked = done.has(task.id);
           const header = isHeader(task.id);
+          const hasLead =
+            task.leadTimeHours !== null || task.leadTimeDays !== null;
           const recipe = task.recipeSlug
             ? recipeBySlug.get(task.recipeSlug)
             : undefined;
@@ -498,9 +602,13 @@ export default function PrepView({
                   )}
 
                   {/* 안 하면 생기는 일 */}
-                  {/* 묶음 머리는 할 일이 아니라 이름표다. "안 하면 —" 이 붙으면
-                      그것도 하나의 할 일로 읽힌다 */}
-                  {!header && (
+                  {/* ★ "안 하면 —" 은 **리드타임이 없는 항목에만** 띄운다.
+                      `지금 걸면 → 내일 07:43 부터` 가 이미 같은 말을 하고,
+                      `쿠팡으로 메울 수 있습니다` 같은 문장은 안 해도 괜찮다고
+                      알려주는 셈이라 해롭다 (사장님 지적 2026-09-08).
+                      묶음 머리는 할 일이 아니라 이름표라서 역시 안 띄운다.
+                      → src/lib/types.ts 의 `consequence` 주석 */}
+                  {!header && !hasLead && task.consequence.trim() !== "" && (
                     <p
                       className={[
                         "mt-2 text-[13px] leading-relaxed",
@@ -554,21 +662,46 @@ export default function PrepView({
                     </>
                   )}
                   <ul className="mt-2 flex flex-col gap-2">
-                    {(optionsBy.get(task.id) ?? []).map((opt) => {
-                      const optDone = done.has(opt.id);
+                    {(isCycleList
+                      ? sortByUrgency(
+                          (optionsBy.get(task.id) ?? []).map((t) => ({
+                            id: t.id,
+                            everyDays: everyOf(t) ?? 0,
+                            t,
+                          })),
+                          cycleDone,
+                          today,
+                        ).map((x) => x.t)
+                      : (optionsBy.get(task.id) ?? [])
+                    ).map((opt) => {
+                      const optEvery = everyOf(opt);
+                      const optLeft = leftOf(opt);
+                      // 주기 항목의 체크는 "오늘 했다" 다. 그날 체크가 아니라
+                      // 마지막으로 한 날을 남긴다
+                      const optDone =
+                        optEvery !== null
+                          ? cycleDone[opt.id] === today
+                          : done.has(opt.id);
                       return (
                         <li key={opt.id}>
                           <button
                             type="button"
-                            onClick={() => toggle(opt)}
+                            onClick={() =>
+                              optEvery !== null ? toggleCycle(opt) : toggle(opt)
+                            }
                             aria-pressed={optDone}
                             className={[
                               "flex w-full items-start gap-2.5 rounded-xl border-2 bg-white p-3 text-left active:bg-zinc-100 dark:bg-zinc-900 dark:active:bg-zinc-800",
                               optDone
                                 ? "border-zinc-200 opacity-55 dark:border-zinc-800"
-                                : opt.recoverable
-                                  ? "border-zinc-200 dark:border-zinc-800"
-                                  : "border-red-300 dark:border-red-900",
+                                : optEvery !== null
+                                  ? // 주기 항목은 기한이 지났거나 기록이 없으면 빨강
+                                    optLeft === null || optLeft < 0
+                                    ? "border-red-300 dark:border-red-900"
+                                    : "border-zinc-200 dark:border-zinc-800"
+                                  : opt.recoverable
+                                    ? "border-zinc-200 dark:border-zinc-800"
+                                    : "border-red-300 dark:border-red-900",
                             ].join(" ")}
                           >
                             <span
@@ -627,16 +760,39 @@ export default function PrepView({
                                   사용 가능
                                 </span>
                               )}
-                              <span
-                                className={[
-                                  "mt-1.5 block text-[12.5px] leading-relaxed",
-                                  opt.recoverable
-                                    ? "text-zinc-500 dark:text-zinc-400"
-                                    : "font-semibold text-red-700 dark:text-red-300",
-                                ].join(" ")}
-                              >
-                                안 하면 — {opt.consequence}
-                              </span>
+                              {/* ★ 마지막으로 한 날. 이게 없어서 이 화면이
+                                  아무 기능을 못 했다 (2026-09-08 고침) */}
+                              {optEvery !== null && (
+                                <span
+                                  className={[
+                                    "mt-1.5 block rounded-lg px-2 py-1.5 text-[12.5px] font-semibold",
+                                    optLeft === null || optLeft < 0
+                                      ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200"
+                                      : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200",
+                                  ].join(" ")}
+                                >
+                                  {cycleDone[opt.id]
+                                    ? `마지막 ${shortDay(cycleDone[opt.id])} · `
+                                    : ""}
+                                  {leftLabel(optLeft)}
+                                </span>
+                              )}
+
+                              {/* 부모 카드와 같은 규칙 — 리드타임이 있으면 안 띄운다 */}
+                              {opt.leadTimeHours === null &&
+                                opt.leadTimeDays === null &&
+                                opt.consequence.trim() !== "" && (
+                                  <span
+                                    className={[
+                                      "mt-1.5 block text-[12.5px] leading-relaxed",
+                                      opt.recoverable
+                                        ? "text-zinc-500 dark:text-zinc-400"
+                                        : "font-semibold text-red-700 dark:text-red-300",
+                                    ].join(" ")}
+                                  >
+                                    안 하면 — {opt.consequence}
+                                  </span>
+                                )}
                             </span>
                           </button>
 
