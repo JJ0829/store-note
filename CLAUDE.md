@@ -267,6 +267,7 @@ src/lib/sales.ts            ← 매출 − 재료비 − 인건비
 src/lib/orders.ts           ← 발주 체크 (주문함 / 들어옴 두 단계)
 src/lib/settings.ts         ← 최저임금·5인이상·목표원가율·판매가·원가제외 재료
 src/lib/businessDay.ts      ← ★ 매장의 하루. 경계는 자정이 아니라 새벽 5시
+src/lib/shiftClock.ts       ← ★ 자정을 넘는 근무조 판정 (마감조 17:00~01:00)
 src/lib/backup.ts           ← 내보내기·되돌리기. ★ CSV는 BOM 필수 + 수식 주입 차단
 src/lib/pinDigest.ts        ← PIN 단방향 요약값. 두 잠금이 공유 (소금은 다르게)
 src/lib/ownerGate.ts        ← 사장님 PIN. ★ 보안이 아니라 가리개다
@@ -275,7 +276,7 @@ src/components/ui.tsx       ← Screen/Card/Row/Chip/NumField 공통
 src/components/OwnerGate.tsx← 화면 전체 잠금 + InlineUnlock(부분 가리기)
 src/components/StoreGate.tsx← 레시피 가림막 + StoreLockButton
 src/components/BackupView.tsx← 내보내기·되돌리기
-tests/                      ← 309개. lib 22개 전부 덮음 (2026-09-09)
+tests/                      ← 337개. lib 23개 전부 + 단일 파일 구문 검사 (2026-09-09)
 ```
 
 ### 운영 기능에서 조심할 것 (테스트로 못 박아둠)
@@ -297,10 +298,14 @@ tests/                      ← 309개. lib 22개 전부 덮음 (2026-09-09)
   (`Blob.text()`는 BOM을 떼고 디코딩하므로 테스트는 바이트로 봐야 한다)
 - **★ CSV 칸이 `= + - @`로 시작하면 앞에 `'`를 붙인다.** 엑셀·구글시트가
   수식으로 실행한다. 직원이 메모를 입력하는 칸이 있어서 실제로 걸리는 경로다.
-- **★ 매장의 하루는 새벽 5시에 바뀐다.** 자정이 아니다 — 마감조가 23:00~01:00 일한다.
+- **★ 매장의 하루는 새벽 5시에 바뀐다.** 자정이 아니다 — 마감조가 17:00~01:00 일한다.
   체크 상태 키는 `businessDay()`로 만든다. 달력 날짜(`new Date()`)를 그대로 쓰면
   23:50에 찍은 체크가 00:10에 사라져 보인다. 출퇴근은 원래부터 자정을 처리했는데
   체크리스트·프렙만 안 하고 있었다. (`19_정책정의서.md` §3.2)
+- **★ 마감조는 자정을 넘는다 (17:00~01:00).** 근무조 판정을
+  `cur >= start && cur < end` 로 하면 **마감조가 화면에서 영영 안 뜬다** —
+  start 1020, end 60 이라 어느 시각에도 참이 안 된다. `shiftClock.isOnDuty()` 를 쓸 것.
+  영업이 새벽 1시까지다(사장님 확인 2026-09-09). `day-flow.md` 의 "22:00 마감"은 옛 가정이다.
 - **되돌리기는 합치지 않고 덮어쓴다.** 같은 날짜 출퇴근이 양쪽에 다르면
   어느 쪽이 맞는지 앱이 모른다. 조용히 고르면 급여가 틀린다.
 

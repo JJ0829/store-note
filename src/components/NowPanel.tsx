@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { minutesOfDay, nextShift, onDutyNow } from "@/lib/shiftClock";
 import Link from "next/link";
 import type { Shift, ShiftFocus } from "@/lib/types";
 
@@ -10,11 +11,6 @@ import type { Shift, ShiftFocus } from "@/lib/types";
  * 근무 스케줄은 부가 기능이 아니라 "어느 화면을 첫 화면으로 줄지"를
  * 고르는 기준이다. 매장 태블릿을 켠 사람이 메뉴를 뒤져야 하면 안 쓴다.
  * ------------------------------------------------------------------ */
-
-function toMinutes(hhmm: string): number {
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + m;
-}
 
 function focusHref(f: ShiftFocus): string {
   switch (f.kind) {
@@ -46,13 +42,11 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
     );
   }
 
-  const cur = now.getHours() * 60 + now.getMinutes();
-  // 겹치는 시간대에는 방금 시작한 조를 위에 둔다.
-  // 시드 등록 순서로 두면 07:30에 제빵(05:00 시작)이 먼저 떠서,
-  // 그 시각에 막 출근한 오픈조가 자기 화면을 아래에서 찾아야 한다.
-  const active = shifts
-    .filter((s) => cur >= toMinutes(s.start) && cur < toMinutes(s.end))
-    .sort((a, b) => toMinutes(b.start) - toMinutes(a.start));
+  const cur = minutesOfDay(now);
+  // 겹치는 시간대에는 방금 시작한 조를 위에 둔다 (`onDutyNow`).
+  // ★ 자정을 넘는 조(마감조 17:00~01:00)를 여기서 직접 비교하면 안 된다 —
+  //   `cur >= start && cur < end` 는 그런 조에서 절대 참이 안 된다.
+  const active = onDutyNow(shifts, cur);
 
   const clock = `${String(now.getHours()).padStart(2, "0")}:${String(
     now.getMinutes(),
@@ -60,10 +54,7 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
 
   // 근무 시간이 아니면 다음 조를 알려준다
   if (active.length === 0) {
-    const upcoming =
-      shifts
-        .filter((s) => toMinutes(s.start) > cur)
-        .sort((a, b) => toMinutes(a.start) - toMinutes(b.start))[0] ?? shifts[0];
+    const upcoming = nextShift(shifts, cur) ?? shifts[0];
 
     return (
       <div className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
