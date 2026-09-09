@@ -2531,7 +2531,9 @@ function renderOrder() {
   let log = loadOrderLog();
   let links = loadOrderLinks();
   const now = new Date();
-  const td = today();
+  /* ★ 달력 날짜가 아니라 영업일. 마감조가 23:50 에 "주문함"을 찍고 00:10 에
+     고치려 하면 달력 날짜로는 다른 키라 빈 상태를 본다. 체크리스트와 같은 규칙. */
+  const td = bizDay();
 
   /* 프렙의 발주 항목을 그대로 쓴다. 새 목록을 만들지 않는다.
      ★ 이 파일의 시드에는 kind 필드가 없다(축약 스키마). "주문하면 며칠 뒤 온다"가
@@ -2539,8 +2541,11 @@ function renderOrder() {
   const tasks = DATA.prepLists.flatMap(l => l.tasks.filter(t => t.days != null).map(task => ({ list: l, task })));
   const taskById = new Map(tasks.map(({ task }) => [task.id, task]));
 
+  /* 기준을 영업일 문자열로 잡고 거기서 뺀다. now 에서 빼면 자정 직후 창이 하루 밀린다 */
   const past = [];
-  for (let i = 1; i <= 7; i++) { const d = new Date(now); d.setDate(d.getDate() - i); past.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`); }
+  { const base = new Date(td + "T12:00:00");
+    for (let i = 1; i <= 7; i++) { const d = new Date(base.getTime()); d.setDate(d.getDate() - i);
+      past.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`); } }
 
   function draw() {
     v.innerHTML = "";

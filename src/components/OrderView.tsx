@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BTN, Card, Caveat, Chip, Empty, INPUT, Screen } from "@/components/ui";
 import { copyText } from "@/lib/copyText";
+import { businessDay, recentDays } from "@/lib/businessDay";
 import { ro } from "@/lib/store";
-import { ymd, label as dayLabel } from "@/lib/roster";
+import { label as dayLabel } from "@/lib/roster";
 import {
   buildOrderText,
   loadOrderLinks,
@@ -75,15 +76,13 @@ export default function OrderView({
     );
   }
 
-  const today = ymd(now);
+  // ★ 달력 날짜가 아니라 영업일이다. 마감조가 23:50 에 "주문함"을 찍고
+  //   00:10 에 고치려 하면, 달력 날짜로는 다른 키라 빈 상태를 보게 된다.
+  //   체크리스트·프렙과 같은 규칙을 쓴다 (경계 새벽 5시).
+  const today = businessDay(now);
 
-  // 지난 7일 중 주문만 하고 안 들어온 것
-  const past: string[] = [];
-  for (let i = 1; i <= 7; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    past.push(ymd(d));
-  }
+  // 지난 7영업일 중 주문만 하고 안 들어온 것
+  const past = recentDays(today, 7);
   const pending = pendingFrom(log, past);
 
   function patch(taskId: string, p: Parameters<typeof putState>[3]) {

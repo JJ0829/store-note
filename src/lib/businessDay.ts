@@ -87,3 +87,25 @@ export function pruneDayKeys(prefix: string, keep: string): string[] {
   }
   return doomed;
 }
+
+/**
+ * `day` 직전 `n` 개 영업일. 최신순.
+ *
+ * 발주 화면이 "지난 7일 중 주문만 하고 안 들어온 것"을 찾을 때 쓴다.
+ * `new Date()` 에서 빼면 자정 직후에 창이 하루 밀린다 — 기준을 영업일
+ * 문자열로 잡고 거기서 뺀다.
+ *
+ * 정오를 기준 시각으로 쓴다. 자정으로 잡으면 서머타임이 있는 지역에서
+ * 하루가 밀릴 수 있다 (한국은 없지만 규칙을 안전하게 둔다).
+ */
+export function recentDays(day: string, n: number): string[] {
+  const base = new Date(`${day}T12:00:00`);
+  if (Number.isNaN(base.getTime())) return [];
+  const out: string[] = [];
+  for (let i = 1; i <= n; i++) {
+    const d = new Date(base.getTime());
+    d.setDate(d.getDate() - i);
+    out.push(ymd(d));
+  }
+  return out;
+}

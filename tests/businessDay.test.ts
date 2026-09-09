@@ -39,7 +39,7 @@ class MemStorage {
 const local = new MemStorage();
 (globalThis as Record<string, unknown>).localStorage = local;
 
-const { DAY_START_HOUR, businessDay, dayKey, pruneDayKeys } = await import(
+const { DAY_START_HOUR, businessDay, dayKey, pruneDayKeys, recentDays } = await import(
   "../src/lib/businessDay.ts"
 );
 
@@ -203,4 +203,41 @@ test("저장소가 막혀 있어도 예외를 던지지 않는다", () => {
   assert.doesNotThrow(() => pruneDayKeys("prep:afternoon:", "2026-09-09"));
   delete (local as unknown as Record<string, unknown>).length;
   if (origLen) Object.defineProperty(MemStorage.prototype, "length", origLen);
+});
+
+/* ---------- 지난 영업일 목록 (발주 화면이 쓴다) ---------- */
+
+test("recentDays: 직전 7일을 최신순으로", () => {
+  assert.deepEqual(recentDays("2026-09-09", 3), ["2026-09-08", "2026-09-07", "2026-09-06"]);
+});
+
+test("recentDays: 오늘은 안 들어간다", () => {
+  assert.ok(!recentDays("2026-09-09", 7).includes("2026-09-09"));
+});
+
+test("recentDays: 월초를 거슬러 간다", () => {
+  assert.deepEqual(recentDays("2026-09-02", 3), ["2026-09-01", "2026-08-31", "2026-08-30"]);
+});
+
+test("recentDays: 연초를 거슬러 간다", () => {
+  assert.deepEqual(recentDays("2027-01-01", 2), ["2026-12-31", "2026-12-30"]);
+});
+
+test("recentDays: 윤년 3/1 은 2/29 로 (2028)", () => {
+  assert.equal(recentDays("2028-03-01", 1)[0], "2028-02-29");
+});
+
+test("recentDays: n=0 이면 빈 배열", () => {
+  assert.deepEqual(recentDays("2026-09-09", 0), []);
+});
+
+test("recentDays: 날짜가 깨져 있으면 빈 배열 (화면이 죽지 않는다)", () => {
+  assert.deepEqual(recentDays("어제", 7), []);
+});
+
+test("★ 발주 창이 자정 직후에 하루 밀리지 않는다", () => {
+  // 00:10 은 아직 어제(영업일)다. 그 기준으로 지난 7일을 세야 한다
+  const day = businessDay(at(2026, 9, 10, 0, 10)); // 2026-09-09
+  assert.equal(day, "2026-09-09");
+  assert.equal(recentDays(day, 1)[0], "2026-09-08");
 });

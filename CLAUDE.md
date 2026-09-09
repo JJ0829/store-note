@@ -276,7 +276,7 @@ src/components/ui.tsx       ← Screen/Card/Row/Chip/NumField 공통
 src/components/OwnerGate.tsx← 화면 전체 잠금 + InlineUnlock(부분 가리기)
 src/components/StoreGate.tsx← 레시피 가림막 + StoreLockButton
 src/components/BackupView.tsx← 내보내기·되돌리기
-tests/                      ← 337개. lib 23개 전부 + 단일 파일 구문 검사 (2026-09-09)
+tests/                      ← 345개. lib 23개 전부 + 단일 파일 구문 검사 (2026-09-09)
 ```
 
 ### 운영 기능에서 조심할 것 (테스트로 못 박아둠)
@@ -306,6 +306,7 @@ tests/                      ← 337개. lib 23개 전부 + 단일 파일 구문 
   `cur >= start && cur < end` 로 하면 **마감조가 화면에서 영영 안 뜬다** —
   start 1020, end 60 이라 어느 시각에도 참이 안 된다. `shiftClock.isOnDuty()` 를 쓸 것.
   영업이 새벽 1시까지다(사장님 확인 2026-09-09). `day-flow.md` 의 "22:00 마감"은 옛 가정이다.
+  **하루 단위 화면(체크리스트·프렙·발주)은 전부 `businessDay()` 를 쓴다.** 달력 날짜 금지.
 - **되돌리기는 합치지 않고 덮어쓴다.** 같은 날짜 출퇴근이 양쪽에 다르면
   어느 쪽이 맞는지 앱이 모른다. 조용히 고르면 급여가 틀린다.
 
