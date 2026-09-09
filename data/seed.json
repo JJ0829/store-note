@@ -649,7 +649,7 @@
       "id": "prep-afternoon",
       "slug": "afternoon",
       "name": "오후 프렙",
-      "note": "14:00~15:30. 대부분 내일을 위한 일입니다.",
+      "note": "14:00~15:30. 점심 손님이 빠진 뒤 한꺼번에 확인하고 만듭니다. 대부분 내일을 위한 일입니다.",
       "tasks": [
         {
           "id": "p-1",
@@ -712,18 +712,98 @@
           "recipeSlug": null
         },
         {
-          "id": "p-4",
-          "title": "시럽 제조",
-          "desc": "잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
+          "id": "p-7",
+          "title": "에이드 청 만들기",
+          "desc": "과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다. 남아 있으면 넘어갑니다.",
           "kind": "time",
           "trigger": {
-            "type": "condition",
-            "when": "시럽 잔량이 1/3 이하일 때"
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 72,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "p-9",
+          "title": "냉침차(콜드티) 우리기",
+          "desc": "찬물에 8~12시간 우립니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 맛이 옅습니다. 남아 있으면 넘어갑니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 12,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "내일 아이스티 못 팝니다. 병 제품으로 메울 수는 있지만 맛이 다릅니다.",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "p-10",
+          "title": "밀크티 베이스 침출",
+          "desc": "찻잎을 4~12시간 침출합니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 싱겁습니다. 남아 있으면 넘어갑니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 12,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "내일 밀크티 못 팝니다. 급하면 진하게 우려 식혀 쓰지만 맛이 다릅니다.",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "p-4",
+          "title": "시럽 제조",
+          "desc": "잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다. 남아 있으면 넘어갑니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
           },
           "leadTimeHours": 4,
           "leadTimeDays": null,
           "recoverable": true,
           "consequence": "당장은 남은 걸로 버팁니다. 다만 피크에 떨어지면 곤란합니다.",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null
+        },
+        {
+          "id": "p-8",
+          "title": "크림폼 만들기",
+          "desc": "생크림을 그날 쓸 만큼만 올립니다. 미리 많이 만들어두면 분리됩니다. 아인슈페너·크림라떼 판매량 보고 배수를 정합니다.",
+          "kind": "routine",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "그 자리에서 다시 만들 수 있습니다. 다만 피크에 떨어지면 줄이 섭니다.",
           "quantityVaries": true,
           "critical": false,
           "goodImage": null,
@@ -773,46 +853,6 @@
           "consequence": "거래처 원두는 다른 데서 못 삽니다. 맛이 바뀝니다.",
           "quantityVaries": true,
           "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null
-        },
-        {
-          "id": "p-7",
-          "title": "에이드 청 만들기",
-          "desc": "과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다. 쓰는 청마다 따로 담급니다.",
-          "kind": "time",
-          "trigger": {
-            "type": "condition",
-            "when": "청 잔량이 1/3 이하일 때"
-          },
-          "leadTimeHours": 72,
-          "leadTimeDays": null,
-          "recoverable": false,
-          "consequence": "떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.",
-          "quantityVaries": true,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null
-        },
-        {
-          "id": "p-8",
-          "title": "크림폼 만들기",
-          "desc": "생크림을 그날 쓸 만큼만 올립니다. 미리 많이 만들어두면 분리됩니다. 아인슈페너·크림라떼 판매량 보고 배수를 정합니다.",
-          "kind": "routine",
-          "trigger": {
-            "type": "condition",
-            "when": "크림폼이 1/3 이하로 남았을 때"
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "그 자리에서 다시 만들 수 있습니다. 다만 피크에 떨어지면 줄이 섭니다.",
-          "quantityVaries": true,
-          "critical": false,
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
