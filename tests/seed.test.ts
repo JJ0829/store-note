@@ -23,6 +23,7 @@ import {
   listRecipes,
   listShifts,
 } from "../src/lib/repo.ts";
+import type { PrepTask } from "../src/lib/types.ts";
 
 test("매장 정보가 있다", () => {
   const s = getStore();
@@ -316,4 +317,85 @@ test("★ 옵션으로 내려도 되돌릴 수 없는 것은 안내에서 안 �
   );
   // 전체 개수는 카드 수와 무관하게 유지된다
   assert.equal(af.tasks.filter((t) => !t.recoverable).length, 7);
+});
+
+/* ---------- 묶음(그룹)과 옵션은 다른 것이다 ---------- */
+
+/** 진행률에 세는 것 = 묶음 머리가 아닌 카드 + optional 아닌 자식 */
+function countedOf(list: { tasks: PrepTask[] }): PrepTask[] {
+  const kidsBy = new Map<string, PrepTask[]>();
+  for (const t of list.tasks) {
+    if (!t.optionOf) continue;
+    const cur = kidsBy.get(t.optionOf);
+    if (cur) cur.push(t);
+    else kidsBy.set(t.optionOf, [t]);
+  }
+  const isHeader = (id: string) => {
+    const kids = kidsBy.get(id) ?? [];
+    return kids.length > 0 && kids.some((k) => !k.optional);
+  };
+  return list.tasks.filter((t) => (t.optionOf ? !t.optional : !isHeader(t.id)));
+}
+
+test("★ optional 인 항목은 반드시 어느 카드 안에 들어가 있다", () => {
+  // 분모에서 빠지면서 부모도 없으면 그 항목은 화면에 아무데도 안 그려진다
+  for (const list of listPrepLists()) {
+    for (const t of list.tasks) {
+      if (!t.optional) continue;
+      assert.ok(t.optionOf, `${list.slug}/${t.id}: optional 인데 부모가 없다`);
+    }
+  }
+});
+
+test("★ 주기 점검은 세 묶음이고 항목 13개는 그대로다", () => {
+  // 사장님 요청 2026-09-08: "주기 점검도 정리해줘"
+  const cy = getPrepListBySlug("cycle");
+  assert.ok(cy);
+  const heads = cy.tasks.filter((t) => t.optionOf === null);
+  assert.equal(heads.length, 3, `묶음이 ${heads.length}개다`);
+  assert.deepEqual(
+    heads.map((h) => h.title),
+    ["기계 · 설비 점검", "안 보이는 곳 청소", "서류 · 법정"],
+  );
+  const kids = cy.tasks.filter((t) => t.optionOf !== null);
+  assert.equal(kids.length, 13, "점검 항목이 13개가 아니다");
+});
+
+test("★★ 주기 점검 항목은 optional 이 아니다 — 매장 사정과 무관하다", () => {
+  // 여기에 "매장에 따라 안 하기도 합니다" 를 붙이면 거짓이다.
+  // 보건증·소방·위생교육은 안 하면 과태료다
+  const cy = getPrepListBySlug("cycle");
+  assert.ok(cy);
+  for (const t of cy.tasks) {
+    assert.equal(t.optional, false, `${t.id} (${t.title}) 가 optional 이다`);
+  }
+});
+
+test("★★ 진행률 분모 — 묶음 머리는 안 세고 그 안의 항목을 센다", () => {
+  const cy = getPrepListBySlug("cycle");
+  assert.ok(cy);
+  // 묶음 3 + 항목 13 = 16 이 아니라 13 이어야 한다. 부모까지 세면 두 번 세는 셈
+  assert.equal(countedOf(cy).length, 13, "주기 점검 분모가 13이 아니다");
+
+  const af = getPrepListBySlug("afternoon");
+  assert.ok(af);
+  // 바 부재료는 안에 든 게 전부 optional 이라 그 카드 자체가 할 일(점검했다)이다
+  assert.equal(countedOf(af).length, 5, "오후 프렙 분모가 5가 아니다");
+
+  const ev = getPrepListBySlug("evening");
+  assert.ok(ev);
+  assert.equal(countedOf(ev).length, 3);
+});
+
+test("주기 점검 묶음 안은 주기가 짧은 것부터다", () => {
+  // 저울 영점(7일)이 머신 정기점검(365일)보다 아래 있으면 매주 할 일을 못 찾는다
+  const cy = getPrepListBySlug("cycle");
+  assert.ok(cy);
+  for (const head of cy.tasks.filter((t) => t.optionOf === null)) {
+    const days: number[] = cy.tasks
+      .filter((t) => t.optionOf === head.id)
+      .map((t) => (t.trigger.type === "cycle" ? t.trigger.everyDays : 0));
+    const sorted: number[] = [...days].sort((a, b) => a - b);
+    assert.deepEqual(days, sorted, `${head.title}: 주기 순서가 뒤섞였다`);
+  }
 });

@@ -1092,7 +1092,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": "cold-brew",
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         },
         {
           "id": "p-2",
@@ -1113,7 +1114,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": "shokupan",
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         },
         {
           "id": "p-3",
@@ -1134,7 +1136,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": "levain",
-          "optionOf": "p-2"
+          "optionOf": "p-2",
+          "optional": true
         },
         {
           "id": "p-bar",
@@ -1155,7 +1158,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         },
         {
           "id": "p-7",
@@ -1176,7 +1180,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": "cheong",
-          "optionOf": "p-bar"
+          "optionOf": "p-bar",
+          "optional": true
         },
         {
           "id": "p-9",
@@ -1197,7 +1202,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": "cold-tea",
-          "optionOf": "p-bar"
+          "optionOf": "p-bar",
+          "optional": true
         },
         {
           "id": "p-10",
@@ -1218,7 +1224,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": "milk-tea-base",
-          "optionOf": "p-bar"
+          "optionOf": "p-bar",
+          "optional": true
         },
         {
           "id": "p-4",
@@ -1239,7 +1246,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": "simple-syrup",
-          "optionOf": "p-bar"
+          "optionOf": "p-bar",
+          "optional": true
         },
         {
           "id": "p-8",
@@ -1260,7 +1268,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": "cream-foam",
-          "optionOf": "p-bar"
+          "optionOf": "p-bar",
+          "optional": true
         },
         {
           "id": "p-5",
@@ -1288,7 +1297,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         },
         {
           "id": "p-6",
@@ -1309,7 +1319,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         }
       ]
     },
@@ -1338,7 +1349,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         },
         {
           "id": "e-2",
@@ -1359,7 +1371,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         },
         {
           "id": "e-3",
@@ -1380,7 +1393,8 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         }
       ]
     },
@@ -1388,91 +1402,29 @@
       "id": "prep-cycle",
       "slug": "cycle",
       "name": "주기 점검",
-      "note": "며칠 걸러도 티가 안 납니다. 그래서 아무도 기억 못 합니다.",
+      "note": "며칠 걸러도 티가 안 납니다. 그래서 아무도 기억 못 합니다. 세 묶음으로 나눠 뒀습니다.",
       "tasks": [
         {
-          "id": "c-1",
-          "title": "정수 필터 교체",
-          "desc": "커피 맛의 절반은 물입니다. 교체일을 적어두지 않으면 아무도 모릅니다.",
+          "id": "c-machine",
+          "title": "기계 · 설비 점검",
+          "desc": "커피 맛과 수리비가 여기서 갈립니다. 갈아줄 때를 적어두지 않으면 아무도 모릅니다.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 120
+            "everyDays": 7
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
           "recoverable": true,
-          "consequence": "맛이 서서히 나빠지고, 오래 두면 머신에 스케일이 껴서 수리비가 나옵니다.",
+          "consequence": "아래 항목을 하나씩 봅니다.",
           "quantityVaries": false,
           "critical": false,
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
-        },
-        {
-          "id": "c-2",
-          "title": "그룹헤드 개스킷·샤워스크린 점검",
-          "desc": "추출 중 옆으로 물이 새면 교체 시기입니다.",
-          "kind": "cycle",
-          "trigger": {
-            "type": "cycle",
-            "everyDays": 180
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "추출 불량과 누수. 방치하면 부품이 더 상합니다.",
-          "quantityVaries": false,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null
-        },
-        {
-          "id": "c-3",
-          "title": "제빙기 청소",
-          "desc": "안 보이는 곳이라 제일 잘 잊습니다. 위생 점검에서 자주 걸리는 항목입니다.",
-          "kind": "cycle",
-          "trigger": {
-            "type": "cycle",
-            "everyDays": 30
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "위생 사고로 이어질 수 있습니다.",
-          "quantityVaries": false,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null
-        },
-        {
-          "id": "c-4",
-          "title": "보건증 갱신 확인",
-          "desc": "직원 전원. 만료되면 과태료 대상입니다.",
-          "kind": "cycle",
-          "trigger": {
-            "type": "cycle",
-            "everyDays": 365
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "법정 의무입니다. 적발되면 과태료가 나옵니다.",
-          "quantityVaries": false,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null
+          "optionOf": null,
+          "optional": false
         },
         {
           "id": "c-5",
@@ -1493,33 +1445,35 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "c-machine",
+          "optional": false
         },
         {
-          "id": "c-6",
-          "title": "배수구·트렌치 청소",
-          "desc": "주방 냄새의 대부분이 여기서 납니다. 눈에 안 보이니 미룹니다.",
+          "id": "c-1",
+          "title": "정수 필터 교체",
+          "desc": "커피 맛의 절반은 물입니다. 교체일을 적어두지 않으면 아무도 모릅니다.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 7
+            "everyDays": 120
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
           "recoverable": true,
-          "consequence": "냄새와 벌레. 위생 점검에서도 걸립니다.",
+          "consequence": "맛이 서서히 나빠지고, 오래 두면 머신에 스케일이 껴서 수리비가 나옵니다.",
           "quantityVaries": false,
           "critical": false,
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "c-machine",
+          "optional": false
         },
         {
-          "id": "c-7",
-          "title": "냉장·냉동고 고무 가스켓 점검",
-          "desc": "문에 붙은 고무가 헐거워지면 찬 기운이 새고 전기료가 오릅니다. 종이 한 장 끼워서 당겨보면 압니다.",
+          "id": "c-2",
+          "title": "그룹헤드 개스킷·샤워스크린 점검",
+          "desc": "추출 중 옆으로 물이 새면 교체 시기입니다.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
@@ -1528,14 +1482,15 @@
           "leadTimeHours": null,
           "leadTimeDays": null,
           "recoverable": true,
-          "consequence": "온도가 서서히 안 맞고, 결국 재료가 상합니다.",
+          "consequence": "추출 불량과 누수. 방치하면 부품이 더 상합니다.",
           "quantityVaries": false,
           "critical": false,
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "c-machine",
+          "optional": false
         },
         {
           "id": "c-8",
@@ -1556,91 +1511,30 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "c-machine",
+          "optional": false
         },
         {
-          "id": "c-9",
-          "title": "후드·덕트 청소",
-          "desc": "기름이 쌓이는 곳입니다. 업체를 불러야 하므로 미리 예약해야 합니다.",
+          "id": "c-7",
+          "title": "냉장·냉동고 고무 가스켓 점검",
+          "desc": "문에 붙은 고무가 헐거워지면 찬 기운이 새고 전기료가 오릅니다. 종이 한 장 끼워서 당겨보면 압니다.",
           "kind": "cycle",
           "trigger": {
             "type": "cycle",
-            "everyDays": 90
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": false,
-          "consequence": "화재 위험입니다. 보험에서도 관리 이력을 봅니다.",
-          "quantityVaries": false,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null
-        },
-        {
-          "id": "c-10",
-          "title": "소화기·소방시설 점검",
-          "desc": "압력계 바늘이 초록 범위에 있는지 봅니다. 축압식은 바늘이 내려가면 교체입니다.",
-          "kind": "cycle",
-          "trigger": {
-            "type": "cycle",
-            "everyDays": 365
+            "everyDays": 180
           },
           "leadTimeHours": null,
           "leadTimeDays": null,
           "recoverable": true,
-          "consequence": "법정 의무입니다. 그리고 정작 필요한 순간에 안 나갑니다.",
-          "quantityVaries": false,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null
-        },
-        {
-          "id": "c-11",
-          "title": "위생교육 이수",
-          "desc": "영업주는 매년 받아야 합니다. 온라인으로 됩니다.",
-          "kind": "cycle",
-          "trigger": {
-            "type": "cycle",
-            "everyDays": 365
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "법정 의무입니다. 미이수 시 과태료입니다.",
-          "quantityVaries": false,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null
-        },
-        {
-          "id": "c-12",
-          "title": "방충·방역",
-          "desc": "업체 정기 방문. 여름 전에 한 번 더 하는 게 좋습니다.",
-          "kind": "cycle",
-          "trigger": {
-            "type": "cycle",
-            "everyDays": 30
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "한 번 들어오면 빼는 데 몇 배로 듭니다.",
+          "consequence": "온도가 서서히 안 맞고, 결국 재료가 상합니다.",
           "quantityVaries": false,
           "critical": false,
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "c-machine",
+          "optional": false
         },
         {
           "id": "c-13",
@@ -1661,7 +1555,206 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "c-machine",
+          "optional": false
+        },
+        {
+          "id": "c-clean",
+          "title": "안 보이는 곳 청소",
+          "desc": "며칠 걸러도 티가 안 납니다. 그래서 위생 점검에서 제일 자주 걸립니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 7
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "아래 항목을 하나씩 봅니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": null,
+          "optional": false
+        },
+        {
+          "id": "c-6",
+          "title": "배수구·트렌치 청소",
+          "desc": "주방 냄새의 대부분이 여기서 납니다. 눈에 안 보이니 미룹니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 7
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "냄새와 벌레. 위생 점검에서도 걸립니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": "c-clean",
+          "optional": false
+        },
+        {
+          "id": "c-3",
+          "title": "제빙기 청소",
+          "desc": "안 보이는 곳이라 제일 잘 잊습니다. 위생 점검에서 자주 걸리는 항목입니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 30
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "위생 사고로 이어질 수 있습니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": "c-clean",
+          "optional": false
+        },
+        {
+          "id": "c-12",
+          "title": "방충·방역",
+          "desc": "업체 정기 방문. 여름 전에 한 번 더 하는 게 좋습니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 30
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "한 번 들어오면 빼는 데 몇 배로 듭니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": "c-clean",
+          "optional": false
+        },
+        {
+          "id": "c-9",
+          "title": "후드·덕트 청소",
+          "desc": "기름이 쌓이는 곳입니다. 업체를 불러야 하므로 미리 예약해야 합니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 90
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "화재 위험입니다. 보험에서도 관리 이력을 봅니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": "c-clean",
+          "optional": false
+        },
+        {
+          "id": "c-legal",
+          "title": "서류 · 법정",
+          "desc": "빠뜨리면 돈이 나갑니다. 과태료는 맛이나 손님과 무관하게 그냥 나갑니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 7
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "아래 항목을 하나씩 봅니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": null,
+          "optional": false
+        },
+        {
+          "id": "c-4",
+          "title": "보건증 갱신 확인",
+          "desc": "직원 전원. 만료되면 과태료 대상입니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 365
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "법정 의무입니다. 적발되면 과태료가 나옵니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": "c-legal",
+          "optional": false
+        },
+        {
+          "id": "c-10",
+          "title": "소화기·소방시설 점검",
+          "desc": "압력계 바늘이 초록 범위에 있는지 봅니다. 축압식은 바늘이 내려가면 교체입니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 365
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "법정 의무입니다. 그리고 정작 필요한 순간에 안 나갑니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": "c-legal",
+          "optional": false
+        },
+        {
+          "id": "c-11",
+          "title": "위생교육 이수",
+          "desc": "영업주는 매년 받아야 합니다. 온라인으로 됩니다.",
+          "kind": "cycle",
+          "trigger": {
+            "type": "cycle",
+            "everyDays": 365
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "법정 의무입니다. 미이수 시 과태료입니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": "c-legal",
+          "optional": false
         }
       ]
     }

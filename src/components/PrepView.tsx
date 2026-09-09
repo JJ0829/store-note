@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import MediaSlot from "@/components/MediaSlot";
@@ -59,6 +59,41 @@ function log(event: string, payload: Record<string, unknown>) {
  * 옵션 안에서도 레시피를 바로 보고 만들 수 있어야 한다는 요청이라
  * 같은 마크업을 두 벌 두면 한쪽만 고치게 된다.
  * ------------------------------------------------------------------ */
+/**
+ * 카드의 누르는 부분.
+ *
+ * **묶음 머리**(`header`)는 누를 수 없다. `기계 · 설비 점검` 은 할 일이 아니라
+ * 이름표이고, 누를 수 있게 두면 그것도 하나의 할 일로 읽힌다.
+ * 아무 일도 안 하는 버튼을 두면 스크린리더도 "버튼"이라고 읽는다.
+ */
+function CardHead({
+  header,
+  checked,
+  onToggle,
+  children,
+}: {
+  header: boolean;
+  checked: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  if (header) {
+    return <div className="flex w-full items-start gap-3 p-4 text-left">{children}</div>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={checked}
+      className="flex w-full items-start gap-3 p-4 text-left active:bg-zinc-50 dark:active:bg-zinc-800"
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
 function Scaler({
   recipe,
   scale,
@@ -182,6 +217,19 @@ export default function PrepView({
     return m;
   }, [list.tasks]);
 
+  /* ★ 「묶음 머리」 — 자기 안에 **반드시 해야 하는** 항목을 담은 카드.
+     주기 점검의 `기계 · 설비 점검` 처럼 그 자체가 할 일이 아니라 이름표다.
+     세면 같은 일을 두 번 세게 되므로 체크도 없고 분모에도 안 들어간다.
+     반대로 `바 부재료 점검 · 제조` 는 안에 든 것이 전부 optional 이라
+     그 카드 자체가 할 일(점검했다)이다 → 그건 센다. */
+  const isHeader = useCallback(
+    (id: string) => {
+      const kids = optionsBy.get(id) ?? [];
+      return kids.length > 0 && kids.some((k) => !k.optional);
+    },
+    [optionsBy],
+  );
+
   /* 빨간 안내는 **옵션까지 센다.** 진행률과 분모가 다른 것은 일부러다 —
      르방을 쓰는 매장에서 "다 했습니다" 가 거짓이 되면 안 된다. */
   const irreversible = useMemo(
@@ -237,10 +285,18 @@ export default function PrepView({
     [list.slug],
   );
 
-  // 옵션은 진행률에서 뺀다. `done.size` 를 그대로 쓰면 옵션을 체크한 만큼
-  // 분자가 커져서 `10/9` 같은 숫자가 나온다
-  const total = tops.length;
-  const doneCount = tops.filter((t) => done.has(t.id)).length;
+  /* 진행률에 세는 것 = 묶음 머리가 아닌 카드 + optional 아닌 자식.
+     `done.size` 를 그대로 쓰면 옵션을 체크한 만큼 분자가 커져서
+     `10/9` 같은 숫자가 나온다. */
+  const counted = useMemo(
+    () =>
+      list.tasks.filter((t) =>
+        t.optionOf ? !t.optional : !isHeader(t.id),
+      ),
+    [list.tasks, isHeader],
+  );
+  const total = counted.length;
+  const doneCount = counted.filter((t) => done.has(t.id)).length;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
   return (
@@ -316,6 +372,7 @@ export default function PrepView({
       <ul className="flex flex-col gap-3 px-4 pt-4">
         {tops.map((task) => {
           const checked = done.has(task.id);
+          const header = isHeader(task.id);
           const recipe = task.recipeSlug
             ? recipeBySlug.get(task.recipeSlug)
             : undefined;
@@ -338,12 +395,12 @@ export default function PrepView({
                     : "border-red-300 dark:border-red-900",
               ].join(" ")}
             >
-              <button
-                type="button"
-                onClick={() => toggle(task)}
-                aria-pressed={checked}
-                className="flex w-full items-start gap-3 p-4 text-left active:bg-zinc-50 dark:active:bg-zinc-800"
+              <CardHead
+                header={header}
+                checked={checked}
+                onToggle={() => toggle(task)}
               >
+                {!header && (
                 <span
                   aria-hidden
                   className={[
@@ -367,6 +424,7 @@ export default function PrepView({
                     </svg>
                   )}
                 </span>
+                )}
 
                 <div className="min-w-0 flex-1">
                   {/* 뱃지 줄 */}
@@ -377,9 +435,12 @@ export default function PrepView({
                         꼭 지키기
                       </span>
                     )}
-                    <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                      {triggerLabel(task.trigger)}
-                    </span>
+                    {/* 묶음 머리의 주기는 자식마다 달라서 하나로 못 적는다 */}
+                    {!header && (
+                      <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                        {triggerLabel(task.trigger)}
+                      </span>
+                    )}
                     {task.quantityVaries && (
                       <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
                         수량 매일 다름
@@ -437,18 +498,22 @@ export default function PrepView({
                   )}
 
                   {/* 안 하면 생기는 일 */}
-                  <p
-                    className={[
-                      "mt-2 text-[13px] leading-relaxed",
-                      task.recoverable
-                        ? "text-zinc-500 dark:text-zinc-400"
-                        : "font-semibold text-red-700 dark:text-red-300",
-                    ].join(" ")}
-                  >
-                    안 하면 — {task.consequence}
-                  </p>
+                  {/* 묶음 머리는 할 일이 아니라 이름표다. "안 하면 —" 이 붙으면
+                      그것도 하나의 할 일로 읽힌다 */}
+                  {!header && (
+                    <p
+                      className={[
+                        "mt-2 text-[13px] leading-relaxed",
+                        task.recoverable
+                          ? "text-zinc-500 dark:text-zinc-400"
+                          : "font-semibold text-red-700 dark:text-red-300",
+                      ].join(" ")}
+                    >
+                      안 하면 — {task.consequence}
+                    </p>
+                  )}
                 </div>
-              </button>
+              </CardHead>
 
               {/* 사진·영상 — 판단이 갈리는 항목일수록 이쪽이 본체다 */}
               <div className="px-4 pb-4 pl-[3.75rem]">
@@ -470,13 +535,24 @@ export default function PrepView({
                   그대로 센다. → src/lib/types.ts 의 `optionOf` */}
               {(optionsBy.get(task.id) ?? []).length > 0 && (
                 <div className="border-t border-dashed border-zinc-300 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-950/60">
-                  <p className="text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
-                    추가 옵션
-                  </p>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-400">
-                    매장에 따라 안 하기도 합니다. <b>하는 매장만</b> 체크하세요 —
-                    위의 진행률에는 안 들어갑니다.
-                  </p>
+                  {/* ★ 같은 자리에 두 가지가 온다.
+                      필수 묶음(주기 점검)에 "안 하기도 합니다" 를 쓰면 거짓이다 —
+                      보건증·소방은 매장 사정과 무관하게 해야 한다 */}
+                  {header ? (
+                    <p className="text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
+                      이 묶음의 항목 {(optionsBy.get(task.id) ?? []).length}개
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
+                        추가 옵션
+                      </p>
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-400">
+                        매장에 따라 안 하기도 합니다. <b>하는 매장만</b> 체크하세요 —
+                        위의 진행률에는 안 들어갑니다.
+                      </p>
+                    </>
+                  )}
                   <ul className="mt-2 flex flex-col gap-2">
                     {(optionsBy.get(task.id) ?? []).map((opt) => {
                       const optDone = done.has(opt.id);
