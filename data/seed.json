@@ -715,9 +715,30 @@
           "optionOf": "p-2"
         },
         {
+          "id": "p-bar",
+          "title": "바 부재료 점검 · 제조",
+          "desc": "점심 손님이 빠진 뒤 아래를 한꺼번에 확인합니다. 남아 있으면 넘어가고, 부족한 것만 지금 만듭니다.",
+          "kind": "routine",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "무엇이 떨어졌는지 모르고 넘어갑니다. 아래 빨간 항목은 오늘 안 걸면 내일 못 씁니다.",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": null
+        },
+        {
           "id": "p-7",
           "title": "에이드 청 만들기",
-          "desc": "과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다. 남아 있으면 넘어갑니다.",
+          "desc": "과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다.",
           "kind": "time",
           "trigger": {
             "type": "daily",
@@ -733,12 +754,12 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "p-bar"
         },
         {
           "id": "p-9",
           "title": "냉침차(콜드티) 우리기",
-          "desc": "찬물에 8~12시간 우립니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 맛이 옅습니다. 남아 있으면 넘어갑니다.",
+          "desc": "찬물에 8~12시간 우립니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 맛이 옅습니다.",
           "kind": "time",
           "trigger": {
             "type": "daily",
@@ -754,12 +775,12 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "p-bar"
         },
         {
           "id": "p-10",
           "title": "밀크티 베이스 침출",
-          "desc": "찻잎을 4~12시간 침출합니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 싱겁습니다. 남아 있으면 넘어갑니다.",
+          "desc": "찻잎을 4~12시간 침출합니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 싱겁습니다.",
           "kind": "time",
           "trigger": {
             "type": "daily",
@@ -775,12 +796,12 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "p-bar"
         },
         {
           "id": "p-4",
           "title": "시럽 제조",
-          "desc": "잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다. 남아 있으면 넘어갑니다.",
+          "desc": "잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
           "kind": "time",
           "trigger": {
             "type": "daily",
@@ -796,7 +817,7 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "p-bar"
         },
         {
           "id": "p-8",
@@ -817,7 +838,7 @@
           "badImage": null,
           "videoUrl": null,
           "recipeSlug": null,
-          "optionOf": null
+          "optionOf": "p-bar"
         },
         {
           "id": "p-5",

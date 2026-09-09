@@ -280,3 +280,40 @@ test("★ 되돌릴 수 없는 안내는 옵션까지 센다", () => {
     "되돌릴 수 없는 옵션이 하나도 없다 — 이 테스트가 지키려는 경우가 사라졌다",
   );
 });
+
+test("★ 매장마다 다른 바 부재료는 한 카드에 모여 있다", () => {
+  // 사장님 지적 2026-09-09: "따로말고 한곳에 모아서 해줘"
+  // 청·냉침차·밀크티·시럽·크림폼이 각각 카드를 차지하면 목록이 열 칸이 되고,
+  // 그중 대부분은 "남아 있으니 넘어감" 이라 진행률이 의미를 잃는다
+  const af = getPrepListBySlug("afternoon");
+  assert.ok(af);
+  const bar = af.tasks.find((t) => t.id === "p-bar");
+  assert.ok(bar, "바 부재료 부모 항목이 없다");
+  assert.equal(bar.optionOf, null, "부모가 또 다른 옵션이 됐다");
+
+  const kids = af.tasks.filter((t) => t.optionOf === "p-bar").map((t) => t.title);
+  for (const want of ["에이드 청", "냉침차", "밀크티", "시럽", "크림폼"]) {
+    assert.ok(
+      kids.some((k) => k.includes(want)),
+      `'${want}' 가 바 부재료 카드 밖에 있다`,
+    );
+  }
+
+  // 카드는 다섯 개다 — 콜드브루 / 반죽 / 바 부재료 / 발주 2
+  const tops = af.tasks.filter((t) => t.optionOf === null);
+  assert.equal(tops.length, 5, `카드가 ${tops.length}개다 (5개여야 한다)`);
+});
+
+test("★ 옵션으로 내려도 되돌릴 수 없는 것은 안내에서 안 빠진다", () => {
+  // 청·냉침차·밀크티는 옵션인데 recoverable:false 다.
+  // 여기서 빠지면 "다 했습니다" 가 거짓이 된다
+  const af = getPrepListBySlug("afternoon");
+  assert.ok(af);
+  const keepOptions = af.tasks.filter((t) => !t.recoverable && t.optionOf !== null);
+  assert.ok(
+    keepOptions.length >= 3,
+    `되돌릴 수 없는 옵션이 ${keepOptions.length}개다 — 청·냉침차·밀크티가 사라졌나`,
+  );
+  // 전체 개수는 카드 수와 무관하게 유지된다
+  assert.equal(af.tasks.filter((t) => !t.recoverable).length, 7);
+});

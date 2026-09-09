@@ -524,6 +524,13 @@ export default function PrepView({
                               </span>
                             </span>
                           </button>
+
+                          {/* 옵션에도 사진·영상 자리를 준다. "사진·영상"이 이 제품의
+                              핵심 가치 셋 중 하나인데, 옵션으로 내렸다고 빼면
+                              크림폼 거품 상태처럼 판단이 갈리는 항목이 글만 남는다 */}
+                          <div className="pl-[2.3rem] pt-2">
+                            <MediaSlot base={opt.id} />
+                          </div>
                         </li>
                       );
                     })}
