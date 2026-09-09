@@ -72,6 +72,24 @@ export default function PrepView({
     [recipes],
   );
 
+  /* ★ 추가 옵션은 부모 카드 안으로 들어간다 (2026-09-09).
+     매장마다 하거나 안 하는 일(르방 등)이 목록의 한 칸을 차지하면
+     `9/10` 이 영영 안 채워지고, 그러면 진행률이 거짓이 된다.
+     → src/lib/types.ts 의 `optionOf` 주석 */
+  const tops = useMemo(() => list.tasks.filter((t) => !t.optionOf), [list.tasks]);
+  const optionsBy = useMemo(() => {
+    const m = new Map<string, PrepTask[]>();
+    for (const t of list.tasks) {
+      if (!t.optionOf) continue;
+      const cur = m.get(t.optionOf);
+      if (cur) cur.push(t);
+      else m.set(t.optionOf, [t]);
+    }
+    return m;
+  }, [list.tasks]);
+
+  /* 빨간 안내는 **옵션까지 센다.** 진행률과 분모가 다른 것은 일부러다 —
+     르방을 쓰는 매장에서 "다 했습니다" 가 거짓이 되면 안 된다. */
   const irreversible = useMemo(
     () => list.tasks.filter((t) => !t.recoverable),
     [list.tasks],
@@ -125,8 +143,10 @@ export default function PrepView({
     [list.slug],
   );
 
-  const total = list.tasks.length;
-  const doneCount = done.size;
+  // 옵션은 진행률에서 뺀다. `done.size` 를 그대로 쓰면 옵션을 체크한 만큼
+  // 분자가 커져서 `10/9` 같은 숫자가 나온다
+  const total = tops.length;
+  const doneCount = tops.filter((t) => done.has(t.id)).length;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
   return (
@@ -200,7 +220,7 @@ export default function PrepView({
 
       {/* ---------- 항목 ---------- */}
       <ul className="flex flex-col gap-3 px-4 pt-4">
-        {list.tasks.map((task) => {
+        {tops.map((task) => {
           const checked = done.has(task.id);
           const recipe = task.recipeSlug
             ? recipeBySlug.get(task.recipeSlug)
@@ -401,6 +421,112 @@ export default function PrepView({
                         </span>
                       </li>
                     ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* ---------- 추가 옵션 ---------- *
+                  매장에 따라 하거나 안 하는 일. 목록의 한 칸을 차지하지 않는다.
+                  진행률에서는 빠지지만 되돌릴 수 없는 것이면 위의 빨간 안내에는
+                  그대로 센다. → src/lib/types.ts 의 `optionOf` */}
+              {(optionsBy.get(task.id) ?? []).length > 0 && (
+                <div className="border-t border-dashed border-zinc-300 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-950/60">
+                  <p className="text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
+                    추가 옵션
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-400">
+                    매장에 따라 안 하기도 합니다. <b>하는 매장만</b> 체크하세요 —
+                    위의 진행률에는 안 들어갑니다.
+                  </p>
+                  <ul className="mt-2 flex flex-col gap-2">
+                    {(optionsBy.get(task.id) ?? []).map((opt) => {
+                      const optDone = done.has(opt.id);
+                      return (
+                        <li key={opt.id}>
+                          <button
+                            type="button"
+                            onClick={() => toggle(opt)}
+                            aria-pressed={optDone}
+                            className={[
+                              "flex w-full items-start gap-2.5 rounded-xl border-2 bg-white p-3 text-left active:bg-zinc-100 dark:bg-zinc-900 dark:active:bg-zinc-800",
+                              optDone
+                                ? "border-zinc-200 opacity-55 dark:border-zinc-800"
+                                : opt.recoverable
+                                  ? "border-zinc-200 dark:border-zinc-800"
+                                  : "border-red-300 dark:border-red-900",
+                            ].join(" ")}
+                          >
+                            <span
+                              aria-hidden
+                              className={[
+                                "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-white",
+                                optDone
+                                  ? "border-orange-500 bg-orange-500"
+                                  : "border-zinc-300 dark:border-zinc-600",
+                              ].join(" ")}
+                            >
+                              {optDone && (
+                                <svg
+                                  viewBox="0 0 20 20"
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M4 10.5 8 14.5 16 6" />
+                                </svg>
+                              )}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="mb-1 flex flex-wrap items-center gap-1.5">
+                                {opt.critical && (
+                                  <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
+                                    꼭 지키기
+                                  </span>
+                                )}
+                                <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                                  {triggerLabel(opt.trigger)}
+                                </span>
+                              </span>
+                              <span
+                                className={[
+                                  "block text-[14px] font-bold leading-snug",
+                                  optDone ? "line-through" : "",
+                                ].join(" ")}
+                              >
+                                {opt.title}
+                              </span>
+                              <span className="mt-0.5 block text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                                {opt.desc}
+                              </span>
+                              {opt.leadTimeHours !== null && (
+                                <span className="mt-1.5 block rounded-lg bg-zinc-100 px-2 py-1.5 text-[12.5px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                                  지금 걸면 →{" "}
+                                  <b>
+                                    {now
+                                      ? `${readyAt(opt.leadTimeHours, now)}부터`
+                                      : `${opt.leadTimeHours}시간 뒤부터`}
+                                  </b>{" "}
+                                  사용 가능
+                                </span>
+                              )}
+                              <span
+                                className={[
+                                  "mt-1.5 block text-[12.5px] leading-relaxed",
+                                  opt.recoverable
+                                    ? "text-zinc-500 dark:text-zinc-400"
+                                    : "font-semibold text-red-700 dark:text-red-300",
+                                ].join(" ")}
+                              >
+                                안 하면 — {opt.consequence}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}

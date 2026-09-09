@@ -223,3 +223,60 @@ test("★ 19:00~22:00 마감 준비 구간에 열 화면이 있다", () => {
     "마감조 화면에 마감 준비가 안 걸려 있다 — 만들어놓고 아무도 못 연다",
   );
 });
+
+test("★ 추가 옵션(optionOf)은 같은 목록의 실재하는 항목을 가리킨다", () => {
+  // 부모를 못 찾으면 그 항목이 화면에서 통째로 사라진다 —
+  // 부모 카드 안에만 그려지고, 목록 순회는 부모만 돌기 때문이다
+  for (const list of listPrepLists()) {
+    const ids = new Set(list.tasks.map((t) => t.id));
+    for (const t of list.tasks) {
+      if (!t.optionOf) continue;
+      assert.ok(
+        ids.has(t.optionOf),
+        `${list.slug}/${t.id}: 부모 '${t.optionOf}' 가 이 목록에 없다`,
+      );
+      assert.notEqual(t.optionOf, t.id, `${list.slug}/${t.id}: 자기 자신을 가리킨다`);
+    }
+  }
+});
+
+test("★ 옵션의 옵션은 없다 — 한 겹만이다", () => {
+  // 두 겹이 되면 화면이 손자를 아무데도 안 그린다
+  for (const list of listPrepLists()) {
+    const optionIds = new Set(list.tasks.filter((t) => t.optionOf).map((t) => t.id));
+    for (const t of list.tasks) {
+      if (!t.optionOf) continue;
+      assert.ok(
+        !optionIds.has(t.optionOf),
+        `${list.slug}/${t.id}: 부모 '${t.optionOf}' 도 옵션이다 (두 겹)`,
+      );
+    }
+  }
+});
+
+test("★ 진행률 분모는 부모 항목 수다 — 옵션은 빠진다", () => {
+  // 매장마다 안 하는 일(르방)이 분모에 들어가면 9/10 이 영영 안 채워지고
+  // 진행률이 거짓이 된다. 그게 optionOf 를 만든 이유다
+  const af = getPrepListBySlug("afternoon");
+  assert.ok(af);
+  const tops = af.tasks.filter((t) => !t.optionOf);
+  assert.ok(
+    tops.length < af.tasks.length,
+    "오후 프렙에 옵션이 하나도 없다 — 르방이 부모 항목으로 돌아갔나",
+  );
+  const levain = af.tasks.find((t) => t.title.includes("르방"));
+  assert.ok(levain, "르방 항목이 없다");
+  assert.equal(levain.optionOf, "p-2", "르방이 '내일용 반죽' 에 안 붙어 있다");
+});
+
+test("★ 되돌릴 수 없는 안내는 옵션까지 센다", () => {
+  // 진행률과 분모가 다른 것은 일부러다. 르방을 쓰는 매장에서
+  // "다 했습니다" 가 거짓이 되면 안 된다
+  const af = getPrepListBySlug("afternoon");
+  assert.ok(af);
+  const keep = af.tasks.filter((t) => !t.recoverable);
+  assert.ok(
+    keep.some((t) => t.optionOf !== null),
+    "되돌릴 수 없는 옵션이 하나도 없다 — 이 테스트가 지키려는 경우가 사라졌다",
+  );
+});

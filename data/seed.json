@@ -669,7 +669,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": "cold-brew"
+          "recipeSlug": "cold-brew",
+          "optionOf": null
         },
         {
           "id": "p-2",
@@ -689,7 +690,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": "shokupan"
+          "recipeSlug": "shokupan",
+          "optionOf": null
         },
         {
           "id": "p-3",
@@ -709,7 +711,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": "p-2"
         },
         {
           "id": "p-7",
@@ -729,7 +732,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "p-9",
@@ -742,14 +746,15 @@
           },
           "leadTimeHours": 12,
           "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "내일 아이스티 못 팝니다. 병 제품으로 메울 수는 있지만 맛이 다릅니다.",
+          "recoverable": false,
+          "consequence": "내일 아이스티 못 팝니다. 찬물에 우리는 8~12시간을 되돌릴 방법이 없습니다.",
           "quantityVaries": true,
           "critical": false,
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "p-10",
@@ -762,14 +767,15 @@
           },
           "leadTimeHours": 12,
           "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "내일 밀크티 못 팝니다. 급하면 진하게 우려 식혀 쓰지만 맛이 다릅니다.",
+          "recoverable": false,
+          "consequence": "내일 밀크티 못 팝니다. 침출 시간을 되돌릴 방법이 없습니다.",
           "quantityVaries": true,
           "critical": false,
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "p-4",
@@ -789,7 +795,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "p-8",
@@ -809,7 +816,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "p-5",
@@ -836,7 +844,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "p-6",
@@ -856,7 +865,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         }
       ]
     },
@@ -884,7 +894,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "e-2",
@@ -904,7 +915,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "e-3",
@@ -924,7 +936,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         }
       ]
     },
@@ -952,7 +965,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-2",
@@ -972,7 +986,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-3",
@@ -992,7 +1007,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-4",
@@ -1012,7 +1028,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-5",
@@ -1032,7 +1049,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-6",
@@ -1052,7 +1070,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-7",
@@ -1072,7 +1091,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-8",
@@ -1092,7 +1112,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-9",
@@ -1112,7 +1133,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-10",
@@ -1132,7 +1154,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-11",
@@ -1152,7 +1175,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-12",
@@ -1172,7 +1196,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         },
         {
           "id": "c-13",
@@ -1192,7 +1217,8 @@
           "goodImage": null,
           "badImage": null,
           "videoUrl": null,
-          "recipeSlug": null
+          "recipeSlug": null,
+          "optionOf": null
         }
       ]
     }
