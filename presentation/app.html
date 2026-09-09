@@ -595,6 +595,33 @@ const store = {
 const WD = ["일","월","화","수","목","금","토"];
 const pad = n => String(n).padStart(2, "0");
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+/* ★ 매장의 하루는 자정이 아니라 새벽 5시에 바뀐다.
+   마감조는 23:00 에 시작해 01:00 에 끝난다. 달력 날짜로 체크 키를 만들면
+   23:50 에 찍은 체크가 00:10 에 사라져 보인다. 출퇴근은 자정 넘김을 이미
+   처리하고 있었는데 체크리스트·프렙만 그대로 맞고 있었다.
+   Next 앱의 src/lib/businessDay.ts 와 같은 규칙이어야 한다.
+   → docs/deliverables/19_정책정의서.md §3.2 */
+const DAY_START_HOUR = 5;
+const bizDay = (now = new Date()) => {
+  const d = new Date(now.getTime());
+  if (d.getHours() < DAY_START_HOUR) d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+};
+/* 지난 영업일 체크 키를 지운다 — 화면이 "초기화됩니다"라고 약속해 왔다.
+   접두사에 슬러그가 들어가 있어야 다른 키를 안 건드린다. */
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+function pruneDayKeys(prefix, keep) {
+  try {
+    const doomed = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith(prefix)) continue;
+      const tail = k.slice(prefix.length);
+      if (DAY_RE.test(tail) && tail !== keep) doomed.push(k);
+    }
+    doomed.forEach(k => localStorage.removeItem(k));
+  } catch { /* 파일로 열면 저장소가 막힌다. 화면은 계속 돌아야 한다 */ }
+}
 const dayLabel = d => `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;
 
 function daysApart(a, b) {
@@ -1263,7 +1290,9 @@ function renderHome() {
  * ------------------------------------------------------------------ */
 function renderPrep(slug) {
   const list = DATA.prepLists.find(l => l.slug === slug) || DATA.prepLists[0];
-  const key = `prep:${list.slug}:${today()}`;
+  const prefix = `prep:${list.slug}:`;
+  pruneDayKeys(prefix, bizDay());
+  const key = prefix + bizDay();
   let done = new Set(store.get(key, []));
   const scales = {};
 
@@ -1882,7 +1911,9 @@ function renderStudy(slug) {
 function renderChecklist(slug) {
   const pos = DATA.positions.find(p => p.slug === slug) || DATA.positions[0];
   const flat = pos.sections.flatMap(s => s.steps.map((t, i) => ({ ...t, key: `${s.title}-${i}` })));
-  const key = `list:${pos.slug}:${today()}`;
+  const prefix = `list:${pos.slug}:`;
+  pruneDayKeys(prefix, bizDay());
+  const key = prefix + bizDay();
   let done = new Set(store.get(key, []));
 
   const right = el(`<span class="count"></span>`);

@@ -4,18 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import BackButton from "@/components/BackButton";
 import MediaSlot from "@/components/MediaSlot";
 import type { Position, Step } from "@/lib/types";
+import { businessDay, dayKey, pruneDayKeys } from "@/lib/businessDay";
 
 /* ------------------------------------------------------------------ */
 /* 저장은 전부 localStorage. 회원가입이 없는 게 이 MVP의 핵심이라서,     */
-/* 체크 상태를 서버에 보관하지 않는다. 날짜가 바뀌면 자동으로 초기화된다. */
+/* 체크 상태를 서버에 보관하지 않는다. 영업일이 바뀌면 초기화된다.            */
+/* 하루의 경계는 자정이 아니라 새벽 5시다 — 마감조가 자정을 넘겨 일한다.    */
+/* → src/lib/businessDay.ts                                                */
 /* ------------------------------------------------------------------ */
 
-function todayKey(): string {
-  const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${mm}-${dd}`;
-}
 
 function getSessionId(): string {
   const KEY = "sop:sid";
@@ -59,7 +56,8 @@ export default function ChecklistView({
   );
   const total = allTasks.length;
 
-  const storageKey = `sop:${position.shareSlug}:${todayKey()}`;
+  const keyPrefix = `sop:${position.shareSlug}:`;
+  const storageKey = dayKey(keyPrefix, businessDay());
 
   const [done, setDone] = useState<Set<string>>(() => new Set());
   const [hydrated, setHydrated] = useState(false);
@@ -67,6 +65,9 @@ export default function ChecklistView({
 
   // 저장된 체크 상태 복원 + 조회 1회 기록
   useEffect(() => {
+    // 지난 영업일 키를 지운다. 화면이 "초기화됩니다"라고 약속해 왔는데
+    // 예전에는 새 키를 읽기만 하고 옛 키를 안 지워서 매일 하나씩 쌓였다
+    pruneDayKeys(keyPrefix, businessDay());
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) setDone(new Set(JSON.parse(raw) as string[]));
@@ -75,7 +76,7 @@ export default function ChecklistView({
     }
     setHydrated(true);
     log("view", { positionSlug: position.shareSlug });
-  }, [storageKey, position.shareSlug]);
+  }, [storageKey, keyPrefix, position.shareSlug]);
 
   const toggle = useCallback(
     (taskId: string) => {
@@ -278,7 +279,7 @@ export default function ChecklistView({
             </>
           ) : (
             <p className="mt-1 text-[13px] text-orange-900/80 dark:text-orange-100/80">
-              답변 감사합니다. 내일 다시 접속하면 체크리스트가 초기화됩니다.
+              답변 감사합니다. 다음 영업일에 다시 열면 체크리스트가 초기화됩니다.
             </p>
           )}
         </section>
@@ -293,7 +294,9 @@ export default function ChecklistView({
           체크 전부 지우기
         </button>
         <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
-          체크 상태는 이 휴대폰에만 저장되며 날짜가 바뀌면 초기화됩니다.
+          체크 상태는 이 휴대폰에만 저장되며 <b>영업일이 바뀌면 초기화됩니다</b>.
+          하루의 경계는 자정이 아니라 <b>새벽 5시</b>라서, 마감조가 자정을 넘겨
+          일해도 체크가 사라지지 않습니다.
         </p>
       </div>
     </div>

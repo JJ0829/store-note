@@ -5,6 +5,7 @@ import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import MediaSlot from "@/components/MediaSlot";
 import { SCALES, scaled } from "@/lib/scale";
+import { businessDay, dayKey, pruneDayKeys } from "@/lib/businessDay";
 import { arrivesIn, readyAt, triggerLabel } from "@/lib/leadTime";
 import type { PrepList, PrepTask, Recipe } from "@/lib/types";
 
@@ -17,12 +18,6 @@ import type { PrepList, PrepTask, Recipe } from "@/lib/types";
  *   3) 수량이 매일 바뀌는 항목은 배수를 눌러서 그 자리에서 환산한다
  * ------------------------------------------------------------------ */
 
-function todayKey(): string {
-  const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${mm}-${dd}`;
-}
 
 function getSessionId(): string {
   const KEY = "sop:sid";
@@ -66,7 +61,8 @@ export default function PrepView({
   recipes: Recipe[];
   storeName: string;
 }) {
-  const storageKey = `prep:${list.slug}:${todayKey()}`;
+  const keyPrefix = `prep:${list.slug}:`;
+  const storageKey = dayKey(keyPrefix, businessDay());
   const [done, setDone] = useState<Set<string>>(() => new Set());
   const [scales, setScales] = useState<Record<string, number>>({});
   const [now, setNow] = useState<Date | null>(null);
@@ -85,6 +81,9 @@ export default function PrepView({
   useEffect(() => {
     // 시각 계산은 클라이언트에서만 한다 (서버에서 하면 빌드 시각이 박힌다)
     setNow(new Date());
+    // 지난 영업일 키를 지운다. 예전에는 removeItem 호출이 아예 없어서
+    // 프렙 체크 기록을 화면에서 지울 방법이 없었다
+    pruneDayKeys(keyPrefix, businessDay());
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) setDone(new Set(JSON.parse(raw) as string[]));
@@ -92,7 +91,7 @@ export default function PrepView({
       /* 사생활 보호 모드 등 — 빈 상태로 시작 */
     }
     log("prep_view", { prepSlug: list.slug });
-  }, [storageKey, list.slug]);
+  }, [storageKey, keyPrefix, list.slug]);
 
   const toggle = useCallback(
     (task: PrepTask) => {
@@ -418,7 +417,8 @@ export default function PrepView({
           처음으로
         </Link>
         <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
-          체크 상태는 이 기기에만 저장되며 날짜가 바뀌면 초기화됩니다.
+          체크 상태는 이 기기에만 저장되며 <b>영업일이 바뀌면 초기화됩니다</b>.
+          하루의 경계는 <b>새벽 5시</b>입니다.
         </p>
       </div>
     </div>
