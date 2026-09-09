@@ -46,7 +46,14 @@ export default function LocalRecipeView({ storeName }: { storeName: string }) {
           type="button"
           onClick={() => {
             if (!window.confirm(`"${recipe.name}" 레시피를 삭제할까요?`)) return;
-            removeLocalRecipe(recipe.id);
+            // ★ 지우기도 저장이다. 실패한 채로 목록으로 보내면 사장님은
+            //   지운 줄 알고 나가고, 레시피는 그대로 남아 있다
+            if (!removeLocalRecipe(recipe.id)) {
+              window.alert(
+                "삭제에 실패했습니다. 브라우저 저장 공간을 확인해 주세요. 레시피는 그대로 남아 있습니다.",
+              );
+              return;
+            }
             router.push("/r");
           }}
           className="w-full rounded-xl border border-red-300 py-3 text-[13px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400"

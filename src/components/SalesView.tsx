@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BTN, Card, Caveat, Chip, NumField, Row, Screen } from "@/components/ui";
+import { BTN, Card, Caveat, Chip, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { pct, won } from "@/lib/store";
 import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData } from "@/lib/roster";
 import {
@@ -49,7 +49,7 @@ export default function SalesView({
   const [punches, setPunches] = useState<PunchData>({});
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [saved, setSaved] = useState(false);
+  const save = useSaveState();
 
   useEffect(() => {
     const d = new Date();
@@ -101,10 +101,7 @@ export default function SalesView({
     const cur = getDay(sales, date);
     const next = { ...sales, [date]: { ...cur, ...p, date } };
     setSales(next);
-    if (saveSales(next)) {
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 1200);
-    }
+    save.report(saveSales(next));
   }
 
   const day = getDay(sales, pick);
@@ -122,7 +119,17 @@ export default function SalesView({
   );
 
   return (
-    <Screen title="매출" storeName={storeName} saved={saved} wide>
+    <Screen
+      title="매출"
+      storeName={storeName}
+      saved={save.saved}
+      saveFailed={
+        save.failed
+          ? { what: "매출 기록", retry: () => save.report(saveSales(sales)) }
+          : null
+      }
+      wide
+    >
       <div className="mt-4 flex gap-2">
         <Chip on={tab === "day"} onClick={() => setTab("day")}>
           하루

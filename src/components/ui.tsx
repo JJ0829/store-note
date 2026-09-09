@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import BackButton from "@/components/BackButton";
+import { eun } from "@/lib/store";
 
 /* ------------------------------------------------------------------ *
  * 화면 여섯 개(원가·근태·매출·발주·거래처·계약서)가 같이 쓰는 껍데기.
@@ -28,6 +29,7 @@ export function Screen({
   title,
   storeName,
   saved,
+  saveFailed,
   wide,
   right,
   children,
@@ -36,6 +38,13 @@ export function Screen({
   storeName?: string;
   /** "저장됨"을 잠깐 띄운다 */
   saved?: boolean;
+  /**
+   * ★ 저장이 안 됐다. `useSaveState()`가 넘겨준다.
+   *
+   * 성공은 1.2초 뒤 사라지지만 **실패는 스스로 사라지지 않는다** —
+   * 사람이 보고 손을 써야 하는 일이기 때문이다.
+   */
+  saveFailed?: SaveFailure | null;
   /** 표가 들어가는 화면은 넓게 */
   wide?: boolean;
   right?: ReactNode;
@@ -71,6 +80,7 @@ export function Screen({
         )}
         {right}
       </div>
+      {saveFailed && <SaveFailed {...saveFailed} />}
       {children}
     </main>
   );
@@ -222,5 +232,104 @@ export function Caveat({ children }: { children: ReactNode }) {
     <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
       {children}
     </p>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * 저장 결과 알림
+ *
+ * ★ 2026-09-09 에 생긴 이유 — 실패가 조용했다.
+ *
+ *   원래 꼴은 이랬다.
+ *       setPunches(next);              // 화면은 이미 바뀌었다
+ *       if (savePunches(next)) {       // 성공하면
+ *         setSaved(true);              //   "저장됨" 을 1.2초 띄운다
+ *       }                              // 실패하면 — 아무 말도 없다
+ *
+ *   **화면이 바뀌어 있으니 사람은 저장된 줄 안다.** 실제로는 React 메모리에만
+ *   있고 새로고침하면 사라진다. 사파리 시크릿 모드, 저장 공간 초과,
+ *   브라우저의 사이트 데이터 차단에서 실제로 일어난다.
+ *   출퇴근이 이 경로를 타면 **급여가 틀린다.**
+ *
+ * 기준 (docs/deliverables/21_화면명세.md §7-①):
+ *   나중에 다시 읽어야 하는 기록(출퇴근·계약·거래처·매출·근무표·설정·발주)은
+ *   **실패를 반드시 알린다.** 체크리스트·프렙처럼 그날 지나면 지워질 것은
+ *   조용해도 된다 — 체크를 잃어도 그날 일은 계속해야 하니까.
+ * ------------------------------------------------------------------ */
+
+export type SaveFailure = {
+  /** 무엇이 안 남았는지. "출퇴근 기록" 처럼 사람이 읽는 말로 */
+  what: string;
+  /** 다시 시도. 같은 값을 한 번 더 저장해 본다 */
+  retry?: () => void;
+};
+
+/**
+ * 저장 성공·실패를 화면에 알린다.
+ *
+ * `report(ok)` 한 줄로 끝난다 — 화면마다 타이머를 따로 두면 한 군데서만
+ * 빼먹는다. `saved` 는 1.2초 뒤 저절로 사라지고 **`failed` 는 안 사라진다.**
+ */
+export function useSaveState() {
+  const [saved, setSaved] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const timer = useRef<number | null>(null);
+
+  const report = useCallback((ok: boolean): boolean => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    if (ok) {
+      setFailed(false);
+      setSaved(true);
+      timer.current = window.setTimeout(() => setSaved(false), 1200);
+    } else {
+      // 실패는 지우지 않는다. 사람이 봐야 한다
+      setSaved(false);
+      setFailed(true);
+    }
+    return ok;
+  }, []);
+
+  // 화면을 떠날 때 타이머가 남으면 사라진 컴포넌트에 setState 한다
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  return { saved, failed, report };
+}
+
+/**
+ * 저장 실패 띠. `Screen` 이 머리말 바로 아래에 띄운다.
+ *
+ * `role="alert"` 이라 스크린리더가 즉시 읽는다 — 저장은 사람이 누른 결과이고
+ * 실패는 **하던 일을 멈춰야 하는** 소식이라 `polite` 가 아니다.
+ */
+export function SaveFailed({ what, retry }: SaveFailure) {
+  return (
+    <div
+      role="alert"
+      className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/40"
+    >
+      <p className="text-[14px] font-bold text-red-800 dark:text-red-200">
+        저장에 실패했습니다
+      </p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-red-800/90 dark:text-red-300/90">
+        {/* eun() 은 낱말까지 같이 돌려준다 — "발주 기록은". 앞에 {what} 을
+            또 쓰면 "발주 기록발주 기록은" 이 된다 (실측으로 잡음) */}
+        브라우저 저장 공간을 확인해 주세요. <b>{eun(what)} 아직 남지
+        않았습니다</b> — 화면을 새로 열면 사라집니다.
+      </p>
+      {retry && (
+        <button
+          type="button"
+          onClick={retry}
+          className="mt-2.5 rounded-xl border-2 border-red-300 px-3 py-2 text-[13px] font-semibold text-red-700 active:bg-red-100 dark:border-red-900 dark:text-red-300 dark:active:bg-red-950"
+        >
+          다시 시도
+        </button>
+      )}
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BTN, Card, Caveat, Chip, Empty, INPUT, Screen } from "@/components/ui";
+import { BTN, Card, Caveat, Chip, Empty, INPUT, Screen, useSaveState } from "@/components/ui";
 import { copyText } from "@/lib/copyText";
 import { businessDay, recentDays } from "@/lib/businessDay";
 import { ro } from "@/lib/store";
@@ -52,6 +52,7 @@ export default function OrderView({
   const [vendors, setVendors] = useState<VendorData | null>(null);
   const [log, setLog] = useState<OrderLog>({});
   const [links, setLinks] = useState<OrderLinks>({});
+  const save = useSaveState();
 
   useEffect(() => {
     setNow(new Date());
@@ -88,13 +89,15 @@ export default function OrderView({
   function patch(taskId: string, p: Parameters<typeof putState>[3]) {
     const next = putState(log, today, taskId, p);
     setLog(next);
-    saveOrderLog(next);
+    // ★ "주문함" 이 안 남으면 내일 아침에 안 들어온 것을 못 잡는다.
+    //   이 화면의 존재 이유가 바로 그 한 칸이다
+    save.report(saveOrderLog(next));
   }
 
   function link(taskId: string, vendorId: string) {
     const next = { ...links, [taskId]: vendorId };
     setLinks(next);
-    saveOrderLinks(next);
+    save.report(saveOrderLinks(next));
   }
 
   /* ---------- 거래처별로 모아 발주서를 만든다 ---------- */
@@ -118,7 +121,17 @@ export default function OrderView({
   const hasVendors = vendors.vendors.length > 0;
 
   return (
-    <Screen title="발주" storeName={storeName} wide>
+    <Screen
+      title="발주"
+      storeName={storeName}
+      saved={save.saved}
+      saveFailed={
+        save.failed
+          ? { what: "발주 기록", retry: () => save.report(saveOrderLog(log)) }
+          : null
+      }
+      wide
+    >
       {/* ---------- 1. 안 들어온 것 ---------- */}
       {pending.length > 0 && (
         <section className="mt-5 rounded-2xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
@@ -151,7 +164,7 @@ export default function OrderView({
                     onClick={() => {
                       const next = putState(log, p.date, p.taskId, { received: true });
                       setLog(next);
-                      saveOrderLog(next);
+                      save.report(saveOrderLog(next));
                     }}
                   >
                     들어왔음

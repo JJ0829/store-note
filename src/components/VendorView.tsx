@@ -10,6 +10,7 @@ import {
   INPUT,
   NumField,
   Screen,
+  useSaveState,
 } from "@/components/ui";
 import { eul, gwa, won } from "@/lib/store";
 import { COMMON_UNITS } from "@/lib/units";
@@ -46,7 +47,7 @@ export default function VendorView({
 }) {
   const [data, setData] = useState<VendorData | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const save = useSaveState();
   const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {
@@ -66,15 +67,13 @@ export default function VendorView({
         : [...settings.excluded, key],
     };
     setSettings(next);
-    saveSettings(next);
+    save.report(saveSettings(next));
   }
 
   function commit(next: VendorData) {
     setData(next);
-    if (saveVendors(next)) {
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 1200);
-    }
+    // ★ 단가가 안 남으면 원가율이 다음에 열 때 딴 값이 된다
+    save.report(saveVendors(next));
   }
 
   const priced = useMemo(
@@ -143,7 +142,17 @@ export default function VendorView({
   }
 
   return (
-    <Screen title="거래처" storeName={storeName} saved={saved} wide>
+    <Screen
+      title="거래처"
+      storeName={storeName}
+      saved={save.saved}
+      saveFailed={
+        save.failed
+          ? { what: "거래처·단가", retry: () => (data ? save.report(saveVendors(data)) : undefined) }
+          : null
+      }
+      wide
+    >
       {/* ---------- 단가가 빠진 재료 ---------- */}
       {ingredientNames.length > 0 && (
         <Card

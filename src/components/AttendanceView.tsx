@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BTN, BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Row, Screen } from "@/components/ui";
+import { BTN, BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
 import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData } from "@/lib/roster";
 import {
@@ -53,7 +53,7 @@ export default function AttendanceView({
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [monday, setMonday] = useState<Date | null>(null);
-  const [saved, setSaved] = useState(false);
+  const save = useSaveState();
   // 출퇴근은 직원이 찍는 화면이라 잠글 수 없다. 돈만 가린다
   const owner = useOwnerOpen();
 
@@ -71,10 +71,8 @@ export default function AttendanceView({
 
   function commit(next: PunchData) {
     setPunches(next);
-    if (savePunches(next)) {
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 1200);
-    }
+    // ★ 실패를 알려야 한다. 출퇴근이 안 남으면 급여가 틀린다
+    save.report(savePunches(next));
   }
 
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);
@@ -150,7 +148,17 @@ export default function AttendanceView({
   const noWage = weekly.filter((w) => !w.contract || w.contract.hourlyWage <= 0);
 
   return (
-    <Screen title="출퇴근 · 근태" storeName={storeName} saved={saved} wide>
+    <Screen
+      title="출퇴근 · 근태"
+      storeName={storeName}
+      saved={save.saved}
+      saveFailed={
+        save.failed
+          ? { what: "출퇴근 기록", retry: () => save.report(savePunches(punches)) }
+          : null
+      }
+      wide
+    >
       {/* ---------- 탭 ---------- */}
       <div className="mt-4 flex gap-2">
         <Chip on={tab === "today"} onClick={() => setTab("today")}>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
+import { SaveFailed, useSaveState } from "@/components/ui";
 import {
   buildEmailBody,
   label,
@@ -49,7 +50,7 @@ export default function RosterView({
   const [email, setEmail] = useState("");
   const [section, setSection] = useState("");
   const [phone, setPhone] = useState("");
-  const [saved, setSaved] = useState(false);
+  const save = useSaveState();
   // 연락처는 기본으로 가린다. 공용 태블릿이라 다음 사람이 그대로 본다.
   const [showContacts, setShowContacts] = useState(false);
   // 메일 본문에 연락처를 넣을지. 기본은 넣지 않는다 (bcc로 가린 의미를 지키려고)
@@ -62,12 +63,14 @@ export default function RosterView({
 
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);
 
-  const persist = useCallback((next: RosterData) => {
-    setData(next);
-    saveRoster(next);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 1200);
-  }, []);
+  const persist = useCallback(
+    (next: RosterData) => {
+      setData(next);
+      // ★ 근무표가 안 남으면 근태(계획 − 실제)를 아예 못 만든다
+      save.report(saveRoster(next));
+    },
+    [save],
+  );
 
   function addStaff() {
     if (!name.trim()) return;
@@ -157,12 +160,20 @@ export default function RosterView({
           </p>
           <h1 className="text-xl font-bold">근무표</h1>
         </div>
-        {saved && (
-          <span className="shrink-0 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400">
+        {save.saved && (
+          <span
+            role="status"
+            aria-live="polite"
+            className="shrink-0 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400"
+          >
             저장됨
           </span>
         )}
       </div>
+
+      {save.failed && (
+        <SaveFailed what="근무표" retry={() => save.report(saveRoster(data))} />
+      )}
 
       {/* ---------- 주 이동 ---------- */}
       <div className="mt-5 flex items-center justify-between gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">

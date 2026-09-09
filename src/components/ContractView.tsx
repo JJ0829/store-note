@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Screen } from "@/components/ui";
+import { BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
 import { loadRoster, WEEKDAY, type RosterData } from "@/lib/roster";
 import {
@@ -35,7 +35,7 @@ export default function ContractView({ storeName }: { storeName: string }) {
   const [list, setList] = useState<Contract[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const save = useSaveState();
 
   useEffect(() => {
     setRoster(loadRoster());
@@ -45,17 +45,15 @@ export default function ContractView({ storeName }: { storeName: string }) {
 
   function commit(next: Contract[]) {
     setList(next);
-    if (saveContracts(next)) {
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 1200);
-    }
+    // ★ 근로계약은 근로기준법 제42조로 3년 보존 대상이다. 조용히 잃으면 안 된다
+    save.report(saveContracts(next));
   }
 
   function patchSettings(patch: Partial<Settings>) {
     if (!settings) return;
     const next = { ...settings, ...patch };
     setSettings(next);
-    saveSettings(next);
+    save.report(saveSettings(next));
   }
 
   if (!roster || !settings) {
@@ -79,7 +77,17 @@ export default function ContractView({ storeName }: { storeName: string }) {
   const missing = roster.staff.filter((s) => !contractOf(list, s.id));
 
   return (
-    <Screen title="근로계약서" storeName={storeName} saved={saved} wide>
+    <Screen
+      title="근로계약서"
+      storeName={storeName}
+      saved={save.saved}
+      saveFailed={
+        save.failed
+          ? { what: "계약 내용", retry: () => save.report(saveContracts(list)) }
+          : null
+      }
+      wide
+    >
       {/* ---------- 사업장 설정 ---------- */}
       <Card
         className="mt-5"

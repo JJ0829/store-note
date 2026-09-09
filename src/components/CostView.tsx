@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, Caveat, Empty, NumField, Row, Screen } from "@/components/ui";
+import { Card, Caveat, Empty, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { pct, won } from "@/lib/store";
 import { costOfRecipe, costRate, suggestedPrice } from "@/lib/cost";
 import { loadVendors } from "@/lib/vendors";
@@ -33,6 +33,7 @@ export default function CostView({
   const [settings, setSettings] = useState<Settings | null>(null);
   const [local, setLocal] = useState<Recipe[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
+  const save = useSaveState();
 
   useEffect(() => {
     setItems(loadVendors());
@@ -55,14 +56,15 @@ export default function CostView({
     if (!settings) return;
     const next = { ...settings, prices: { ...settings.prices, [id]: price } };
     setSettings(next);
-    saveSettings(next);
+    // ★ 판매가가 안 남으면 다음에 열 때 원가율이 딴 값이 된다
+    save.report(saveSettings(next));
   }
 
   function setTarget(v: number) {
     if (!settings) return;
     const next = { ...settings, targetCostRate: v };
     setSettings(next);
-    saveSettings(next);
+    save.report(saveSettings(next));
   }
 
   if (!items || !settings) {
@@ -97,7 +99,17 @@ export default function CostView({
   const totalMissing = rows.reduce((s, r) => s + r.cost.missing, 0);
 
   return (
-    <Screen title="원가" storeName={storeName} wide>
+    <Screen
+      title="원가"
+      storeName={storeName}
+      saved={save.saved}
+      saveFailed={
+        save.failed
+          ? { what: "설정", retry: () => (settings ? save.report(saveSettings(settings)) : undefined) }
+          : null
+      }
+      wide
+    >
       {/* ---------- 목표 원가율 ---------- */}
       <Card
         className="mt-5"
