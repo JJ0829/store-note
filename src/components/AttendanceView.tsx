@@ -352,22 +352,22 @@ export default function AttendanceView({
             <table className="w-full min-w-[720px] border-collapse text-[13px]">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                  <th className="px-3 py-2.5 text-left font-semibold">직원</th>
+                  <th scope="col" className="px-3 py-2.5 text-left font-semibold">직원</th>
                   {days.map((d) => (
-                    <th key={ymd(d)} className="px-1.5 py-2.5 text-center font-semibold">
+                    <th key={ymd(d)} scope="col" className="px-1.5 py-2.5 text-center font-semibold">
                       {d.getMonth() + 1}/{d.getDate()}
                     </th>
                   ))}
-                  <th className="px-3 py-2.5 text-right font-semibold">근로</th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">근로</th>
                   {owner.open && (
-                    <th className="px-3 py-2.5 text-right font-semibold">인건비(추정)</th>
+                    <th scope="col" className="px-3 py-2.5 text-right font-semibold">인건비(추정)</th>
                   )}
                 </tr>
               </thead>
               <tbody>
                 {weekly.map(({ staff, results, pay, contract }) => (
                   <tr key={staff.id} className="border-b border-zinc-100 dark:border-zinc-800/60">
-                    <td className="px-3 py-2.5">
+                    <th scope="row" className="px-3 py-2.5 text-left font-normal">
                       <span className="block font-semibold">{staff.name}</span>
                       {owner.open && (
                         <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -376,7 +376,7 @@ export default function AttendanceView({
                             : "시급 없음"}
                         </span>
                       )}
-                    </td>
+                    </th>
                     {results.map((r) => (
                       <td key={r.date} className="px-1.5 py-2.5 text-center">
                         {r.status === "휴무" ? (

@@ -58,8 +58,14 @@ export function Screen({
           )}
           <h1 className="text-xl font-bold">{title}</h1>
         </div>
+        {/* 저장은 사용자가 누른 결과인데 화면에만 뜨면 스크린리더는 모른다.
+            polite 라 하던 낭독을 끊지 않는다 */}
         {saved && (
-          <span className="shrink-0 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400">
+          <span
+            role="status"
+            aria-live="polite"
+            className="shrink-0 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400"
+          >
             저장됨
           </span>
         )}

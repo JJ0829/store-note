@@ -79,7 +79,7 @@ export default function StoreGate({
             className={INPUT}
           />
           {error && (
-            <p className="text-[13px] font-semibold text-red-600 dark:text-red-400">
+            <p role="alert" className="text-[13px] font-semibold text-red-600 dark:text-red-400">
               {error}
             </p>
           )}
@@ -147,7 +147,7 @@ export function StoreLockButton() {
             className={INPUT}
           />
           {error && (
-            <p className="text-[13px] font-semibold text-red-600 dark:text-red-400">
+            <p role="alert" className="text-[13px] font-semibold text-red-600 dark:text-red-400">
               {error}
             </p>
           )}

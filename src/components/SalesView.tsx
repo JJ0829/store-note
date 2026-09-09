@@ -309,11 +309,11 @@ export default function SalesView({
             <table className="w-full min-w-[600px] border-collapse text-[13px]">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                  <th className="px-3 py-2.5 text-left font-semibold">날짜</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">매출</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">재료비</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">인건비</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">남은 돈</th>
+                  <th scope="col" className="px-3 py-2.5 text-left font-semibold">날짜</th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">매출</th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">재료비</th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">인건비</th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">남은 돈</th>
                 </tr>
               </thead>
               <tbody>

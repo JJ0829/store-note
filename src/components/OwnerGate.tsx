@@ -82,7 +82,7 @@ export default function OwnerGate({
               className={INPUT}
             />
             {error && (
-              <p className="text-[13px] font-semibold text-red-600 dark:text-red-400">
+              <p role="alert" className="text-[13px] font-semibold text-red-600 dark:text-red-400">
                 {error}
               </p>
             )}
@@ -137,7 +137,7 @@ export default function OwnerGate({
             className={INPUT}
           />
           {error && (
-            <p className="text-[13px] font-semibold text-red-600 dark:text-red-400">
+            <p role="alert" className="text-[13px] font-semibold text-red-600 dark:text-red-400">
               {error}
             </p>
           )}
@@ -212,7 +212,7 @@ export function OwnerLockButton() {
             className={INPUT}
           />
           {error && (
-            <p className="text-[13px] font-semibold text-red-600 dark:text-red-400">
+            <p role="alert" className="text-[13px] font-semibold text-red-600 dark:text-red-400">
               {error}
             </p>
           )}
@@ -354,7 +354,7 @@ export function InlineUnlock({
         </button>
       </div>
       {error && (
-        <p className="mt-2 text-[12px] font-semibold text-red-600 dark:text-red-400">
+        <p role="alert" className="mt-2 text-[12px] font-semibold text-red-600 dark:text-red-400">
           {error}
         </p>
       )}

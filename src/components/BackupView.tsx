@@ -227,7 +227,7 @@ export default function BackupView({ storeName }: { storeName: string }) {
 
         {stage.s === "error" && (
           <div className="mt-3">
-            <p className="rounded-xl bg-red-50 px-3 py-2.5 text-[13px] font-semibold leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300">
+            <p role="alert" className="rounded-xl bg-red-50 px-3 py-2.5 text-[13px] font-semibold leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300">
               {stage.reason}
             </p>
             <button
@@ -284,11 +284,11 @@ export default function BackupView({ storeName }: { storeName: string }) {
         {stage.s === "done" && (
           <div className="mt-3">
             {stage.failed.length === 0 ? (
-              <p className="rounded-xl bg-emerald-50 px-3 py-2.5 text-[13px] font-semibold leading-relaxed text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <p role="status" aria-live="polite" className="rounded-xl bg-emerald-50 px-3 py-2.5 text-[13px] font-semibold leading-relaxed text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
                 되돌렸습니다. 출퇴근·계약서 화면에서 확인해보세요.
               </p>
             ) : (
-              <p className="rounded-xl bg-red-50 px-3 py-2.5 text-[13px] font-semibold leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              <p role="alert" className="rounded-xl bg-red-50 px-3 py-2.5 text-[13px] font-semibold leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300">
                 일부를 저장하지 못했습니다: {stage.failed.join(" · ")}. 이
                 태블릿의 저장공간이 꽉 찼거나 사생활 보호 모드일 수 있습니다.
               </p>

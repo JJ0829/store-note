@@ -269,10 +269,10 @@ export default function RosterView({
             </caption>
             <thead>
               <tr className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                <th className="px-3 py-2 text-left font-semibold">섹션</th>
-                <th className="px-3 py-2 text-left font-semibold">이름</th>
-                <th className="px-3 py-2 text-left font-semibold">이메일</th>
-                <th className="px-3 py-2 text-left font-semibold">전화번호</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">섹션</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">이름</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">이메일</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">전화번호</th>
               </tr>
             </thead>
             <tbody>
@@ -316,12 +316,13 @@ export default function RosterView({
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                <th className="sticky left-0 z-10 w-[120px] min-w-[120px] bg-white px-3 py-2.5 text-left font-bold dark:bg-zinc-900">
+                <th scope="col" className="sticky left-0 z-10 w-[120px] min-w-[120px] bg-white px-3 py-2.5 text-left font-bold dark:bg-zinc-900">
                   직원
                 </th>
                 {days.map((d) => (
                   <th
                     key={ymd(d)}
+                    scope="col"
                     className={[
                       "min-w-[104px] px-2 py-2.5 font-bold",
                       d.getDay() === 0
@@ -334,7 +335,9 @@ export default function RosterView({
                     {label(d)}
                   </th>
                 ))}
-                <th className="w-10" />
+                <th scope="col" className="w-10">
+                  <span className="sr-only">지우기</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -343,7 +346,7 @@ export default function RosterView({
                   key={s.id}
                   className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
                 >
-                  <th className="sticky left-0 z-10 w-[120px] min-w-[120px] bg-white px-3 py-2 text-left dark:bg-zinc-900">
+                  <th scope="row" className="sticky left-0 z-10 w-[120px] min-w-[120px] bg-white px-3 py-2 text-left font-normal dark:bg-zinc-900">
                     <span className="block truncate font-bold">{s.name}</span>
                     <span className="block truncate text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
                       {s.section || "—"}
