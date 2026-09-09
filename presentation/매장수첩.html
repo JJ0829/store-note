@@ -199,6 +199,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .rows { display: flex; flex-direction: column; gap: 10px; }
 
 .opts { border-top: 1px dashed var(--line); background: var(--sunken); padding: 12px 14px; }
+.scaler-sm { border-top: 1px solid var(--line); padding: 10px 12px; }
+.scaler-sm .ing li { font-size: 13px; }
 .opts-note { font-size: 11px; color: var(--ink-3); margin: 2px 0 8px; line-height: 1.5; }
 .task.opt { margin: 0 0 8px; }
 .task.opt:last-child { margin-bottom: 0; }
@@ -522,6 +524,77 @@ const DATA = {
         {title:"버터 뺀 재료 먼저 반죽", desc:"버터를 처음부터 넣으면 글루텐이 안 잡힙니다."},
         {title:"글루텐 잡히면 버터 투입", desc:"반죽이 매끈해지고 얇게 늘어나면 그때 넣습니다."},
         {title:"냉장 발효 12~18시간", desc:"총 반죽 3520g을 6등분하면 개당 약 590g입니다(1.5근 틀 기준). 여기서 하루가 걸립니다. 오늘 만들어야 내일 굽습니다.", critical:true}
+      ]},
+    { slug:"cheong", name:"수제청 (과일 : 설탕 1:1)", category:"음료", forNewbie:true,
+      yield:{amount:2000, unit:"g"}, note:"동량 절임. 종류에 따라 3일~2주 숙성",
+      ingredients:[
+        {name:"과일 과육", amount:1000, unit:"g", note:"껍질·씨 뺀 무게"},
+        {name:"설탕", amount:1000, unit:"g", note:"과일과 같은 무게"},
+        {name:"레몬즙", amount:30, unit:"ml", note:"갈변을 늦춘다"}
+      ],
+      steps:[
+        {title:"과일을 다듬어 무게를 잰다", desc:"껍질·씨를 뺀 무게가 기준입니다. 이 무게만큼 설탕을 답니다."},
+        {title:"설탕과 켜켜이 담고 레몬즙", desc:"맨 위는 설탕으로 덮습니다. 과일이 공기에 닿으면 곰팡이가 옵니다.", critical:true},
+        {title:"담근 날짜를 병에 적는다", desc:"언제 담갔는지 안 적으면 언제 쓸 수 있는지 아무도 모릅니다.", critical:true},
+        {title:"설탕이 다 녹을 때까지 숙성", desc:"하루 한 번 흔들어 줍니다. 바닥에 설탕이 남아 있으면 아직입니다."}
+      ]},
+    { slug:"cold-tea", name:"냉침차 (콜드티)", category:"음료", forNewbie:true,
+      yield:{amount:1000, unit:"ml"}, note:"찬물 침출 8~12시간",
+      ingredients:[
+        {name:"정수", amount:1000, unit:"ml", note:null},
+        {name:"찻잎", amount:10, unit:"g", note:"물 대비 1:100"}
+      ],
+      steps:[
+        {title:"찬물에 찻잎을 넣는다", desc:"뜨거운 물로 우리면 떫은맛이 먼저 나옵니다. 반드시 찬물입니다.", critical:true},
+        {title:"담근 시각을 적고 냉장", desc:"8시간 전에는 맛이 옅고, 12시간을 넘기면 떫어집니다.", critical:true},
+        {title:"걸러서 병입", desc:"찻잎을 그대로 두면 계속 우러납니다."}
+      ]},
+    { slug:"milk-tea-base", name:"밀크티 베이스", category:"음료", forNewbie:true,
+      yield:{amount:1000, unit:"ml"}, note:"침출 4~12시간. 우유는 낼 때 섞는다",
+      ingredients:[
+        {name:"정수", amount:1000, unit:"ml", note:null},
+        {name:"홍차잎", amount:40, unit:"g", note:"우유로 희석하므로 진하게"}
+      ],
+      steps:[
+        {title:"찻잎을 넣고 침출", desc:"우유를 미리 섞지 않습니다. 섞어두면 하루도 못 갑니다.", critical:true},
+        {title:"담근 시각을 적고 냉장", desc:"일찍 꺼내면 우유에 묻혀서 싱겁습니다."},
+        {title:"걸러서 병입", desc:"낼 때 우유와 1:1 로 섞습니다."}
+      ]},
+    { slug:"simple-syrup", name:"설탕 시럽 (1:1)", category:"음료", forNewbie:true,
+      yield:{amount:1500, unit:"ml"}, note:"끓여서 녹이고 완전히 식힌다",
+      ingredients:[
+        {name:"설탕", amount:1000, unit:"g", note:null},
+        {name:"정수", amount:1000, unit:"ml", note:"설탕과 1:1"}
+      ],
+      steps:[
+        {title:"설탕과 물을 같은 양으로", desc:"눈대중으로 하면 단맛이 매번 달라집니다."},
+        {title:"약불에서 맑아질 때까지", desc:"끓여 졸이면 농도가 진해집니다. 맑아지면 끝입니다."},
+        {title:"완전히 식혀서 병입", desc:"뜨거운 채로 담으면 병이 상하고 상온 보관이 안 됩니다.", critical:true}
+      ]},
+    { slug:"cream-foam", name:"크림폼", category:"음료", forNewbie:true,
+      yield:{amount:400, unit:"ml"}, note:"그날 쓸 만큼만. 미리 많이 만들면 분리된다",
+      ingredients:[
+        {name:"생크림", amount:400, unit:"ml", note:"차가운 상태"},
+        {name:"설탕", amount:32, unit:"g", note:"생크림 대비 8%"},
+        {name:"바닐라 시럽", amount:20, unit:"ml", note:null}
+      ],
+      steps:[
+        {title:"생크림·볼을 차게", desc:"미지근하면 거품이 안 잡힙니다."},
+        {title:"설탕을 넣고 중속으로", desc:"한 번에 고속으로 돌리면 순식간에 넘어갑니다."},
+        {title:"흐르다 멈추는 정도에서 끝", desc:"숟가락을 들면 천천히 흘러내리는 상태입니다. 뿔이 서면 이미 지났습니다.", critical:true}
+      ]},
+    { slug:"levain", name:"르방 갱신 (1:1:1)", category:"베이커리", forNewbie:true,
+      yield:{amount:300, unit:"g"}, note:"매일 같은 시간에. 거르면 되살리는 데 2~3일",
+      ingredients:[
+        {name:"기존 르방", amount:100, unit:"g", note:"전날 것"},
+        {name:"강력분", amount:100, unit:"g", note:"르방과 같은 무게"},
+        {name:"물", amount:100, unit:"g", note:"28~30℃"}
+      ],
+      steps:[
+        {title:"기존 르방 100g만 남기고 덜어낸다", desc:"다 쓰면 씨가 없어집니다. 남기는 것이 먼저입니다.", critical:true},
+        {title:"밀가루·물을 같은 무게로 섞는다", desc:"르방 : 밀가루 : 물 = 1 : 1 : 1. 눈대중으로 하면 산도가 매일 달라집니다."},
+        {title:"갱신 시각을 적고 실온에 둔다", desc:"언제 먹였는지 안 적으면 다음 사람이 언제 쓸 수 있는지 모릅니다.", critical:true},
+        {title:"부피가 두 배로 오르면 쓸 수 있다", desc:"시간보다 부피가 기준입니다. 실온에 따라 6~12시간으로 다릅니다."}
       ]}
   ],
 
@@ -535,25 +608,25 @@ const DATA = {
         option:null, conseq:"내일 아침 빵이 없습니다. 사올 수도 없습니다.", recipe:"shokupan" },
       { id:"p3", title:"르방 갱신", desc:"매일 같은 시간에. 거르면 되살리는 데 2~3일 걸립니다.",
         trigger:"매일 14:00", hours:24, days:null, recoverable:false, critical:true, varies:false,
-        option:"p2", conseq:"복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.", recipe:null },
+        option:"p2", conseq:"복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.", recipe:"levain" },
       { id:"pbar", title:"바 부재료 점검 · 제조", desc:"점심 손님이 빠진 뒤 아래를 한꺼번에 확인합니다. 남아 있으면 넘어가고, 부족한 것만 지금 만듭니다.",
         trigger:"매일 14:00", hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:null, conseq:"무엇이 떨어졌는지 모르고 넘어갑니다. 아래 빨간 항목은 오늘 안 걸면 내일 못 씁니다.", recipe:null },
       { id:"p7", title:"에이드 청 만들기", desc:"과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다.",
         trigger:"매일 14:00", hours:72, days:null, recoverable:false, critical:false, varies:true,
-        option:"pbar", conseq:"떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.", recipe:null },
+        option:"pbar", conseq:"떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.", recipe:"cheong" },
       { id:"p9", title:"냉침차(콜드티) 우리기", desc:"찬물에 8~12시간 우립니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 맛이 옅습니다.",
         trigger:"매일 14:00", hours:12, days:null, recoverable:false, critical:false, varies:true,
-        option:"pbar", conseq:"내일 아이스티 못 팝니다. 찬물에 우리는 8~12시간을 되돌릴 방법이 없습니다.", recipe:null },
+        option:"pbar", conseq:"내일 아이스티 못 팝니다. 찬물에 우리는 8~12시간을 되돌릴 방법이 없습니다.", recipe:"cold-tea" },
       { id:"p10", title:"밀크티 베이스 침출", desc:"찻잎을 4~12시간 침출합니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 싱겁습니다.",
         trigger:"매일 14:00", hours:12, days:null, recoverable:false, critical:false, varies:true,
-        option:"pbar", conseq:"내일 밀크티 못 팝니다. 침출 시간을 되돌릴 방법이 없습니다.", recipe:null },
+        option:"pbar", conseq:"내일 밀크티 못 팝니다. 침출 시간을 되돌릴 방법이 없습니다.", recipe:"milk-tea-base" },
       { id:"p4", title:"시럽 제조", desc:"잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
         trigger:"매일 14:00", hours:4, days:null, recoverable:true, critical:false, varies:true,
-        option:"pbar", conseq:"당장은 남은 걸로 버팁니다. 다만 피크에 떨어지면 곤란합니다.", recipe:null },
+        option:"pbar", conseq:"당장은 남은 걸로 버팁니다. 다만 피크에 떨어지면 곤란합니다.", recipe:"simple-syrup" },
       { id:"p8", title:"크림폼 만들기", desc:"생크림을 그날 쓸 만큼만 올립니다. 미리 많이 만들어두면 분리됩니다. 아인슈페너·크림라떼 판매량 보고 배수를 정합니다.",
         trigger:"매일 14:00", hours:null, days:null, recoverable:true, critical:false, varies:true,
-        option:"pbar", conseq:"그 자리에서 다시 만들 수 있습니다. 다만 피크에 떨어지면 줄이 섭니다.", recipe:null },
+        option:"pbar", conseq:"그 자리에서 다시 만들 수 있습니다. 다만 피크에 떨어지면 줄이 섭니다.", recipe:"cream-foam" },
       { id:"p5", title:"우유·식자재 발주", desc:"재고 확인하고 주문합니다. 금요일에는 주말치까지 함께 넣습니다.",
         trigger:"월·화·수·목·금 15:00", hours:null, days:1, recoverable:true, critical:false, varies:true,
         option:null, conseq:"쿠팡으로 메울 수 있습니다. 다만 값이 더 나갑니다.", recipe:null },
@@ -1430,17 +1503,19 @@ function renderPrep(slug) {
     if (done.has(t.id)) card.classList.add("done");
     card.appendChild(hit);
 
-    const rec = t.recipe && recipeBy(t.recipe);
-    if (rec) {
-      scales[t.id] = 1;
-      const sc = el(`<div class="scaler">
+    /* ★ 배수 계산기를 부품으로 뽑았다 (2026-09-09).
+       옵션 안에서도 레시피를 바로 보고 만들 수 있어야 해서, 부모 카드와
+       옵션이 같은 것을 쓴다. 두 벌 두면 한쪽만 고치게 된다. */
+    const scalerFor = (taskId, rec, compact) => {
+      scales[taskId] = scales[taskId] || 1;
+      const sc = el(`<div class="scaler${compact ? " scaler-sm" : ""}">
         <span class="eyebrow">오늘 몇 배?</span>
         <div class="scale-grid"></div>
         <p class="yield"></p>
         <ul class="ing"></ul></div>`);
       const grid = sc.querySelector(".scale-grid");
       const draw = () => {
-        const s = scales[t.id];
+        const s = scales[taskId];
         [...grid.children].forEach((b, i) => b.setAttribute("aria-pressed", String(SCALES[i] === s)));
         // 단위(unit)도 사용자가 직접 치는 값이다. 지금은 recipeBy()가 내장
         // 레시피만 보지만, 사용자 레시피를 합치는 순간 그대로 취약해진다.
@@ -1452,12 +1527,15 @@ function renderPrep(slug) {
       };
       SCALES.forEach(s => {
         const b = el(`<button type="button">${s}배</button>`);
-        b.onclick = () => { scales[t.id] = s; draw(); };
+        b.onclick = () => { scales[taskId] = s; draw(); };
         grid.appendChild(b);
       });
       draw();
-      card.appendChild(sc);
-    }
+      return sc;
+    };
+
+    const rec = t.recipe && recipeBy(t.recipe);
+    if (rec) card.appendChild(scalerFor(t.id, rec, false));
     /* ---------- 추가 옵션 ---------- */
     const opts = optionsBy[t.id] || [];
     if (opts.length) {
@@ -1480,6 +1558,7 @@ function renderPrep(slug) {
         }
         ob.appendChild(el(`<p class="conseq">안 하면 — ${esc(o.conseq)}</p>`));
         oh.append(ot, ob);
+        const orec = o.recipe && recipeBy(o.recipe);
         oh.onclick = () => {
           done.has(o.id) ? done.delete(o.id) : done.add(o.id);
           store.set(key, [...done]);
@@ -1490,6 +1569,7 @@ function renderPrep(slug) {
         oh.setAttribute("aria-pressed", String(done.has(o.id)));
         if (done.has(o.id)) oc.classList.add("done");
         oc.appendChild(oh);
+        if (orec) oc.appendChild(scalerFor(o.id, orec, true));
         optWrap.appendChild(oc);
       });
       card.appendChild(optWrap);

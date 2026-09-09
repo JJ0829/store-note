@@ -52,6 +52,100 @@ function log(event: string, payload: Record<string, unknown>) {
 
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ * 배수 계산기
+ *
+ * 부모 카드와 「추가 옵션」이 **같은 것을 쓴다** (2026-09-09).
+ * 옵션 안에서도 레시피를 바로 보고 만들 수 있어야 한다는 요청이라
+ * 같은 마크업을 두 벌 두면 한쪽만 고치게 된다.
+ * ------------------------------------------------------------------ */
+function Scaler({
+  recipe,
+  scale,
+  onPick,
+  compact,
+}: {
+  recipe: Recipe;
+  scale: number;
+  onPick: (s: number) => void;
+  /** 옵션 안에서는 한 급 작게 */
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={[
+        "border-t bg-zinc-50 dark:bg-zinc-950/60",
+        compact
+          ? "mt-2 rounded-xl border border-zinc-200 px-3 py-2.5 dark:border-zinc-800"
+          : "border-zinc-200 px-4 py-3 dark:border-zinc-800",
+      ].join(" ")}
+    >
+      <span className="mb-1.5 block text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
+        오늘 몇 배?
+      </span>
+      <div className="grid grid-cols-5 gap-1.5">
+        {SCALES.map((sc) => (
+          <button
+            key={sc}
+            type="button"
+            onClick={() => onPick(sc)}
+            className={[
+              "rounded-lg border text-center font-bold tabular-nums transition-colors",
+              compact ? "py-1.5 text-[12px]" : "py-2 text-[13px]",
+              scale === sc
+                ? "border-orange-500 bg-orange-500 text-white"
+                : "border-zinc-300 bg-white text-zinc-600 active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300",
+            ].join(" ")}
+          >
+            {sc}배
+          </button>
+        ))}
+      </div>
+
+      <p className="mt-2.5 text-[12px] text-zinc-500 dark:text-zinc-400">
+        <Link
+          href={`/r/${recipe.slug}`}
+          className="font-semibold text-zinc-700 underline underline-offset-2 dark:text-zinc-200"
+        >
+          {recipe.name}
+        </Link>{" "}
+        · 1배합 = {recipe.yield.amount}
+        {recipe.yield.unit} →{" "}
+        <b className="text-orange-600 dark:text-orange-400">
+          {scaled(recipe.yield.amount, scale)}
+          {recipe.yield.unit}
+        </b>
+      </p>
+
+      <ul className="mt-1.5 flex flex-col gap-0.5">
+        {recipe.ingredients.map((ing) => (
+          <li
+            key={ing.name}
+            className={[
+              "flex items-baseline justify-between gap-3",
+              compact ? "text-[13px]" : "text-[14px]",
+            ].join(" ")}
+          >
+            <span className="min-w-0 text-zinc-600 dark:text-zinc-300">
+              {ing.name}
+              {ing.note && (
+                // 배합률(60%, 6%)은 배수를 곱해도 그대로다. 그래서 기준이 된다.
+                <span className="ml-1.5 text-[11px] text-zinc-400">{ing.note}</span>
+              )}
+            </span>
+            <span className="shrink-0 font-bold tabular-nums">
+              {scaled(ing.amount, scale)}
+              {ing.unit}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
 export default function PrepView({
   list,
   recipes,
@@ -363,66 +457,11 @@ export default function PrepView({
 
               {/* 배수 계산기 (버튼 밖에 둔다) */}
               {recipe && (
-                <div className="border-t border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/60">
-                  <span className="mb-1.5 block text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
-                    오늘 몇 배?
-                  </span>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {SCALES.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setScale(task.id, s)}
-                        className={[
-                          "rounded-lg border py-2 text-center text-[13px] font-bold tabular-nums transition-colors",
-                          scale === s
-                            ? "border-orange-500 bg-orange-500 text-white"
-                            : "border-zinc-300 bg-white text-zinc-600 active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300",
-                        ].join(" ")}
-                      >
-                        {s}배
-                      </button>
-                    ))}
-                  </div>
-
-                  <p className="mt-2.5 text-[12px] text-zinc-500 dark:text-zinc-400">
-                    <Link
-                      href={`/r/${recipe.slug}`}
-                      className="font-semibold text-zinc-700 underline underline-offset-2 dark:text-zinc-200"
-                    >
-                      {recipe.name}
-                    </Link>{" "}
-                    · 1배합 = {recipe.yield.amount}
-                    {recipe.yield.unit} →{" "}
-                    <b className="text-orange-600 dark:text-orange-400">
-                      {scaled(recipe.yield.amount, scale)}
-                      {recipe.yield.unit}
-                    </b>
-                  </p>
-
-                  <ul className="mt-1.5 flex flex-col gap-0.5">
-                    {recipe.ingredients.map((ing) => (
-                      <li
-                        key={ing.name}
-                        className="flex items-baseline justify-between gap-3 text-[14px]"
-                      >
-                        <span className="min-w-0 text-zinc-600 dark:text-zinc-300">
-                          {ing.name}
-                          {ing.note && (
-                            // 배합률(60%, 6%)은 배수를 곱해도 그대로다. 그래서 기준이 된다.
-                            <span className="ml-1.5 text-[11px] text-zinc-400">
-                              {ing.note}
-                            </span>
-                          )}
-                        </span>
-                        <span className="shrink-0 font-bold tabular-nums">
-                          {scaled(ing.amount, scale)}
-                          {ing.unit}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <Scaler
+                  recipe={recipe}
+                  scale={scale}
+                  onPick={(sc) => setScale(task.id, sc)}
+                />
               )}
 
               {/* ---------- 추가 옵션 ---------- *
@@ -524,6 +563,19 @@ export default function PrepView({
                               </span>
                             </span>
                           </button>
+
+                          {/* ★ 옵션 안에서도 레시피를 바로 보고 만들 수 있어야 한다
+                              (사장님 요청 2026-09-09). 부모 카드와 같은 부품을 쓴다 */}
+                          {opt.recipeSlug && recipeBySlug.get(opt.recipeSlug) && (
+                            <div className="px-3 pb-1">
+                              <Scaler
+                                recipe={recipeBySlug.get(opt.recipeSlug) as Recipe}
+                                scale={scales[opt.id] ?? 1}
+                                onPick={(sc) => setScale(opt.id, sc)}
+                                compact
+                              />
+                            </div>
+                          )}
 
                           {/* 옵션에도 사진·영상 자리를 준다. "사진·영상"이 이 제품의
                               핵심 가치 셋 중 하나인데, 옵션으로 내렸다고 빼면
