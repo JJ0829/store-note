@@ -87,6 +87,12 @@ test("리드타임 종류와 실제 값이 어긋나지 않는다", () => {
       if (t.kind === "order") {
         assert.notEqual(t.leadTimeDays, null, `${where}: 일수가 비었다`);
       }
+      if (t.kind === "routine") {
+        // 리드타임이 없는 일(홀 정리·화장실 청소)이다. 값이 들어 있으면
+        // 화면이 "몇 시부터 쓸 수 있음"을 계산해서 없는 약속을 만든다
+        assert.equal(t.leadTimeHours, null, `${where}: routine 인데 시간이 있다`);
+        assert.equal(t.leadTimeDays, null, `${where}: routine 인데 일수가 있다`);
+      }
       if (t.leadTimeHours !== null) {
         assert.ok(t.leadTimeHours > 0, `${where}: 리드타임이 0 이하`);
       }
@@ -193,4 +199,27 @@ test("없는 slug를 물으면 null (404로 이어진다)", () => {
   assert.equal(getPositionBySlug("없는-포지션"), null);
   assert.equal(getRecipeBySlug("없는-레시피"), null);
   assert.equal(getPrepListBySlug("없는-프렙"), null);
+});
+
+test("★ 19:00~22:00 마감 준비 구간에 열 화면이 있다", () => {
+  // day-flow 검수에서 나온 구멍(2026-09-09). 영업 종료 전 3시간 동안
+  // 마감조가 여는 화면이 없었다 — cafe-close 체크리스트는 22시 이후 것이다
+  const evening = getPrepListBySlug("evening");
+  assert.ok(evening, "마감 준비 목록이 없다");
+  assert.ok(evening.tasks.length > 0, "마감 준비 목록이 비었다");
+  for (const t of evening.tasks) {
+    assert.equal(t.trigger.type, "daily", `${t.id}: 매일 뜨는 일이 아니다`);
+    assert.equal(
+      (t.trigger as { at: string }).at,
+      "19:00",
+      `${t.id}: 19:00 이 아니다`,
+    );
+  }
+
+  const close = listShifts().find((s) => s.name === "마감조");
+  assert.ok(close, "마감조가 없다");
+  assert.ok(
+    close.focus.some((f) => f.kind === "prep" && f.slug === "evening"),
+    "마감조 화면에 마감 준비가 안 걸려 있다 — 만들어놓고 아무도 못 연다",
+  );
 });
