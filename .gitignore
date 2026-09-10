@@ -24,3 +24,6 @@ public/media/*
 
 # Claude Code 로컬 설정 — 이 기기에서만 쓰는 권한 규칙. 공유하지 않는다
 .claude/settings.local.json
+
+# 미리보기용 임시 폴더 (작업 중에만 씀)
+.tmp-preview/
