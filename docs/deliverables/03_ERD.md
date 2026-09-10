@@ -81,7 +81,7 @@ function load(): SeedData {
 | 1 | **쓰기 경로가 없다.** `repo.ts`에 write 함수가 0개다. 내용 수정은 JSON 파일 직접 편집 | `src/lib/repo.ts` 전량 |
 | 2 | **조회가 전부 선형 탐색.** `getPositionBySlug`·`getRecipeBySlug`·`getPrepListBySlug`가 `Array.find()` | `repo.ts:41,64,72` |
 | 3 | **참조 무결성이 없다.** slug 문자열 매칭이고 검증 코드가 없다. 없는 slug를 써도 `undefined`로 조용히 넘어간다 | `PrepView.tsx:271` |
-| 4 | **교대 인계가 안 된다.** 오픈조가 태블릿에서 체크한 오후 프렙을 마감조가 다른 기기로 열면 0/6이다. 리드타임이 이 제품의 핵심 주장인데 "어제 콜드브루를 걸었나"를 기기 밖에서 확인할 방법이 없다 | 6절 |
+| 4 | **교대 인계가 안 된다.** 오픈조가 태블릿에서 체크한 오후 프렙을 마감조가 다른 기기로 열면 0/5다. 리드타임이 이 제품의 핵심 주장인데 "어제 콜드브루를 걸었나"를 기기 밖에서 확인할 방법이 없다 | 6절 |
 | 5 | **주기 점검이 매일 리셋된다.** 저장 키에 날짜가 박혀 있어(`prep:{slug}:{YYYY-MM-DD}`) 120일 주기 정수 필터 체크가 매일 0으로 돌아간다. 마지막 수행일을 저장하는 곳이 없다 | `PrepView.tsx:133` |
 | 6 | **사장님이 신입 진도를 볼 수 없다.** 체크는 신입 기기에만 쌓이고 돌아오지 않는다 | 6절 |
 | 7 | **근무표 전체가 태블릿 한 대에 있다.** 직원 이름·이메일·전화번호가 `sop:roster` 하나에 들어 있어 기기 초기화 = 전부 유실 | `src/lib/roster.ts:29` |
@@ -436,17 +436,17 @@ erDiagram
 |---|---|---|
 | Store | 1 | `store-1` / `○○ 베이커리 카페` / `our-cafe` |
 | Position | 3 | `cafe-open` / `cafe-close` / `bakery-morning` |
-| Section | 13 | 포지션 9 + 레시피 4. id 13개 전부 유일 |
-| Step | 38 | **시드 기준.** 포지션 26 (critical 11) + 레시피 12. 매장이 레시피를 직접 추가하면 **브라우저가 Section·Step을 런타임에 더 만든다** → 3-4절 |
-| Recipe | 4 | `americano` `cafe-latte` `cold-brew` `shokupan`. **4개 모두 `forNewbie: true`** |
+| Section | 19 | 포지션 9 + 레시피 10. id 전부 유일 (2026-09-10) |
+| Step | 58 | **시드 기준 2026-09-10.** 포지션 26 + 레시피 32. 매장이 레시피를 직접 추가하면 **브라우저가 Section·Step을 런타임에 더 만든다** → 3-4절 |
+| Recipe | 10 | `americano` `cafe-latte` `cold-brew` `shokupan` + 바 부재료 6(`levain` 계열·청·냉침차·밀크티·시럽·크림폼). **10개 모두 `forNewbie: true`** (숫자 정본: [21_화면명세.md §1-b](21_화면명세.md)) |
 | Ingredient | 13 | 단위는 `g`, `ml` 두 종류만 |
-| PrepList | 2 | `afternoon`(6) / `cycle`(13) |
-| PrepTask | 19 | `recoverable: false` **5개** (`p-1` `p-2` `p-3` `p-6` `c-9`) |
+| PrepList | 3 | `afternoon`(카드 5 + 옵션 6) / `evening`(3) / `cycle`(묶음 3 + 항목 13) |
+| PrepTask | 30 | `recoverable: false` **8개** (숫자 정본: [21_화면명세.md §1-b](21_화면명세.md)) |
 | Shift | 4 | 제빵 05:00–13:00 / 오픈조 07:30–15:30 / 미들 11:00–19:00 / 마감조 14:30–22:30 |
 | ShiftFocus | 7 | **training 1 / checklist 2 / prep 2 / recipes 2** (`282c0a9`에서 `position` 3건이 `training` 1 + `checklist` 2로 갈렸다 — 5-2절) |
 | Staff · Assign | 0 | 서버에 없다. 브라우저 저장 |
 | ChecklistCheck · PrepCheck | **—** | **DDL 신설 테이블이라 현재 데이터가 없다.** 체크는 브라우저 날짜 키에만 있다 |
-| 미디어 파일 | **1항목분** | `public/media/`에 `t-open-5-good.png`, `t-open-5-bad.png` 2개. 둘 다 70바이트 1×1 투명 PNG |
+| 미디어 파일 | **0건** | ⚠️ **2026-09-04 `528a75b`(보안 조치)에서 투명 PNG 2개가 지워졌다.** 지금 `public/media/`에는 `촬영목록.md` 뿐이다 — **실사 0장** |
 
 ### 2-2. ERD를 읽을 때 반드시 알아야 하는 것 6가지
 
@@ -454,7 +454,7 @@ erDiagram
 |---|---|---|
 | 1 | **조회 키는 `id`가 아니라 `shareSlug`/`slug`다.** `Position.id`·`PrepList.id`·`Shift.id`는 React key로만 쓰인다 | `repo.ts:41,64,72` |
 | 2 | **`PrepList`에는 `Section` 계층이 없다.** 포지션·레시피는 2단(Section→Step), 프렙은 1단(List→Task) | `types.ts:151-158` |
-| 3 | **Step 38 + PrepTask 19 = 57개 id가 전역 유일해야 한다.** 소비처가 둘이다. ① 미디어 파일명이 `public/media/{id}-good.jpg`로 컨테이너 구분 없이 평면에 놓인다. ② `/shoot`의 `PRIORITY` 맵이 step id와 prep_task id를 **한 네임스페이스로 섞어 조회한다**(4절). 측정 확인: 57개 전부 유일 | `mediaProbe.ts:53-59`, `shoot/page.tsx:14-19` |
+| 3 | **Step 58 + PrepTask 30 = 88개 id가 전역 유일해야 한다.** 소비처가 둘이다. ① 미디어 파일명이 `public/media/{id}-good.jpg`로 컨테이너 구분 없이 평면에 놓인다. ② `/shoot`의 `PRIORITY` 맵이 step id와 prep_task id를 **한 네임스페이스로 섞어 조회한다**(4절). 측정 확인(2026-09-10): 88개 전부 유일 (숫자 정본: [21_화면명세.md §1-b](21_화면명세.md)) | `mediaProbe.ts:53-59`, `shoot/page.tsx:14-19` |
 | 4 | **`goodImage`/`badImage`/`videoUrl`은 필드로 존재하나 읽는 코드가 0개다.** grep 결과 출현은 `types.ts` 정의와 `RecipeForm.tsx:92-94`(항상 `null` 채움)뿐. 시드에 `goodImage` 3건이 `/photos/*.svg`를 가리키지만 화면에 안 나온다 | grep 확인 |
 | 5 | **`Store.slug`와 `Store.id`는 어디서도 읽지 않는다.** 읽히는 건 `store.name`뿐이다 | grep 확인 |
 | 6 | **`PrepTask.kind`(리드타임 3축)를 읽는 화면도 0개다.** 시드 19건에 빠짐없이 채워져 있지만(`time` 4 / `order` 2 / `cycle` 13) 화면의 실제 구분은 `recoverable`과 `leadTimeHours`/`leadTimeDays`의 유무로 이뤄진다. `src/` 전체에서 `kind`의 출현은 `types.ts` 정의뿐이고 `NowPanel.tsx:20`의 `f.kind`는 `ShiftFocus`다. **3축 개념 자체는 제품 논리로 유효하다** — 3-8절·11절 #1 | grep 확인 |
@@ -523,7 +523,7 @@ erDiagram
 | `section.id` | `` `${id}-sec` `` | `RecipeForm.tsx:83` |
 | `step.id` | `` `${id}-s0` ``, `-s1`, … (`my-xxxxxxxx-s0`) | `RecipeForm.tsx:87` |
 
-그리고 **그 step id가 그대로 미디어 조회 키가 된다** — `RecipeDetail.tsx:203`이 `<MediaSlot base={step.id} />`를 그리고, 로컬 레시피도 같은 `RecipeDetail`로 그려진다(`LocalRecipeView.tsx:43`). 즉 미디어 파일명 네임스페이스는 시드 57개로 닫혀 있지 않다. 8절 DDL이 `step`에 `(id, owner_kind) → media_key(key, owner_kind)` 복합 FK를 걸었으므로, **이관 시 로컬 레시피의 step 행을 넣기 전에 `owner_kind='step'`인 `media_key` 행을 먼저 넣어야 한다**(9절 단계 6).
+그리고 **그 step id가 그대로 미디어 조회 키가 된다** — `RecipeDetail.tsx:203`이 `<MediaSlot base={step.id} />`를 그리고, 로컬 레시피도 같은 `RecipeDetail`로 그려진다(`LocalRecipeView.tsx:43`). 즉 미디어 파일명 네임스페이스는 시드 88개로 닫혀 있지 않다. 8절 DDL이 `step`에 `(id, owner_kind) → media_key(key, owner_kind)` 복합 FK를 걸었으므로, **이관 시 로컬 레시피의 step 행을 넣기 전에 `owner_kind='step'`인 `media_key` 행을 먼저 넣어야 한다**(9절 단계 6).
 
 ### 3-5. `recipe` — `types.ts:69-82`
 
@@ -671,9 +671,9 @@ ERD에서 가장 오해를 사기 쉬운 부분이다. 데이터에 경로를 �
 
 동작: `GET /api/media`가 `public/media/` 파일명 목록을 반환(dotfile·`.md` 제외) → `mediaProbe`가 프로세스당 **한 번만** 받아 `Set`에 담음(`manifest ??=`) → `MediaSlot base={id}`가 그 안에서 이름을 찾는다. 없으면 `hasAny()`가 막아 **아무것도 그리지 않는다** (`MediaSlot.tsx:31`).
 
-**키 발급 주체가 둘이다.** 시드(`data/seed.json`)의 57개 id와, **브라우저가 로컬 레시피를 만들 때 발급하는 `my-xxxxxxxx-s0` 형태의 step id**(`RecipeForm.tsx:87`, 3-4절)다. 후자도 `MediaSlot base={step.id}`로 같은 네임스페이스를 쓴다(`RecipeDetail.tsx:203`). 즉 **이 레지스트리는 시드만 채워서는 완성되지 않는다.**
+**키 발급 주체가 둘이다.** 시드(`data/seed.json`)의 88개 id와, **브라우저가 로컬 레시피를 만들 때 발급하는 `my-xxxxxxxx-s0` 형태의 step id**(`RecipeForm.tsx:87`, 3-4절)다. 후자도 `MediaSlot base={step.id}`로 같은 네임스페이스를 쓴다(`RecipeDetail.tsx:203`). 즉 **이 레지스트리는 시드만 채워서는 완성되지 않는다.**
 
-**현재 상태:** `public/media/`에 `t-open-5-good.png`, `t-open-5-bad.png` 2개(둘 다 70바이트 1×1 투명 PNG)와 `촬영목록.md`. 즉 57개 항목 중 **1개만** 미디어가 잡히고, 그 1개는 실사가 아니라 투명 픽셀이다. 배관은 완성돼 있고 콘텐츠가 사실상 0건이다.
+**현재 상태(2026-09-10):** `public/media/`에 **`촬영목록.md` 하나뿐이다.** 투명 픽셀 2개는 `528a75b`(2026-09-04 보안 조치)에서 지워졌다. 즉 **88개 항목 중 0개** — 배관은 완성돼 있고 **콘텐츠가 0건**이다. 이건 내가 못 메운다(사장님이 찍어야 한다).
 
 `public/photos/`의 SVG 8개는 어느 화면에서도 쓰이지 않는다(버거집 시절 플레이스홀더).
 
@@ -902,7 +902,7 @@ ERD에서 가장 오해를 사기 쉬운 부분이다. 데이터에 경로를 �
 | `assign` 값 | 조 이름을 고치면 기존 배정이 전부 고아 | `roster.ts:21` |
 | **`/shoot`의 `PRIORITY` 4건** | **`먼저` 배지가 조용히 사라진다.** `PRIORITY[st.id]`가 `undefined`가 될 뿐 에러가 없다 | `shoot/page.tsx:14-19`, 사용처 `32`·`43`·`53` |
 
-**`PRIORITY`가 특이한 이유:** 이 맵은 **step id와 prep_task id를 한 네임스페이스로 섞어 조회한다.** 실측 — `t-open-5`(포지션 step), `s-lt-2`(레시피 step), `t-bake-1`(포지션 step), `p-1`(prep_task). 네 id 모두 시드에 실존한다(측정 확인). 2-2절 #3의 "57개 id 전역 유일"이 미디어 파일명 말고도 필요한 두 번째 이유가 여기다.
+**`PRIORITY`가 특이한 이유:** 이 맵은 **step id와 prep_task id를 한 네임스페이스로 섞어 조회한다.** 실측 — `t-open-5`(포지션 step), `s-lt-2`(레시피 step), `t-bake-1`(포지션 step), `p-1`(prep_task). 네 id 모두 시드에 실존한다(측정 확인). 2-2절 #3의 "88개 id 전역 유일"이 미디어 파일명 말고도 필요한 두 번째 이유가 여기다.
 
 ```ts
 // src/app/shoot/page.tsx:14-19 — 시드가 아니라 코드에 박혀 있다
@@ -1655,7 +1655,7 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 | 5 | `assign.shift_name` → `shift_id` FK | 조 이름을 고쳐도 배정이 안 깨진다. 휴무는 행을 안 만든다 |
 | 6 | `store_id`를 전 테이블에 | 나중에 끼우면 `repo.ts` 12개 함수를 다 고쳐야 한다 |
 | 7 | `recipe.origin` 신설 | `my-` 접두사 규약(`localRecipes.ts:49`)을 컬럼으로 대체. `/r/my?id=`를 `/r/{slug}`로 통합할 수 있게 된다 |
-| 8 | `media_key` 레지스트리 + `step`·`prep_task`의 복합 FK | 57개 id의 전역 유일성을 DB가 강제. **`key` PK 하나로는 부족하다** — 두 테이블이 같은 key 행을 함께 참조할 수 있어 같은 id가 양쪽에 동시에 생긴다. `unique (key, owner_kind)` + 참조 쪽의 고정값 `owner_kind` 컬럼 + `(id, owner_kind)` 복합 FK로 한 key를 한쪽 테이블에 묶는다 |
+| 8 | `media_key` 레지스트리 + `step`·`prep_task`의 복합 FK | 88개 id의 전역 유일성을 DB가 강제. **`key` PK 하나로는 부족하다** — 두 테이블이 같은 key 행을 함께 참조할 수 있어 같은 id가 양쪽에 동시에 생긴다. `unique (key, owner_kind)` + 참조 쪽의 고정값 `owner_kind` 컬럼 + `(id, owner_kind)` 복합 FK로 한 key를 한쪽 테이블에 묶는다 |
 | 9 | `shift.crosses_midnight` 신설 | 자정 넘김을 명시적으로 다룬다. **현재 `toMinutes()`는 이 경우를 처리하지 않는다(미구현)** |
 | 10 | `checklist_check`·`prep_check`·`prep_task_last_done` 신설 | 1-2절의 한계 #4·#5·#6을 푼다. **현재 코드에 대응 없음** |
 | 11 | `staff.deleted_at` 신설 | 소프트 삭제. 현재는 배열에서 즉시 제거된다 |
@@ -1703,7 +1703,7 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 
 | # | 검사 | 실측 상태 |
 |---|---|---|
-| 1 | Step 38 + PrepTask 19 = 57개 id가 전역 유일한가 | 통과 |
+| 1 | Step 58 + PrepTask 30 = 88개 id가 전역 유일한가 | 통과 (재확인 2026-09-10) |
 | 2 | `prep_task.recipe_slug` 2건이 실존 레시피를 가리키는가 | 통과 (`cold-brew`, `shokupan`) |
 | 3 | `shift_focus.slug` 5건이 실존 포지션·프렙을 가리키는가 | 통과 (training 1, checklist 2, prep 2) |
 | 4 | `trigger` 4분기의 키 조합이 유니온과 일치하는가 | 통과 |
@@ -1821,10 +1821,10 @@ for (const s of data.staff) {
 
 | # | |
 |---|---|
-| 1 | **죽은 필드가 넷이다.** `goodImage`·`badImage`·`videoUrl`(읽는 코드 0개. 미디어의 실제 조회 키는 항목 id + 파일명 규약 — 3-13절)과 **`PrepTask.kind`**(읽는 화면 0개. 화면은 `recoverable`과 리드타임 컬럼 유무로 갈린다 — 3-8절). ERD에는 넷 다 그려져 있다. **`kind`는 죽었지만 3축 개념은 유효하다** — `01_MVP기획서.md` §5.2 |
-| 2 | **사진·영상 콘텐츠는 사실상 0건이다.** 배관은 완성됐고 57개 항목 중 1개만, 그것도 70바이트 투명 픽셀이 들어 있다 |
+| 1 | **죽은 필드가 셋이다.** `goodImage`·`badImage`·`videoUrl`(읽는 코드 0개. 미디어의 실제 조회 키는 항목 id + 파일명 규약 — 3-13절). ⚠️ **`PrepTask.kind` 는 2026-09-10 기준 살아 있다** — `OrderView.tsx:40` 이 `t.kind === "order"` 로 발주 항목을 고르고, `routine` 이 더해지면서 리드타임이 없는 일을 구분하는 칸이 됐다. 이 줄이 넷이라고 적어둔 것은 낡은 기록이다 |
+| 2 | **사진·영상 콘텐츠가 0건이다.** 배관은 완성됐고 88개 항목 중 **하나도 없다** (2026-09-07 에 투명 픽셀 2개마저 지워졌다) |
 | 3 | **`Staff`/`Assign`은 서버 데이터가 아니다.** `SeedData`에 `staff` 필드가 없다. `types.ts`에서 유도할 수 없고 `roster.ts`에서 가져온 것이다 |
-| 4 | **8~9절은 아직 코드에 없다.** Supabase 미설치, 배포 안 됨, git remote 없음 |
+| 4 | **8~9절은 아직 코드에 없다.** Supabase 미설치, 배포 안 됨. (git remote 는 2026-09-07 에 생겼다 — `origin` = `github.com/JJ0829/store-note` (**비공개**)) |
 | 5 | **`data/events.jsonl` 58줄은 실사용 데이터가 아니다.** 전부 개발 중 본인 조작이고 버거집 slug가 섞여 있다. "수집된 지표"로 제시하면 안 된다 |
 | 6 | **`README.md:86-100`의 SQL 초안은 낡았다.** 이 문서의 8절이 그것을 대체한다 |
 | 7 | **주기 점검을 "관리된다"고 쓰면 안 된다.** 라벨은 뜨지만 마지막 수행일 저장이 없어 매일 리셋된다. 8절의 `prep_check` + `prep_task_last_done` 뷰가 그걸 고치는 제안이고, 아직 구현이 아니다 |

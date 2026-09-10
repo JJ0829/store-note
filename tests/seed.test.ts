@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import {
   countCritical,
   countTasks,
+  countedTasks,
   getPositionBySlug,
   getPrepListBySlug,
   getRecipeBySlug,
@@ -445,4 +446,65 @@ test("★ 리드타임이 없는 항목에는 \"안 하면\" 문장이 있어야
       );
     }
   }
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 숫자 정본
+ *
+ * 이 값들은 문서 아홉 곳에 적혀 있었고 시드를 고칠 때마다 전부 낡았다.
+ * 2026-09-10 점검에서 28군데가 틀린 채로 남아 있는 것을 발견했다.
+ *
+ * **정본은 `docs/deliverables/21_화면명세.md` §1-b 한 곳이고, 이 테스트가 그것을 못 박는다.**
+ * 시드를 일부러 고쳤다면 이 테스트가 깨지는 게 정상이다 —
+ * **숫자를 여기서 고치고 §1-b 도 같이 고칠 것.** 그러라고 있는 테스트다.
+ * ------------------------------------------------------------------ */
+
+const 정본 = "docs/deliverables/21_화면명세.md §1-b 를 같이 고칠 것";
+
+test("★ 숫자 정본 — 프렙 목록의 개수", () => {
+  const want: Record<string, { all: number; counted: number; irreversible: number }> = {
+    afternoon: { all: 11, counted: 5, irreversible: 7 },
+    evening: { all: 3, counted: 3, irreversible: 0 },
+    cycle: { all: 16, counted: 13, irreversible: 1 },
+  };
+  assert.equal(listPrepLists().length, 3, `프렙 목록 수가 바뀌었다 — ${정본}`);
+  for (const list of listPrepLists()) {
+    const w = want[list.slug];
+    assert.ok(w, `모르는 프렙 목록 ${list.slug} — ${정본}`);
+    assert.equal(list.tasks.length, w.all, `${list.slug} 전체 항목 — ${정본}`);
+    assert.equal(countedTasks(list), w.counted, `${list.slug} 화면에 세는 수 — ${정본}`);
+    assert.equal(
+      irreversibleTasks(list).length,
+      w.irreversible,
+      `${list.slug} 되돌릴 수 없음 — ${정본}`,
+    );
+  }
+});
+
+test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상", () => {
+  assert.equal(listRecipes().length, 10, `레시피 수 — ${정본}`);
+  assert.equal(listShifts().length, 4, `근무조 수 — ${정본}`);
+
+  const positions = listPositions();
+  assert.equal(positions.length, 3, `포지션 수 — ${정본}`);
+  const positionSteps = positions.reduce((n, p) => n + countTasks(p), 0);
+  assert.equal(positionSteps, 26, `포지션 스텝 합계 — ${정본}`);
+
+  const recipeSteps = listRecipes().reduce(
+    (n, r) => n + r.sections.reduce((m, s) => m + s.steps.length, 0),
+    0,
+  );
+  assert.equal(recipeSteps, 32, `레시피 스텝 합계 — ${정본}`);
+
+  const prepTasks = listPrepLists().reduce((n, l) => n + l.tasks.length, 0);
+  assert.equal(prepTasks, 30, `프렙 항목 합계 — ${정본}`);
+
+  // /shoot 이 실제로 만드는 목록과 같은 셈법이다 (src/app/shoot/page.tsx)
+  assert.equal(positionSteps + recipeSteps + prepTasks, 88, `촬영 대상 합계 — ${정본}`);
+});
+
+test("★ 숫자 정본 — 레시피가 붙은 프렙 · 수량이 바뀌는 프렙", () => {
+  const all = listPrepLists().flatMap((l) => l.tasks);
+  assert.equal(all.filter((t) => t.recipeSlug).length, 8, `레시피가 붙은 프렙 — ${정본}`);
+  assert.equal(all.filter((t) => t.quantityVaries).length, 10, `수량이 바뀌는 프렙 — ${정본}`);
 });

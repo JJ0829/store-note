@@ -92,9 +92,24 @@ export default function ShootPlanner() {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="매장 사정 (선택) — 예: 사워도우는 안 합니다"
-          aria-label="매장 사정 (선택)"
+          aria-label="매장 사정 (선택) — 직원 이름·연락처는 쓰지 마세요"
           className={INPUT}
         />
+        {/* ★ 제31조 제1항 — 생성형 AI 기반 운용 사실 **사전** 고지.
+            누르기 전에 보여야 하므로 버튼 위에 둔다.
+            → 05_AI기본법_검토.md §6.2 (1) · §6.3
+            ⚠️ 문서 초안은 "포지션명만 전송" 이었으나 **매장 사정 칸도 같이 간다.**
+               사실과 다른 고지는 안 하느니만 못하므로 두 칸이라고 적었다 */}
+        <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-[12px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-300">
+          <b>이 기능은 외부 AI 서비스(Anthropic)를 씁니다.</b> 위에 적은{" "}
+          <b>두 칸(포지션·메뉴 이름, 매장 사정)만</b> 전송되고,{" "}
+          <b>직원 이름·연락처·시급·출퇴근·체크 기록은 전송되지 않습니다.</b>{" "}
+          그러니 <b>매장 사정 칸에 사람 이름이나 연락처를 쓰지 마세요.</b>
+          <br />
+          나오는 것은 <b>초안</b>입니다 — 위생·안전 기준의 최종 판단은 AI 가 대신할 수 없습니다.
+          이 기능을 안 쓰고 직접 목록을 만들어도 됩니다.
+        </p>
+
         <button
           type="button"
           className={BTN_PRIMARY}
@@ -118,6 +133,10 @@ export default function ShootPlanner() {
         <div className="mt-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[13px] font-bold">
+              {/* 제31조 제2항 — 생성물 표시. 면제 해석에 기대지 않는다 (§6.2 (2)) */}
+              <span className="mr-1.5 rounded-md bg-zinc-900 px-1.5 py-0.5 align-middle text-[10.5px] font-bold text-white dark:bg-zinc-100 dark:text-zinc-900">
+                AI 생성 초안
+              </span>
               {state.forWhat} — {state.items.length}개
             </p>
             <button
