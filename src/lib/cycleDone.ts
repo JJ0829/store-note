@@ -73,10 +73,22 @@ export function setEvery(data: CycleEvery, id: string, days: number | null): Cyc
   return next;
 }
 
-/** 마지막으로 한 날을 직접 넣는다. 빈 값이면 지운다 (과거 날짜를 채울 때 쓴다) */
-export function setDone(data: CycleDone, id: string, day: string | null): CycleDone {
+/**
+ * 마지막으로 한 날을 직접 넣는다. 빈 값이면 지운다 (지난 날짜를 채울 때 쓴다).
+ *
+ * ★ **미래 날짜는 안 받는다** (2026-09-10 점검에서 발견).
+ *   날짜 칸에 실수로 다음 달을 넣으면 `daysSince` 가 음수가 되고,
+ *   `everyDays - (음수)` 는 큰 양수라 **빨간 표시가 오히려 풀린다.**
+ *   "안 한 것"이 "여유 있음"으로 보이는 것이 이 화면에서 제일 나쁜 거짓말이다.
+ */
+export function setDone(
+  data: CycleDone,
+  id: string,
+  day: string | null,
+  today: string = businessDay(),
+): CycleDone {
   const next = { ...data };
-  if (!day || !YMD.test(day)) delete next[id];
+  if (!day || !YMD.test(day) || day > today) delete next[id];
   else next[id] = day;
   return next;
 }

@@ -394,3 +394,11 @@ test("내보내기 → 되돌리기 왕복에서 점검 기록이 살아남는�
   assert.deepEqual(loadCycleDone(), { "c-1": "2026-05-11", "c-11": "2026-01-20" });
   assert.deepEqual(loadCycleEvery(), { "c-1": 120 });
 });
+
+test("★ 되돌리기 전에 보여주는 건수에 점검 기록이 들어 있다", () => {
+  // 되돌리기는 점검 기록을 덮어쓰는데 경고에는 없었다 (2026-09-10 점검에서 발견).
+  // 화면이 "사라지는 것"을 셀 때 이 값을 쓴다
+  local.clear();
+  saveCycleDone({ "c-4": "2026-05-11", "c-10": "2026-03-01" });
+  assert.equal(backupCounts(buildBackup("○○")).cycle, 2);
+});

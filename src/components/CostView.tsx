@@ -57,14 +57,18 @@ export default function CostView({
     const next = { ...settings, prices: { ...settings.prices, [id]: price } };
     setSettings(next);
     // ★ 판매가가 안 남으면 다음에 열 때 원가율이 딴 값이 된다
-    save.report(saveSettings(next));
+    save.report("판매가", saveSettings(next), () =>
+      save.report("판매가", saveSettings(next)),
+    );
   }
 
   function setTarget(v: number) {
     if (!settings) return;
     const next = { ...settings, targetCostRate: v };
     setSettings(next);
-    save.report(saveSettings(next));
+    save.report("목표 원가율", saveSettings(next), () =>
+      save.report("목표 원가율", saveSettings(next)),
+    );
   }
 
   if (!items || !settings) {
@@ -103,11 +107,7 @@ export default function CostView({
       title="원가"
       storeName={storeName}
       saved={save.saved}
-      saveFailed={
-        save.failed
-          ? { what: "설정", retry: () => (settings ? save.report(saveSettings(settings)) : undefined) }
-          : null
-      }
+      saveFailed={save.failures}
       wide
     >
       {/* ---------- 목표 원가율 ---------- */}

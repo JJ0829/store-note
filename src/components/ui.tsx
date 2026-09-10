@@ -44,7 +44,7 @@ export function Screen({
    * 성공은 1.2초 뒤 사라지지만 **실패는 스스로 사라지지 않는다** —
    * 사람이 보고 손을 써야 하는 일이기 때문이다.
    */
-  saveFailed?: SaveFailure | null;
+  saveFailed?: SaveFailure[] | null;
   /** 표가 들어가는 화면은 넓게 */
   wide?: boolean;
   right?: ReactNode;
@@ -80,7 +80,7 @@ export function Screen({
         )}
         {right}
       </div>
-      {saveFailed && <SaveFailed {...saveFailed} />}
+      {saveFailed && saveFailed.length > 0 && <SaveFailed failures={saveFailed} />}
       {children}
     </main>
   );
@@ -272,22 +272,36 @@ export type SaveFailure = {
  */
 export function useSaveState() {
   const [saved, setSaved] = useState(false);
-  const [failed, setFailed] = useState(false);
+  /* ★ 대상별로 들고 있는다 (2026-09-10 점검에서 발견).
+     예전에는 `failed` 가 boolean 하나여서 **성공 한 번이 다른 기록의 실패
+     경고를 지웠다** — 계약 저장이 실패한 채로 설정을 고치면 경고가 사라졌다.
+     그리고 재시도 버튼이 화면당 하나라 **엉뚱한 것을 다시 저장**했다. */
+  const [failures, setFailures] = useState<SaveFailure[]>([]);
   const timer = useRef<number | null>(null);
 
-  const report = useCallback((ok: boolean): boolean => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    if (ok) {
-      setFailed(false);
-      setSaved(true);
-      timer.current = window.setTimeout(() => setSaved(false), 1200);
-    } else {
-      // 실패는 지우지 않는다. 사람이 봐야 한다
-      setSaved(false);
-      setFailed(true);
-    }
-    return ok;
-  }, []);
+  /**
+   * `report("출퇴근 기록", savePunches(next), () => ...)`
+   *
+   * 같은 `what` 이 다시 성공하면 그 경고만 사라진다. 다른 대상의 경고는 남는다.
+   */
+  const report = useCallback(
+    (what: string, ok: boolean, retry?: () => void): boolean => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      setFailures((prev) => {
+        const rest = prev.filter((f) => f.what !== what);
+        return ok ? rest : [...rest, { what, retry }];
+      });
+      if (ok) {
+        setSaved(true);
+        timer.current = window.setTimeout(() => setSaved(false), 1200);
+      } else {
+        // 실패는 지우지 않는다. 사람이 봐야 한다
+        setSaved(false);
+      }
+      return ok;
+    },
+    [],
+  );
 
   // 화면을 떠날 때 타이머가 남으면 사라진 컴포넌트에 setState 한다
   useEffect(
@@ -297,7 +311,7 @@ export function useSaveState() {
     [],
   );
 
-  return { saved, failed, report };
+  return { saved, failures, report };
 }
 
 /**
@@ -305,8 +319,12 @@ export function useSaveState() {
  *
  * `role="alert"` 이라 스크린리더가 즉시 읽는다 — 저장은 사람이 누른 결과이고
  * 실패는 **하던 일을 멈춰야 하는** 소식이라 `polite` 가 아니다.
+ *
+ * ★ **여러 개가 동시에 실패할 수 있다.** 계약과 설정이 각각 실패했는데
+ *   하나만 보여주면 나머지는 조용히 잃는다. 전부 그린다.
  */
-export function SaveFailed({ what, retry }: SaveFailure) {
+export function SaveFailed({ failures }: { failures: SaveFailure[] }) {
+  if (failures.length === 0) return null;
   return (
     <div
       role="alert"
@@ -315,21 +333,26 @@ export function SaveFailed({ what, retry }: SaveFailure) {
       <p className="text-[14px] font-bold text-red-800 dark:text-red-200">
         저장에 실패했습니다
       </p>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-red-800/90 dark:text-red-300/90">
-        {/* eun() 은 낱말까지 같이 돌려준다 — "발주 기록은". 앞에 {what} 을
-            또 쓰면 "발주 기록발주 기록은" 이 된다 (실측으로 잡음) */}
-        브라우저 저장 공간을 확인해 주세요. <b>{eun(what)} 아직 남지
-        않았습니다</b> — 화면을 새로 열면 사라집니다.
-      </p>
-      {retry && (
-        <button
-          type="button"
-          onClick={retry}
-          className="mt-2.5 rounded-xl border-2 border-red-300 px-3 py-2 text-[13px] font-semibold text-red-700 active:bg-red-100 dark:border-red-900 dark:text-red-300 dark:active:bg-red-950"
-        >
-          다시 시도
-        </button>
-      )}
+      <ul className="mt-1 flex flex-col gap-2">
+        {failures.map((f) => (
+          <li key={f.what}>
+            <p className="text-[12.5px] leading-relaxed text-red-800/90 dark:text-red-300/90">
+              {/* eun() 은 낱말까지 같이 돌려준다 — "발주 기록은" */}
+              브라우저 저장 공간을 확인해 주세요. <b>{eun(f.what)} 아직 남지
+              않았습니다</b> — 화면을 새로 열면 사라집니다.
+            </p>
+            {f.retry && (
+              <button
+                type="button"
+                onClick={f.retry}
+                className="mt-1.5 rounded-xl border-2 border-red-300 px-3 py-2 text-[13px] font-semibold text-red-700 active:bg-red-100 dark:border-red-900 dark:text-red-300 dark:active:bg-red-950"
+              >
+                {f.what} 다시 시도
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

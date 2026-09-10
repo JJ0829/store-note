@@ -1120,13 +1120,13 @@
         {
           "id": "p-3",
           "title": "르방 갱신",
-          "desc": "매일 같은 시간에. 거르면 되살리는 데 2~3일 걸립니다.",
+          "desc": "매일 같은 시간에. 실온에 따라 6~12시간이면 부피가 두 배로 오릅니다 — 화면의 시각은 넉넉한 12시간 기준입니다. 거르면 되살리는 데 2~3일 걸립니다.",
           "kind": "time",
           "trigger": {
             "type": "daily",
             "at": "14:00"
           },
-          "leadTimeHours": 24,
+          "leadTimeHours": 12,
           "leadTimeDays": null,
           "recoverable": false,
           "consequence": "복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.",

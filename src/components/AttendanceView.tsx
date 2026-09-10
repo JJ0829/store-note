@@ -72,7 +72,7 @@ export default function AttendanceView({
   function commit(next: PunchData) {
     setPunches(next);
     // ★ 실패를 알려야 한다. 출퇴근이 안 남으면 급여가 틀린다
-    save.report(savePunches(next));
+    save.report("출퇴근 기록", savePunches(next), () => save.report("출퇴근 기록", savePunches(next)));
   }
 
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);
@@ -152,11 +152,7 @@ export default function AttendanceView({
       title="출퇴근 · 근태"
       storeName={storeName}
       saved={save.saved}
-      saveFailed={
-        save.failed
-          ? { what: "출퇴근 기록", retry: () => save.report(savePunches(punches)) }
-          : null
-      }
+      saveFailed={save.failures}
       wide
     >
       {/* ---------- 탭 ---------- */}

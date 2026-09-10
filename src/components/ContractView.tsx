@@ -46,14 +46,19 @@ export default function ContractView({ storeName }: { storeName: string }) {
   function commit(next: Contract[]) {
     setList(next);
     // ★ 근로계약은 근로기준법 제42조로 3년 보존 대상이다. 조용히 잃으면 안 된다
-    save.report(saveContracts(next));
+    save.report("계약 내용", saveContracts(next), () =>
+      save.report("계약 내용", saveContracts(next)),
+    );
   }
 
   function patchSettings(patch: Partial<Settings>) {
     if (!settings) return;
     const next = { ...settings, ...patch };
     setSettings(next);
-    save.report(saveSettings(next));
+    // ★ 계약과 설정은 다른 대상이다. 하나로 묶으면 엉뚱한 것을 다시 저장한다
+    save.report("사업장 설정", saveSettings(next), () =>
+      save.report("사업장 설정", saveSettings(next)),
+    );
   }
 
   if (!roster || !settings) {
@@ -81,11 +86,7 @@ export default function ContractView({ storeName }: { storeName: string }) {
       title="근로계약서"
       storeName={storeName}
       saved={save.saved}
-      saveFailed={
-        save.failed
-          ? { what: "계약 내용", retry: () => save.report(saveContracts(list)) }
-          : null
-      }
+      saveFailed={save.failures}
       wide
     >
       {/* ---------- 사업장 설정 ---------- */}

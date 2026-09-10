@@ -628,8 +628,8 @@ const DATA = {
       { id:"p2", title:"내일용 반죽 제조 후 냉장", desc:"내일 아침 구울 분량만큼. 판매량 보고 배수를 정합니다.",
         trigger:"매일 14:00", cycle:false, hours:15, days:null, recoverable:false, critical:true, varies:true,
         option:null, optional:false, conseq:"내일 아침 빵이 없습니다. 사올 수도 없습니다.", recipe:"shokupan" },
-      { id:"p3", title:"르방 갱신", desc:"매일 같은 시간에. 거르면 되살리는 데 2~3일 걸립니다.",
-        trigger:"매일 14:00", cycle:false, hours:24, days:null, recoverable:false, critical:true, varies:false,
+      { id:"p3", title:"르방 갱신", desc:"매일 같은 시간에. 실온에 따라 6~12시간이면 부피가 두 배로 오릅니다 — 화면의 시각은 넉넉한 12시간 기준입니다. 거르면 되살리는 데 2~3일 걸립니다.",
+        trigger:"매일 14:00", cycle:false, hours:12, days:null, recoverable:false, critical:true, varies:false,
         option:"p2", optional:true, conseq:"복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.", recipe:"levain" },
       { id:"pbar", title:"바 부재료 점검 · 제조", desc:"점심 손님이 빠진 뒤 아래를 한꺼번에 확인합니다. 남아 있으면 넘어가고, 부족한 것만 지금 만듭니다.",
         trigger:"매일 14:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
@@ -1824,14 +1824,16 @@ function renderPrep(slug) {
            날짜 칸이 있어야 지난 기록도 채워 넣을 수 있다 */
         if (o.cycle) {
           const box = el(`<div class="cyc">
-            <label>마지막 <input type="date" value="${esc(cycleDone[o.id] || "")}"></label>
+            <label>마지막 <input type="date" max="${bizDay()}" value="${esc(cycleDone[o.id] || "")}"></label>
             <label>주기 <input type="number" min="1" placeholder="미정" value="${cycleEvery[o.id] != null ? cycleEvery[o.id] : ""}"> 일</label>
           </div>`);
           const dIn = box.querySelectorAll("input")[0];
           const eIn = box.querySelectorAll("input")[1];
           dIn.onchange = () => {
             const next = { ...cycleDone };
-            if (DAY_RE.test(dIn.value)) next[o.id] = dIn.value; else delete next[o.id];
+            // 미래 날짜는 기한 계산을 뒤집어 빨간 표시를 오히려 푼다
+            if (DAY_RE.test(dIn.value) && dIn.value <= bizDay()) next[o.id] = dIn.value;
+            else delete next[o.id];
             cycleDone = next; saveCycleDone(next); paintSlot(); refresh();
           };
           eIn.onchange = () => {

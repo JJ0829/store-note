@@ -358,7 +358,12 @@ export default function PrepView({
     pruneDayKeys(keyPrefix, businessDay());
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) setDone(new Set(JSON.parse(raw) as string[]));
+      /* ★ 없으면 **비운다.** `if (raw)` 로 두면 영업일이 바뀌었을 때
+         어제 체크가 그대로 남는다 — 이 effect 는 `storageKey` 가 바뀌면
+         다시 도는데, 새 키에 값이 없으면 아무것도 안 하고 지나갔다.
+         태블릿을 켜둔 채 새벽 4시를 넘기면 그 다음 토글이
+         **어제 체크를 오늘 키에 통째로 써 넣는다.** (2026-09-10 점검에서 발견) */
+      setDone(raw ? new Set(JSON.parse(raw) as string[]) : new Set());
     } catch {
       /* 사생활 보호 모드 등 — 빈 상태로 시작 */
     }
@@ -401,7 +406,9 @@ export default function PrepView({
     (task: PrepTask) => {
       const next = toggleCycleDone(cycleDone, task.id, businessDay());
       setCycleDone(next);
-      save.report(saveCycleDone(next));
+      save.report("점검 기록", saveCycleDone(next), () =>
+        save.report("점검 기록", saveCycleDone(next)),
+      );
       log("prep_check", {
         prepSlug: list.slug,
         taskId: task.id,
@@ -443,7 +450,9 @@ export default function PrepView({
     (id: string, day: string) => {
       const next = setCycleDay(cycleDone, id, day || null);
       setCycleDone(next);
-      save.report(saveCycleDone(next));
+      save.report("점검 기록", saveCycleDone(next), () =>
+        save.report("점검 기록", saveCycleDone(next)),
+      );
     },
     [cycleDone, save],
   );
@@ -454,7 +463,10 @@ export default function PrepView({
       const n = raw.trim() === "" ? null : Number(raw);
       const next = setCycleEvery(cycleEvery, id, n);
       setCycleEveryState(next);
-      save.report(saveCycleEvery(next));
+      // ★ 마지막 날짜와 주기는 다른 키다. 하나로 묶으면 엉뚱한 것을 다시 저장한다
+      save.report("점검 주기", saveCycleEvery(next), () =>
+        save.report("점검 주기", saveCycleEvery(next)),
+      );
     },
     [cycleEvery, save],
   );
@@ -477,12 +489,20 @@ export default function PrepView({
       ),
     [list.tasks, isHeader],
   );
-  const total = counted.length;
-  /* 주기 목록에서 "오늘 체크한 개수" 는 뜻이 없다 — 4개월 주기를 매일 체크할
-     일이 없으니 늘 0/13 이 된다. 그래서 **기한 안에 있는 것**을 센다. */
+  /* ★ 주기 목록의 분모는 **주기를 정한 것**만이다 (2026-09-10 점검에서 발견).
+     "오늘 체크한 개수" 는 뜻이 없고(4개월 주기를 매일 체크할 일이 없다),
+     그렇다고 전부를 분모에 넣으면 **주기를 안 정한 항목 때문에 13/13 인데
+     실제로 판단된 것은 하나도 없는** 상태가 된다.
+     기한을 판단할 수 있는 것만 세고, 하나도 없으면 진행률을 안 그린다. */
+  const cycleJudgeable = isCycleList
+    ? counted.filter((t) => everyOf(t) !== null)
+    : [];
+  const total = isCycleList ? cycleJudgeable.length : counted.length;
   const doneCount = isCycleList
-    ? counted.filter((t) => !statusOf(t).late).length
+    ? cycleJudgeable.filter((t) => !statusOf(t).late).length
     : counted.filter((t) => done.has(t.id)).length;
+  /* 주기를 하나도 안 정했으면 보여줄 진행률이 없다 — 0/0 을 띄우면 거짓이다 */
+  const showProgress = total > 0;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
   return (
@@ -497,10 +517,15 @@ export default function PrepView({
             </p>
             <h1 className="truncate text-lg font-bold">{list.name}</h1>
           </div>
-          <p className="shrink-0 text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">
-            {doneCount}/{total}
-          </p>
+          {showProgress ? (
+            <p className="shrink-0 text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">
+              {doneCount}/{total}
+            </p>
+          ) : (
+            <p className="shrink-0 text-[12px] text-zinc-400">주기 미정</p>
+          )}
         </div>
+        {showProgress && (
         <div
           className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
           role="progressbar"
@@ -514,14 +539,12 @@ export default function PrepView({
             style={{ width: `${pct}%` }}
           />
         </div>
+        )}
       </header>
 
-      {save.failed && (
+      {save.failures.length > 0 && (
         <div className="px-4 pt-4">
-          <SaveFailed
-            what="점검 기록"
-            retry={() => save.report(saveCycleDone(cycleDone) && saveCycleEvery(cycleEvery))}
-          />
+          <SaveFailed failures={save.failures} />
         </div>
       )}
 
@@ -934,6 +957,9 @@ export default function PrepView({
                                 <input
                                   type="date"
                                   value={cycleDone[opt.id] ?? ""}
+                                  /* 미래 날짜를 넣으면 기한 계산이 뒤집혀
+                                     빨간 표시가 오히려 풀린다. lib 에서도 막는다 */
+                                  max={today}
                                   onChange={(e) => putCycleDay(opt.id, e.target.value)}
                                   className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-[13px] dark:border-zinc-700 dark:bg-zinc-900"
                                   aria-label={`${opt.title} 마지막으로 한 날`}

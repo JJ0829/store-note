@@ -67,13 +67,18 @@ export default function VendorView({
         : [...settings.excluded, key],
     };
     setSettings(next);
-    save.report(saveSettings(next));
+    // ★ 거래처와 "원가에서 뺄 재료"(설정)는 다른 대상이다
+    save.report("원가에서 뺄 재료", saveSettings(next), () =>
+      save.report("원가에서 뺄 재료", saveSettings(next)),
+    );
   }
 
   function commit(next: VendorData) {
     setData(next);
     // ★ 단가가 안 남으면 원가율이 다음에 열 때 딴 값이 된다
-    save.report(saveVendors(next));
+    save.report("거래처·단가", saveVendors(next), () =>
+      save.report("거래처·단가", saveVendors(next)),
+    );
   }
 
   const priced = useMemo(
@@ -146,11 +151,7 @@ export default function VendorView({
       title="거래처"
       storeName={storeName}
       saved={save.saved}
-      saveFailed={
-        save.failed
-          ? { what: "거래처·단가", retry: () => (data ? save.report(saveVendors(data)) : undefined) }
-          : null
-      }
+      saveFailed={save.failures}
       wide
     >
       {/* ---------- 단가가 빠진 재료 ---------- */}

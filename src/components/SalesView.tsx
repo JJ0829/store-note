@@ -101,7 +101,9 @@ export default function SalesView({
     const cur = getDay(sales, date);
     const next = { ...sales, [date]: { ...cur, ...p, date } };
     setSales(next);
-    save.report(saveSales(next));
+    save.report("매출 기록", saveSales(next), () =>
+      save.report("매출 기록", saveSales(next)),
+    );
   }
 
   const day = getDay(sales, pick);
@@ -123,11 +125,7 @@ export default function SalesView({
       title="매출"
       storeName={storeName}
       saved={save.saved}
-      saveFailed={
-        save.failed
-          ? { what: "매출 기록", retry: () => save.report(saveSales(sales)) }
-          : null
-      }
+      saveFailed={save.failures}
       wide
     >
       <div className="mt-4 flex gap-2">

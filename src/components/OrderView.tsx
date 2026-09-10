@@ -91,13 +91,18 @@ export default function OrderView({
     setLog(next);
     // ★ "주문함" 이 안 남으면 내일 아침에 안 들어온 것을 못 잡는다.
     //   이 화면의 존재 이유가 바로 그 한 칸이다
-    save.report(saveOrderLog(next));
+    save.report("발주 기록", saveOrderLog(next), () =>
+      save.report("발주 기록", saveOrderLog(next)),
+    );
   }
 
   function link(taskId: string, vendorId: string) {
     const next = { ...links, [taskId]: vendorId };
     setLinks(next);
-    save.report(saveOrderLinks(next));
+    // ★ 발주 기록과 거래처 연결은 다른 대상이다
+    save.report("거래처 연결", saveOrderLinks(next), () =>
+      save.report("거래처 연결", saveOrderLinks(next)),
+    );
   }
 
   /* ---------- 거래처별로 모아 발주서를 만든다 ---------- */
@@ -125,11 +130,7 @@ export default function OrderView({
       title="발주"
       storeName={storeName}
       saved={save.saved}
-      saveFailed={
-        save.failed
-          ? { what: "발주 기록", retry: () => save.report(saveOrderLog(log)) }
-          : null
-      }
+      saveFailed={save.failures}
       wide
     >
       {/* ---------- 1. 안 들어온 것 ---------- */}
@@ -164,7 +165,7 @@ export default function OrderView({
                     onClick={() => {
                       const next = putState(log, p.date, p.taskId, { received: true });
                       setLog(next);
-                      save.report(saveOrderLog(next));
+                      save.report("발주 기록", saveOrderLog(next));
                     }}
                   >
                     들어왔음

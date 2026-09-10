@@ -70,7 +70,12 @@ export default function ChecklistView({
     pruneDayKeys(keyPrefix, businessDay());
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) setDone(new Set(JSON.parse(raw) as string[]));
+      /* ★ 없으면 **비운다.** `if (raw)` 로 두면 영업일이 바뀌었을 때
+         어제 체크가 그대로 남는다 — 이 effect 는 `storageKey` 가 바뀌면
+         다시 도는데, 새 키에 값이 없으면 아무것도 안 하고 지나갔다.
+         태블릿을 켜둔 채 새벽 4시를 넘기면 그 다음 토글이
+         **어제 체크를 오늘 키에 통째로 써 넣는다.** (2026-09-10 점검에서 발견) */
+      setDone(raw ? new Set(JSON.parse(raw) as string[]) : new Set());
     } catch {
       /* 사파리 사생활 보호 모드 등 — 그냥 빈 상태로 시작 */
     }

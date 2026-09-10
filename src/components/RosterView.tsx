@@ -67,7 +67,9 @@ export default function RosterView({
     (next: RosterData) => {
       setData(next);
       // ★ 근무표가 안 남으면 근태(계획 − 실제)를 아예 못 만든다
-      save.report(saveRoster(next));
+      save.report("근무표", saveRoster(next), () =>
+        save.report("근무표", saveRoster(next)),
+      );
     },
     [save],
   );
@@ -171,9 +173,7 @@ export default function RosterView({
         )}
       </div>
 
-      {save.failed && (
-        <SaveFailed what="근무표" retry={() => save.report(saveRoster(data))} />
-      )}
+      <SaveFailed failures={save.failures} />
 
       {/* ---------- 주 이동 ---------- */}
       <div className="mt-5 flex items-center justify-between gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">

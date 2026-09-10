@@ -276,12 +276,15 @@ export default function BackupView({
               <Row label="직원" value={`${stage.counts.staff}명`} />
               <Row label="출퇴근" value={`${stage.counts.punches}건`} />
               <Row label="근로계약" value={`${stage.counts.contracts}건`} />
+              {/* ★ 되돌리기가 점검 기록도 덮어쓰는데 여기에 없었다 (2026-09-10 점검) */}
+              <Row label="점검 기록" value={`${stage.counts.cycle}건`} />
             </div>
 
             <p className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-[12px] leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300">
               <b>지금 이 태블릿에 있는 것은 사라집니다.</b> 합치지 않고
               덮어씁니다 (직원 {stage.losing.staff}명 · 출퇴근{" "}
-              {stage.losing.punches}건 · 계약 {stage.losing.contracts}건). 지금
+              {stage.losing.punches}건 · 계약 {stage.losing.contracts}건 · 점검{" "}
+              {stage.losing.cycle}건). 지금
               것이 더 최신이면 <b>먼저 전체 백업을 내려받으세요.</b>
             </p>
 
