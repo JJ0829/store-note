@@ -11,6 +11,10 @@
  *
  * ⚠️ 여기서 하는 것은 **구문 검사와 몇 가지 계약 확인**뿐이다.
  *   화면이 제대로 그려지는지는 브라우저로 봐야 한다 (DOM 이 없다).
+ *
+ * 짝이 되는 파일 —
+ *   `tests/twoApps.test.ts`    박아둔 데이터가 `seed.json` 과 같은 사실인가
+ *   `tests/builtPages.test.ts` Next 빌드 산출물이 실제로 무엇을 내보내는가
  * ------------------------------------------------------------------ */
 
 import test from "node:test";
@@ -51,18 +55,6 @@ test("두 파일의 스크립트가 같다 (사본이 갈리면 한쪽만 고치
   assert.equal(a, b, "매장수첩.html 과 app.html 의 스크립트가 달라졌다");
 });
 
-test("★ 단일 파일의 마감조 시각이 시드와 같다", () => {
-  // 두 앱의 시드가 갈리면 시연 화면과 제품이 다른 것을 보여준다.
-  // 영업 22:00 종료 · 마감 22:30 완료 (사장님 확인 2026-09-09).
-  // 01:00 퇴근은 특별한 경우라 근무조 설정에는 안 넣는다.
-  const js = scriptOf(FILES[0]);
-  assert.match(
-    js,
-    /name:"마감조",\s*start:"14:30",\s*end:"22:30"/,
-    "단일 파일의 마감조 시각이 시드와 어긋났다",
-  );
-});
-
 test("★ 자정 넘김을 다루는 onDuty 가 있다", () => {
   // 평소에는 안 쓰이지만 01:00 퇴근 예외인 날에 필요하다.
   // 없으면 그날 근무조가 홈에서 통째로 사라진다
@@ -101,42 +93,9 @@ test("마감조 문구에 시간 압박이 없다", () => {
  *
  * 뿌리는 키 계산이 아니라 데이터였다 — seed.json 을 복사해 넣으면서
  * steps[].id 와 sections[].id 가 통째로 빠져서 쓸 키가 없었다.
- * 그래서 아래 두 검사가 짝으로 있어야 한다.
+ * 데이터가 시드와 같은지는 `tests/twoApps.test.ts` 가 본다 — 이 파일은
+ * **파일이 안 깨졌는가**만 본다.
  * ------------------------------------------------------------------ */
-
-type Named = { id: string; title: string };
-
-/** 단일 파일 안에 박아둔 positions 블록만 잘라낸다 */
-function positionsOf(path: string): string {
-  const html = readFileSync(path, "utf8");
-  const from = html.indexOf("  positions: [");
-  const to = html.indexOf("\n  prepLists:", from);
-  assert.ok(from > 0 && to > from, `${path}: positions 블록을 못 찾았다`);
-  return html.slice(from, to);
-}
-
-/** `{ id:"...", title:"...", desc:` 또는 `..., note:` 를 순서대로 뽑는다 */
-const pick = (block: string, tail: string): Named[] =>
-  [
-    ...block.matchAll(
-      new RegExp(`\\{ id:"([^"]*)", title:"([^"]*)", ${tail}`, "g"),
-    ),
-  ].map((m) => ({ id: m[1], title: m[2] }));
-
-function seedFlat() {
-  const seed = JSON.parse(readFileSync("data/seed.json", "utf8")) as {
-    positions: { sections: (Named & { steps: Named[] })[] }[];
-  };
-  const sections: Named[] = [];
-  const steps: Named[] = [];
-  for (const p of seed.positions) {
-    for (const s of p.sections) {
-      sections.push({ id: s.id, title: s.title });
-      for (const t of s.steps) steps.push({ id: t.id, title: t.title });
-    }
-  }
-  return { sections, steps };
-}
 
 for (const path of FILES) {
   test(`★ ${path} — 체크리스트가 t.id 로 저장한다`, () => {
@@ -151,12 +110,5 @@ for (const path of FILES) {
     );
     assert.match(body, /store\.set\(key, \[\.\.\.done\]\)/, "저장 호출이 사라졌다");
     assert.match(body, /done\.(has|add|delete)\(t\.id\)/, "체크 판정이 t.id 가 아니다");
-  });
-
-  test(`★ ${path} — 박아둔 항목의 id·제목이 시드와 같다`, () => {
-    const block = positionsOf(path);
-    const seed = seedFlat();
-    assert.deepEqual(pick(block, "desc:"), seed.steps, "항목이 시드와 어긋났다");
-    assert.deepEqual(pick(block, "note:"), seed.sections, "섹션이 시드와 어긋났다");
   });
 }
