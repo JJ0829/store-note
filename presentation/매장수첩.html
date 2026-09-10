@@ -200,6 +200,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .opts { border-top: 1px dashed var(--line); background: var(--sunken); padding: 12px 14px; }
 .scaler-sm { border-top: 1px solid var(--line); padding: 10px 12px; }
+.steps { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.steps > summary { cursor: pointer; list-style: none; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.steps > summary::-webkit-details-marker { display: none; }
+.steps .caret { display: inline-block; transition: transform .15s; }
+.steps[open] .caret { transform: rotate(90deg); }
+.steps .dim { font-weight: 400; color: var(--ink-3); }
+.steplist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.step { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+        border: 1px solid var(--line); border-radius: 12px; background: var(--ground); }
+.step.crit { border-color: var(--danger-b); }
+.stepno { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: var(--sunken);
+          color: var(--ink-3); font-size: 12px; font-weight: 700; display: flex;
+          align-items: center; justify-content: center; }
+.step h4 { margin: 2px 0 0; font-size: 14px; }
+.step p { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.55; }
+.step .tip { margin-top: 6px; background: var(--sunken); border-radius: 8px; padding: 6px 8px; font-size: 12px; }
 .slot.late { background: var(--danger-w); color: var(--danger); }
 .cyc { display:flex; flex-wrap:wrap; gap:6px 14px; padding:8px 12px 2px; }
 .cyc label { font-size:12px; color:var(--ink-3); display:flex; align-items:center; gap:5px; }
@@ -499,7 +515,7 @@ const DATA = {
       ],
       steps:[
         {title:"에스프레소 먼저 내린다", desc:"우유를 먼저 스팀하면 커피를 기다리는 동안 거품이 꺼집니다."},
-        {title:"스팀 — 온도와 거품", desc:"공기 주입은 2~3초만, 그다음 노즐을 깊이 넣어 회전시킵니다. 60~65℃에서 멈춥니다. 65℃를 넘기면 단맛이 사라지고 쇠맛이 납니다."},
+        {title:"스팀 — 온도와 거품", desc:"공기 주입은 2~3초만, 그다음 노즐을 깊이 넣어 회전시킵니다. 60~65℃에서 멈춥니다. 65℃를 넘기면 단맛이 사라지고 쇠맛이 납니다.", tip:"이 항목이 사람마다 제일 다릅니다. 영상으로 보세요."},
         {title:"스팀완드 즉시 닦기", desc:"우유가 굳으면 안 지워지고 위생 문제가 됩니다.", critical:true}
       ]},
     { slug:"cold-brew", name:"콜드브루 (1배치)", category:"음료", forNewbie:true,
@@ -586,7 +602,7 @@ const DATA = {
       steps:[
         {title:"생크림·볼을 차게", desc:"미지근하면 거품이 안 잡힙니다."},
         {title:"설탕을 넣고 중속으로", desc:"한 번에 고속으로 돌리면 순식간에 넘어갑니다."},
-        {title:"흐르다 멈추는 정도에서 끝", desc:"숟가락을 들면 천천히 흘러내리는 상태입니다. 뿔이 서면 이미 지났습니다.", critical:true}
+        {title:"흐르다 멈추는 정도에서 끝", desc:"숟가락을 들면 천천히 흘러내리는 상태입니다. 뿔이 서면 이미 지났습니다.", critical:true, tip:"여기가 사람마다 제일 다른 지점입니다. 영상으로 남겨두면 좋습니다."}
       ]},
     { slug:"levain", name:"르방 갱신 (1:1:1)", category:"베이커리", forNewbie:true,
       yield:{amount:300, unit:"g"}, note:"매일 같은 시간에. 거르면 되살리는 데 2~3일",
@@ -599,7 +615,7 @@ const DATA = {
         {title:"기존 르방 100g만 남기고 덜어낸다", desc:"다 쓰면 씨가 없어집니다. 남기는 것이 먼저입니다.", critical:true},
         {title:"밀가루·물을 같은 무게로 섞는다", desc:"르방 : 밀가루 : 물 = 1 : 1 : 1. 눈대중으로 하면 산도가 매일 달라집니다."},
         {title:"갱신 시각을 적고 실온에 둔다", desc:"언제 먹였는지 안 적으면 다음 사람이 언제 쓸 수 있는지 모릅니다.", critical:true},
-        {title:"부피가 두 배로 오르면 쓸 수 있다", desc:"시간보다 부피가 기준입니다. 실온에 따라 6~12시간으로 다릅니다."}
+        {title:"부피가 두 배로 오르면 쓸 수 있다", desc:"시간보다 부피가 기준입니다. 실온에 따라 6~12시간으로 다릅니다.", tip:"여기가 사람마다 제일 다른 지점입니다. 영상으로 남겨두면 좋습니다."}
       ]}
   ],
 
@@ -1668,6 +1684,32 @@ function renderPrep(slug) {
         grid.appendChild(b);
       });
       draw();
+
+      /* ★ 만드는 순서를 여기 붙인다 (사장님 요청 2026-09-10:
+         "프렙이랑 레시피랑 같이 있어야 하는데").
+         전에는 재료와 배수만 있고 순서를 보려면 레시피 화면으로 나가야 했다.
+         재료와 순서는 한 몸이다. 접어 두는 것은 목록을 훑을 수 있게 하기
+         위해서다 — 한 번 누르는 것과 화면을 옮기는 것은 다르다. */
+      if ((rec.steps || []).length) {
+        const det = el(`<details class="steps">
+          <summary><span class="caret">›</span> 만드는 순서 ${rec.steps.length}단계${rec.note ? ` <span class="dim">${esc(rec.note)}</span>` : ""}</summary>
+          <ol class="steplist"></ol>
+        </details>`);
+        const ol = det.querySelector(".steplist");
+        rec.steps.forEach((st, i) => {
+          const li = el(`<li class="step${st.critical ? " crit" : ""}">
+            <span class="stepno">${i + 1}</span>
+            <div style="min-width:0;flex:1">
+              ${st.critical ? `<span class="pill crit">꼭 지키기</span>` : ""}
+              <h4>${esc(st.title)}</h4>
+              <p>${esc(st.desc)}</p>
+              ${st.tip ? `<p class="tip"><b>선배 한마디</b> ${esc(st.tip)}</p>` : ""}
+            </div>
+          </li>`);
+          ol.appendChild(li);
+        });
+        sc.appendChild(det);
+      }
       return sc;
     };
 

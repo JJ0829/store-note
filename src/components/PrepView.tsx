@@ -189,7 +189,92 @@ function Scaler({
           </li>
         ))}
       </ul>
+
+      <RecipeSteps recipe={recipe} />
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * 만드는 순서 — 프렙 안에서 바로 본다
+ *
+ * ★ 왜 여기 있나 (사장님 요청 2026-09-10: "프렙이랑 레시피랑 같이 있어야 하는데")
+ *
+ *   전에는 프렙에 **재료와 배수만** 있었다. 만드는 순서를 보려면
+ *   `/r/{slug}` 로 나가야 했고, 그 화면은 **매장 PIN 이 걸려 있다.**
+ *   주방에서 크림폼을 올리다 말고 화면을 나갔다가, 번호를 넣고,
+ *   다시 프렙으로 돌아와 체크해야 했다. 젖은 손으로 네 번이다.
+ *
+ *   재료와 순서는 한 몸이다. 나눠 놓을 이유가 없었다.
+ *
+ * ★ 접어 두는 이유: 오후 프렙에만 레시피 붙은 항목이 여덟이다.
+ *   전부 펼쳐 두면 스크롤이 길어져 정작 목록을 못 훑는다.
+ *   한 번 누르는 것과 **화면을 옮기는 것**은 다르다 — 번호도 안 묻고
+ *   보던 자리를 잃지도 않는다.
+ *
+ * 사진 자리(`MediaSlot base={step.id}`)는 레시피 화면과 **같은 id** 를 쓴다.
+ * 한 번 찍어 넣으면 두 화면에 같이 뜬다.
+ * ------------------------------------------------------------------ */
+function RecipeSteps({ recipe }: { recipe: Recipe }) {
+  const steps = recipe.sections.flatMap((sec) => sec.steps);
+  if (steps.length === 0) return null;
+  const note = recipe.sections.map((sec) => sec.note).filter(Boolean)[0];
+
+  return (
+    <details className="group mt-3 border-t border-zinc-200 pt-2.5 dark:border-zinc-800">
+      <summary className="cursor-pointer list-none text-[12.5px] font-semibold text-zinc-600 marker:content-none dark:text-zinc-300">
+        <span className="inline-block transition-transform group-open:rotate-90">›</span>{" "}
+        만드는 순서 {steps.length}단계
+        {note && (
+          <span className="ml-1.5 font-normal text-zinc-400">{note}</span>
+        )}
+      </summary>
+
+      <ol className="mt-2 flex flex-col gap-2">
+        {steps.map((step, i) => (
+          <li
+            key={step.id}
+            className={[
+              "overflow-hidden rounded-xl border bg-white dark:bg-zinc-900",
+              step.critical
+                ? "border-red-200 dark:border-red-900/60"
+                : "border-zinc-200 dark:border-zinc-800",
+            ].join(" ")}
+          >
+            <div className="flex items-start gap-2.5 p-3">
+              <span
+                aria-hidden
+                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+              >
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                {step.critical && (
+                  <span className="mb-1 inline-block rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
+                    꼭 지키기
+                  </span>
+                )}
+                <h4 className="text-[14px] font-semibold leading-snug">
+                  {step.title}
+                </h4>
+                <p className="mt-0.5 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                  {step.desc}
+                </p>
+                {step.tip && (
+                  <p className="mt-1.5 rounded-lg bg-zinc-100 px-2 py-1.5 text-[12px] leading-relaxed text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                    <span className="font-semibold">선배 한마디 </span>
+                    {step.tip}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="px-3 pb-3 pl-[2.75rem]">
+              <MediaSlot base={step.id} />
+            </div>
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 }
 
