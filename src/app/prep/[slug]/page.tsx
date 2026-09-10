@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import PrepView from "@/components/PrepView";
-import StoreGate from "@/components/StoreGate";
+import ServerStoreGate from "@/components/ServerStoreGate";
 import { getPrepListBySlug, getStore, listPrepLists, listRecipes } from "@/lib/repo";
 
 type Params = { slug: string };
@@ -35,8 +35,8 @@ export default async function PrepPage({
  *  ⚠️ 그래도 가림막이다. 서버는 여전히 하이드레이션용 페이로드에 레시피를
  *  실어 보낸다 — `tests/builtPages.test.ts` 가 그 사실을 붙들고 있다. */
   return (
-    <StoreGate title={list.name}>
+    <ServerStoreGate title={list.name}>
       <PrepView list={list} recipes={listRecipes()} storeName={getStore().name} />
-    </StoreGate>
+    </ServerStoreGate>
   );
 }

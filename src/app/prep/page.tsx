@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import RecipeSearch from "@/components/RecipeSearch";
-import StoreGate from "@/components/StoreGate";
+import ServerStoreGate from "@/components/ServerStoreGate";
 import {
   countedTasks,
   getStore,
@@ -43,13 +43,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function PrepIndexPage() {
+export default async function PrepIndexPage() {
   const store = getStore();
   const prepLists = listPrepLists();
   const recipes = listRecipes();
 
   return (
-    <StoreGate title="프렙">
+    <ServerStoreGate title="프렙">
       <main className="mx-auto min-h-dvh w-full max-w-[720px] bg-zinc-50 px-4 py-8 pb-28 dark:bg-zinc-950">
         <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
         <h1 className="mt-1 text-2xl font-bold">프렙</h1>
@@ -110,6 +110,6 @@ export default function PrepIndexPage() {
           서버를 붙일 때 됩니다. <b>레시피 링크는 매장 밖으로 보내지 마세요.</b>
         </p>
       </main>
-    </StoreGate>
+    </ServerStoreGate>
   );
 }

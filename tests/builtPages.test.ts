@@ -60,12 +60,14 @@ test("★ 시드의 슬러그마다 화면이 실제로 만들어졌다", (t) =>
   /* `seed.test.ts` 는 데이터 안에서 슬러그가 맞는지만 본다. 여기서는
      **빌드가 그 화면을 진짜로 뽑았는지** 본다 — 시드에는 있는데
      `generateStaticParams` 에서 빠지면 시연 중에 404 가 난다. */
+  /* ★ 레시피·프렙은 2026-09-10 부터 **정적 파일이 없다.**
+     서버 게이트(`ServerStoreGate`)가 쿠키를 보느라 요청마다 그린다.
+     그게 이 잠금이 진짜인 이유다 — 미리 만들어 두면 그 파일이 그냥 나간다.
+     그래서 여기서는 **공개 화면**만 본다. */
   const missing: string[] = [];
   const want = [
     ...seed.positions.map((p) => `p/${p.shareSlug}.html`),
     ...seed.positions.map((p) => `t/${p.shareSlug}.html`),
-    ...seed.recipes.map((r) => `r/${r.slug}.html`),
-    ...seed.prepLists.map((l) => `prep/${l.slug}.html`),
   ];
   for (const rel of want) {
     if (!fs.existsSync(path.join(OUT, rel))) missing.push(rel);
@@ -126,37 +128,62 @@ test("배포 주소가 빌드에 박힌다 — localhost 로 나가면 카톡 �
  *   서버 보호가 생기면 이 테스트가 깨진다 — 그때 **일부러** 고쳐야 한다.
  * ------------------------------------------------------------------ */
 
-test("★ 지금 레시피는 잠겨 있어도 HTML 에 그대로 실려 나간다 (V-19)", (t) => {
+test("★ 레시피는 이제 정적 파일로 안 나간다 (V-19 해소)", (t) => {
   if (!built) return t.skip(SKIP);
 
-  /* CLAUDE.md: "레시피는 공개 링크로 두면 안 된다. 영업비밀이다."
-     그런데 매장 PIN(`StoreGate`) 은 **브라우저 안에서만** 돈다.
-     서버는 잠금과 무관하게 레시피를 통째로 그려서 보낸다 —
-     `curl` 이나 [페이지 소스 보기] 로 PIN 없이 전부 읽힌다.
+  /* ★ 2026-09-10 이전에는 여기가 반대였다.
+   *
+   *  그때 이 자리에는 "레시피가 잠겨 있어도 HTML 에 그대로 실려 나간다" 를
+   *  못 박은 테스트가 있었다. 매장 PIN 이 브라우저 안에서만 돌아서, 서버는
+   *  잠금과 무관하게 레시피를 그려 보냈다 — `curl` 로 PIN 없이 읽혔다.
+   *  그 테스트에 **"서버 보호가 생기면 깨진다, 그때 일부러 고치라"** 고
+   *  적어뒀었고, 지금이 그 순간이다.
+   *
+   *  이제 `ServerStoreGate` 가 쿠키를 보고 없으면 `children` 을 렌더하지
+   *  않는다. 렌더를 안 하니 하이드레이션 페이로드에도 안 실린다.
+   *  그리고 `cookies()` 를 부르므로 **정적 파일 자체가 안 만들어진다.**
+   *
+   *  ⚠️ 다만 `STORE_PIN` 을 안 넣고 배포하면 서버는 **안 막는다**
+   *  (사장님 결정: 환경변수를 깜빡해서 시연 중 레시피가 안 열리는 쪽이 더
+   *  큰 사고다). 대신 화면이 빨간 띠로 크게 말한다 — 아래 테스트가 그걸 본다. */
+  const gated = ["r.html", "r/americano.html", "prep.html", "prep/afternoon.html"];
+  const stillStatic = gated.filter((rel) => fs.existsSync(path.join(OUT, rel)));
 
-     ★ 배포하면(D-010) 주소를 아는 사람은 누구나 받아볼 수 있다.
-       발표에서 "PIN 으로 보호한다" 고 말하면 그건 사실이 아니다.
-       → `06_보안설계` V-19 · 진짜 접근 통제는 서버가 있어야 한다
-
-     이 테스트는 **그 사실을 지우지 못하게** 붙들어 둔다. */
-  const src = html("r/americano.html");
-  const recipe = seed.recipes.find((r) => r.slug === "americano");
-  assert.ok(recipe, "아메리카노 레시피가 시드에 없다");
-
-  for (const ing of recipe.ingredients) {
-    assert.ok(
-      src.includes(ing.name),
-      `재료 "${ing.name}" 가 HTML 에서 사라졌다 — 서버 보호가 생겼다면 ` +
-        "이 테스트를 지우고 06_보안설계 V-19 를 해소로 바꿀 것",
-    );
-  }
-  // 잠금 화면조차 HTML 에 없다. 가림막은 하이드레이션 뒤에 씌워진다
-  assert.ok(
-    !src.includes("잠금번호"),
-    "HTML 에 잠금 화면이 들어갔다 — 서버 쪽 처리가 생겼다는 뜻이다",
+  assert.deepEqual(
+    stillStatic,
+    [],
+    "레시피 화면이 정적 파일로 만들어졌다 — 그 파일은 게이트를 안 거치고 그냥 나간다: " +
+      stillStatic.join(", "),
   );
 });
 
+test("★ 서버 PIN 이 없을 때 조용히 열지 않고 화면이 알린다", (t) => {
+  /* 사장님이 고른 것은 "열어두되 크게 알린다" 다. 알림이 빠지면 그냥
+     조용히 열린 것이고, 그게 이번 작업 내내 없애려던 바로 그것이다. */
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "src", "components", "ServerStoreGate.tsx"),
+    "utf-8",
+  );
+  assert.match(src, /storePinConfigured\(\)/, "설정 여부를 안 본다");
+  assert.match(src, /매장 번호가 설정되어 있지 않습니다/, "알리는 문구가 없다");
+  assert.match(src, /role="alert"/, "스크린리더가 못 읽는다");
+});
+
+test("★ 잠겼을 때 children 을 렌더하지 않는다 (렌더하면 페이로드에 실린다)", () => {
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "src", "components", "ServerStoreGate.tsx"),
+    "utf-8",
+  );
+  /* 잠긴 갈래가 `children` 을 그리면 화면에는 안 보여도 하이드레이션
+     페이로드에 실려 나간다. 예전 `StoreGate` 가 정확히 그랬다. */
+  const locked = src.slice(src.indexOf("if (!cookieMatches("));
+  const upToReturn = locked.slice(0, locked.indexOf("}"));
+  assert.ok(
+    !upToReturn.includes("{children}"),
+    "잠긴 갈래에서 children 을 그린다 — 안 보여도 소스에는 들어간다",
+  );
+  assert.match(upToReturn, /StoreUnlockForm/, "입력칸을 안 보낸다");
+});
 test("★ 개인정보·매출은 HTML 에 안 들어간다 (브라우저에만 있기 때문)", (t) => {
   if (!built) return t.skip(SKIP);
 
@@ -250,7 +277,7 @@ test("★ 배합이 보이는 마크업에 나오는 화면이 없다 (전부 �
     [],
     "잠금 없이 배합이 보이는 화면이 있다: " +
       leaking.join(", ") +
-      ". 해당 page.tsx 를 StoreGate 로 감쌀 것",
+      ". 해당 page.tsx 를 ServerStoreGate 로 감쌀 것",
   );
 });
 
@@ -268,7 +295,9 @@ test("★ 레시피를 다루는 라우트에 게이트가 붙어 있다 (코드
   const naked: string[] = [];
   for (const rel of need) {
     const src = fs.readFileSync(path.join(process.cwd(), rel), "utf-8");
-    if (!/<StoreGate\b/.test(src)) naked.push(rel);
+    /* ★ `ServerStoreGate` 여야 한다. `StoreGate`(브라우저)로 되돌아가면
+       화면만 가리고 서버는 레시피를 그대로 보낸다 — 원래대로 돌아간다. */
+    if (!/<ServerStoreGate\b/.test(src)) naked.push(rel);
   }
-  assert.deepEqual(naked, [], `매장 PIN 게이트가 빠진 라우트: ${naked.join(", ")}`);
+  assert.deepEqual(naked, [], `서버 게이트가 빠진 라우트: ${naked.join(", ")}`);
 });

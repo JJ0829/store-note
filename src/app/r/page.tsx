@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import RecipeSearch from "@/components/RecipeSearch";
-import StoreGate from "@/components/StoreGate";
+import ServerStoreGate from "@/components/ServerStoreGate";
 import { getStore, listRecipes } from "@/lib/repo";
 
 // 레시피는 영업비밀이다. 체크리스트와 달리 검색에 걸리면 안 된다.
@@ -13,12 +13,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RecipeListPage() {
+export default async function RecipeListPage() {
   const store = getStore();
   const recipes = listRecipes();
 
   return (
-    <StoreGate title="레시피">
+    <ServerStoreGate title="레시피">
       <main className="mx-auto min-h-dvh w-full max-w-[720px] bg-zinc-50 px-4 py-8 dark:bg-zinc-950">
         <div className="flex items-center justify-between gap-3">
           <BackButton />
@@ -45,6 +45,6 @@ export default function RecipeListPage() {
           서버를 붙일 때 됩니다. <b>레시피 링크는 매장 밖으로 보내지 마세요.</b>
         </p>
       </main>
-    </StoreGate>
+    </ServerStoreGate>
   );
 }

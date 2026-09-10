@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import RecipeDetail from "@/components/RecipeDetail";
-import StoreGate from "@/components/StoreGate";
+import ServerStoreGate from "@/components/ServerStoreGate";
 import { getRecipeBySlug, getStore, listRecipes } from "@/lib/repo";
 
 type Params = { slug: string };
@@ -34,8 +34,8 @@ export default async function RecipePage({
   if (!recipe) notFound();
 
   return (
-    <StoreGate title={recipe.name}>
+    <ServerStoreGate title={recipe.name}>
       <RecipeDetail recipe={recipe} storeName={getStore().name} />
-    </StoreGate>
+    </ServerStoreGate>
   );
 }

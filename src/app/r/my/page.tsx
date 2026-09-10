@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import LocalRecipeView from "@/components/LocalRecipeView";
-import StoreGate from "@/components/StoreGate";
+import ServerStoreGate from "@/components/ServerStoreGate";
 import { getStore } from "@/lib/repo";
 
 export const metadata: Metadata = {
@@ -15,12 +15,12 @@ export const metadata: Metadata = {
  * 시드 레시피(/r/[slug])는 빌드 때 주소가 정해지지만, 직접 추가한 것은
  * 브라우저에만 있으므로 주소를 미리 만들 수 없다. 그래서 ?id= 로 받는다.
  */
-export default function MyRecipePage() {
+export default async function MyRecipePage() {
   return (
-    <StoreGate title="레시피">
+    <ServerStoreGate title="레시피">
       <Suspense fallback={null}>
         <LocalRecipeView storeName={getStore().name} />
       </Suspense>
-    </StoreGate>
+    </ServerStoreGate>
   );
 }
