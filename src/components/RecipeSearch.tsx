@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { copyText } from "@/lib/copyText";
-import { isLocal, loadLocalRecipes } from "@/lib/localRecipes";
+import {
+  countBrokenLocalRecipes,
+  isLocal,
+  loadLocalRecipes,
+} from "@/lib/localRecipes";
 import type { Recipe } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -18,9 +22,12 @@ import type { Recipe } from "@/lib/types";
 export default function RecipeSearch({ recipes }: { recipes: Recipe[] }) {
   const [q, setQ] = useState("");
   const [mine, setMine] = useState<Recipe[]>([]);
+  /** 모양이 깨져서 화면에서 뺀 개수. 0 이 아니면 말해야 한다 */
+  const [broken, setBroken] = useState(0);
 
   useEffect(() => {
     setMine(loadLocalRecipes());
+    setBroken(countBrokenLocalRecipes());
   }, []);
 
   const all = useMemo(() => [...recipes, ...mine], [recipes, mine]);
@@ -54,6 +61,21 @@ export default function RecipeSearch({ recipes }: { recipes: Recipe[] }) {
 
   return (
     <>
+      {/* ★ 읽을 수 없는 레시피를 조용히 빼지 않는다.
+          빼기만 하면 사장님은 **자기가 넣은 레시피가 사라진 줄** 안다.
+          그리고 그건 백업에도 안 담긴다는 뜻이다.
+          (예전에는 이런 항목 하나가 이 화면 전체를 하얗게 만들었다) */}
+      {broken > 0 && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl border-2 border-amber-300 bg-amber-50 px-3.5 py-3 text-[12px] leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+        >
+          <b>읽을 수 없는 레시피 {broken}개를 화면에서 뺐습니다.</b> 옛 판에서
+          만들었거나 저장이 도중에 끊긴 것입니다. 나머지는 그대로 쓸 수 있지만,
+          <b> 뺀 것은 백업에도 안 담깁니다.</b> 다시 넣으셔야 합니다.
+        </p>
+      )}
+
       <input
         type="search"
         value={q}

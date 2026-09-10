@@ -32,6 +32,7 @@ const local = new MemStorage();
 (globalThis as Record<string, unknown>).localStorage = local;
 
 const {
+  countBrokenLocalRecipes,
   LOCAL_PREFIX,
   addLocalRecipe,
   getLocalRecipe,
@@ -205,4 +206,79 @@ test("저장에 실패하면 false — 예외를 던지지 않는다", () => {
   assert.equal(saveLocalRecipes([recipe()]), false);
   assert.equal(addLocalRecipe(recipe()), false);
   local.setItem = orig;
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 깨진 레시피 하나가 화면 전체를 죽이지 않는다.
+ *
+ * 2026-09-10 브라우저에서 실제로 냈다. 칸 이름이 다른 항목을 하나 넣었더니
+ * `/r` 이 `Cannot read properties of undefined (reading 'length')` 로 터졌고,
+ * 사장님이 보는 것은 `Application error` 한 줄뿐이었다.
+ *
+ * 예전 `loadLocalRecipes` 는 `Array.isArray(parsed)` 만 봤다 — 배열이기만
+ * 하면 안에 뭐가 들었든 그대로 화면에 넘겼다.
+ *
+ * 어떻게 깨지나: 옛 판 앱이 만든 것 · 다른 판 백업으로 되돌렸을 때 ·
+ * 저장 공간이 차서 새 값이 안 써지고 옛 값이 남았을 때.
+ * ------------------------------------------------------------------ */
+
+/** 화면이 실제로 읽는 칸을 다 갖춘 레시피 */
+function whole(id: string): Recipe {
+  return {
+    id,
+    slug: id,
+    name: "우리집 스콘",
+    category: "베이커리",
+    yield: { amount: 6, unit: "개" },
+    ingredients: [],
+    sections: [],
+    forNewbie: false,
+  };
+}
+
+test("★ 깨진 항목만 빼고 나머지는 그대로 보여준다", () => {
+  local.clear();
+  local.setItem(
+    "sop:recipes",
+    JSON.stringify([
+      whole("my-1"),
+      // 옛 판이 만든 모양 — ingredients 대신 items, yield 가 문자열
+      { id: "my-2", slug: "my-2", name: "옛날 것", yield: "6개", items: [] },
+      whole("my-3"),
+    ]),
+  );
+
+  const list = loadLocalRecipes();
+  assert.deepEqual(
+    list.map((r) => r.id),
+    ["my-1", "my-3"],
+    "성한 것까지 같이 사라졌거나, 깨진 것이 그대로 넘어갔다",
+  );
+  assert.equal(countBrokenLocalRecipes(), 1);
+});
+
+test("★ 뺀 개수를 셀 수 있다 (조용히 빼면 사장님은 자기가 지운 줄 안다)", () => {
+  local.clear();
+  local.setItem("sop:recipes", JSON.stringify([{ id: "x" }, null, "글자", 42]));
+  assert.deepEqual(loadLocalRecipes(), []);
+  assert.equal(countBrokenLocalRecipes(), 4);
+});
+
+test("성한 것만 있으면 뺀 개수가 0 이다", () => {
+  local.clear();
+  local.setItem("sop:recipes", JSON.stringify([whole("my-1")]));
+  assert.equal(countBrokenLocalRecipes(), 0);
+});
+
+test("저장된 게 없으면 0 이다 (없는 것과 깨진 것은 다르다)", () => {
+  local.clear();
+  assert.equal(countBrokenLocalRecipes(), 0);
+  assert.deepEqual(loadLocalRecipes(), []);
+});
+
+test("배열이 아닌 것이 들어 있어도 안 죽는다", () => {
+  local.clear();
+  local.setItem("sop:recipes", JSON.stringify({ not: "an array" }));
+  assert.deepEqual(loadLocalRecipes(), []);
+  assert.equal(countBrokenLocalRecipes(), 0);
 });

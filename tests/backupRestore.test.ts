@@ -477,7 +477,22 @@ function seedOps() {
   local.setItem("sop:settings", JSON.stringify({ minWage: 10_320, fiveOrMore: false }));
   local.setItem(
     "sop:recipes",
-    JSON.stringify([{ id: "my-1", slug: "my-1", name: "우리집 스콘", yield: "6개", steps: [], items: [] }]),
+    /* ★ 화면이 읽는 칸을 다 갖춘 모양이어야 한다. 예전에는 이 표본이
+       옛 판 모양(yield 가 문자열, ingredients 대신 items)이었는데,
+       `loadLocalRecipes` 가 깨진 것을 걸러내게 되면서 백업에 안 담겼다.
+       → tests/localRecipes.test.ts 의 "깨진 항목만 빼고" 참조 */
+    JSON.stringify([
+      {
+        id: "my-1",
+        slug: "my-1",
+        name: "우리집 스콘",
+        category: "베이커리",
+        yield: { amount: 6, unit: "개" },
+        ingredients: [],
+        sections: [],
+        forNewbie: false,
+      },
+    ]),
   );
   local.setItem(
     "sop:orderLog",

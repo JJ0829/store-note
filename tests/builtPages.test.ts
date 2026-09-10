@@ -204,3 +204,71 @@ test("체크리스트 화면에 시드의 항목이 실제로 들어 있다", (t
   assert.match(src, /손 씻고 위생 복장 착용/);
   assert.match(src, /꼭 지키기/, "필수 항목 표시가 없다");
 });
+
+/* ------------------------------------------------------------------ *
+ * ★ 레시피가 보이는 화면은 전부 잠겨 있는가
+ *
+ *   2026-09-10 에 `/prep/<슬러그>` 하나가 빠져 있었다. 목록(`/prep`)에는
+ *   게이트가 있는데 **정작 배합을 보여주는 상세**가 열려 있었다.
+ *
+ *   왜 그랬나 — 게이트를 걸 당시에는 프렙 상세가 그냥 할 일 목록이었다.
+ *   그 뒤 **프렙 안에 레시피를 합치면서**(만드는 순서까지) 전제가 깨졌는데
+ *   게이트를 같이 옮기지 않았다. 결정은 그때 맞았고 나중에 조용히 틀려졌다.
+ *
+ *   그래서 사람의 기억이 아니라 **산출물**로 검사한다 — 보이는 마크업에
+ *   배합이 있으면 그 화면은 잠금이 없는 것이다.
+ * ------------------------------------------------------------------ */
+
+/** `<script>` 를 걷어낸, 사람 눈에 보이는 마크업만 */
+function visibleMarkup(rel: string): string {
+  return html(rel).replace(/<script[^>]*>[\s\S]*?<\/script>/g, "");
+}
+
+test("★ 배합이 보이는 마크업에 나오는 화면이 없다 (전부 잠금 뒤에 있다)", (t) => {
+  if (!built) return t.skip(SKIP);
+
+  /* 식빵 배합의 고유한 낱말로 찾는다. "물"·"설탕" 은 아무 데나 있어서 못 쓴다 */
+  const probes = ["강력분", "드라이이스트", "탈지분유"];
+  const leaking: string[] = [];
+
+  const walk = (dir: string) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith(".html")) {
+        const rel = path.relative(OUT, p).split(path.sep).join("/");
+        const vis = visibleMarkup(rel);
+        const hit = probes.filter((x) => vis.includes(x));
+        if (hit.length) leaking.push(`${rel} (${hit.join(", ")})`);
+      }
+    }
+  };
+  walk(OUT);
+
+  assert.deepEqual(
+    leaking,
+    [],
+    "잠금 없이 배합이 보이는 화면이 있다: " +
+      leaking.join(", ") +
+      ". 해당 page.tsx 를 StoreGate 로 감쌀 것",
+  );
+});
+
+test("★ 레시피를 다루는 라우트에 게이트가 붙어 있다 (코드 쪽 확인)", (t) => {
+  /* 위 테스트는 **결과**를 본다. 이건 **원인**을 본다 — 시드가 바뀌어
+     식빵이 빠지면 위 테스트는 통과해 버리기 때문이다. */
+  const need = [
+    "src/app/r/page.tsx",
+    "src/app/r/[slug]/page.tsx",
+    "src/app/r/my/page.tsx",
+    "src/app/r/new/page.tsx",
+    "src/app/prep/page.tsx",
+    "src/app/prep/[slug]/page.tsx", // ← 2026-09-10 에 빠져 있던 곳
+  ];
+  const naked: string[] = [];
+  for (const rel of need) {
+    const src = fs.readFileSync(path.join(process.cwd(), rel), "utf-8");
+    if (!/<StoreGate\b/.test(src)) naked.push(rel);
+  }
+  assert.deepEqual(naked, [], `매장 PIN 게이트가 빠진 라우트: ${naked.join(", ")}`);
+});
