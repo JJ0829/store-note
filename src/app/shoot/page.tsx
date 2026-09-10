@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ShootBoard, { type ShootItem } from "@/components/ShootBoard";
+import ServerStoreGate from "@/components/ServerStoreGate";
 import { getStore, listPositions, listPrepLists, listRecipes } from "@/lib/repo";
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ const PRIORITY: Record<string, string> = {
   "p-1": "콜드브루 거는 장면",
 };
 
-export default function ShootPage() {
+export default async function ShootPage() {
   const items: ShootItem[] = [];
 
   for (const p of listPositions())
@@ -53,5 +54,17 @@ export default function ShootPage() {
         priority: PRIORITY[t.id],
       });
 
-  return <ShootBoard items={items} storeName={getStore().name} />;
+  /* ★ 매장 PIN 뒤로 넣는다 (2026-09-10).
+   *
+   *  두 가지 때문이다.
+   *  ① 이 화면이 **레시피 이름 10개와 만드는 순서를 통째로** 보여준다.
+   *     배합 수치는 없지만 순서는 다 보인다 — 잠금 없이 열려 있었다.
+   *  ② **AI 입력칸이 여기 있다.** 그게 이 앱에서 돈이 나가는 유일한
+   *     경로다. 화면을 잠그면 그 입력칸도 같이 잠긴다
+   *     (`/api/shoot-plan` 도 서버에서 같은 쿠키를 요구한다). */
+  return (
+    <ServerStoreGate title="촬영 진행">
+      <ShootBoard items={items} storeName={getStore().name} />
+    </ServerStoreGate>
+  );
 }

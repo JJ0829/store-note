@@ -1,5 +1,19 @@
-import { NextResponse } from "next/server";
-import { MAX_INPUT, parseItems } from "@/lib/shootPlan";
+/* 표준 `Response` 를 쓴다. `next/server` 쪽 응답 도우미는 번들러가
+   있어야 읽히는데, 그러면 테스트가 이 파일을 그대로 못 부른다.
+   하는 일은 같다 (`/api/store-unlock` 도 표준 `Response` 를 쓴다).
+   → tests/aiGuard.test.ts */
+import { MAX_INPUT, parseItems } from "../../../lib/shootPlan.ts";
+/* ★ `@/` 가 아니라 상대경로다 — 테스트가 이 파일을 그대로 불러서 부른다.
+   노드는 `@/` 별칭을 모른다. → tests/aiGuard.test.ts */
+import {
+  refundAiSlot,
+  takeAiSlot,
+} from "../../../lib/rateLimit.ts";
+import {
+  STORE_COOKIE,
+  cookieMatches,
+  storePinConfigured,
+} from "../../../lib/serverGate.ts";
 
 /* ------------------------------------------------------------------ *
  * 촬영 목록 만들기 — 이 앱의 유일한 AI 기능
@@ -33,6 +47,22 @@ import { MAX_INPUT, parseItems } from "@/lib/shootPlan";
  * ⚠️ **단일 파일 시연본(`presentation/`)에는 이 기능이 없다.**
  *   그 파일의 규율은 **외부 요청 0건**이다(발표장에서 인터넷이 끊겨도 도는 것).
  *   AI 는 네트워크가 있어야 하므로 둘은 같이 갈 수 없다.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * ★ 돈이 나가는 유일한 경로다 (2026-09-10 에 막았다)
+ *
+ *   전에는 **인증도 횟수 제한도 없었다.** 배포하면 주소를 아는 사람이
+ *   사장님 키로 호출당 2000토큰씩, 얼마든지 쓸 수 있었다. 청구서로 알게 된다.
+ *   키를 서버에만 둔 것은 맞았는데 **그 키를 아무나 쓸 수 있다**가 빠져 있었다.
+ *
+ *   두 겹으로 막는다.
+ *     1) `STORE_PIN` 이 설정돼 있으면 **매장 쿠키를 요구한다.**
+ *        레시피 화면과 같은 문이다 — 번호를 아는 사람만 쓴다
+ *     2) 설정이 없어도 **횟수 제한은 항상 건다.** 사장님 결정("열되 알린다")은
+ *        레시피 얘기였고, 이건 돈이라 열어두더라도 상한은 있어야 한다
+ *
+ *   ⚠️ 둘 다 서버 메모리에 센다. **진짜 상한은 Anthropic 콘솔의 예산 한도**
+ *     에서 걸어야 한다 — `docs/배포.md`.
  * ------------------------------------------------------------------ */
 
 const MODEL = "claude-sonnet-5";
@@ -55,13 +85,52 @@ const SYSTEM = `당신은 개인 카페·베이커리의 주방 교육을 돕는
 {"items":[{"title":"...","why":"...","first":true}]}`;
 
 function bad(reason: string, status = 400) {
-  return NextResponse.json({ ok: false, reason }, { status });
+  return Response.json({ ok: false, reason }, { status });
+}
+
+/** 누구의 호출인지. 정확할 필요는 없고 **나눠서 세기만** 하면 된다 */
+function caller(req: Request): string {
+  const h = req.headers;
+  return (
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    h.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+/** 쿠키 한 줄에서 매장 쿠키를 꺼낸다 */
+function storeCookie(req: Request): string | undefined {
+  const raw = req.headers.get("cookie") ?? "";
+  for (const part of raw.split(";")) {
+    const [k, ...v] = part.trim().split("=");
+    if (k === STORE_COOKIE) return v.join("=");
+  }
+  return undefined;
 }
 
 export async function POST(req: Request) {
+  /* ① 매장 번호가 설정돼 있으면 그 문을 지난 사람만 쓴다 */
+  if (storePinConfigured() && !cookieMatches(storeCookie(req))) {
+    return bad("매장 번호를 먼저 넣어주세요. 레시피 화면에서 넣을 수 있습니다.", 401);
+  }
+
+  /* ② 설정이 없어도 횟수 제한은 건다 — 이건 돈이다 */
+  const who = caller(req);
+  const slot = takeAiSlot(who);
+  if (!slot.ok) {
+    const mins = Math.ceil(slot.retryAfterSec / 60);
+    return bad(
+      slot.scope === "total"
+        ? `이 서버에서 한 시간에 만들 수 있는 횟수를 다 썼습니다. ${mins}분 뒤에 다시 해주세요.`
+        : `너무 여러 번 만들었습니다. ${mins}분 뒤에 다시 해주세요.`,
+      429,
+    );
+  }
+
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     // 없는 기능을 있는 척하지 않는다. 화면이 이 문장을 그대로 띄운다
+    refundAiSlot(who); // 부르지도 못했으니 칸을 돌려준다
     return bad(
       "AI 키가 설정되지 않았습니다. 배포처의 환경변수에 ANTHROPIC_API_KEY 를 넣어주세요.",
       503,
@@ -72,12 +141,16 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
+    refundAiSlot(who);
     return bad("요청을 읽을 수 없습니다.");
   }
   const { position, note } = (body ?? {}) as { position?: unknown; note?: unknown };
   const pos = typeof position === "string" ? position.trim().slice(0, MAX_INPUT) : "";
   const memo = typeof note === "string" ? note.trim().slice(0, MAX_INPUT) : "";
-  if (pos.length < 2) return bad("포지션이나 메뉴 이름을 2글자 이상 넣어주세요.");
+  if (pos.length < 2) {
+    refundAiSlot(who);
+    return bad("포지션이나 메뉴 이름을 2글자 이상 넣어주세요.");
+  }
 
   const user = memo
     ? `포지션·메뉴: ${pos}\n매장 사정: ${memo}`
@@ -132,5 +205,5 @@ export async function POST(req: Request) {
     return bad("AI 가 목록을 만들지 못했습니다. 이름을 조금 더 구체적으로 적어보세요.", 502);
   }
 
-  return NextResponse.json({ ok: true, items });
+  return Response.json({ ok: true, items });
 }

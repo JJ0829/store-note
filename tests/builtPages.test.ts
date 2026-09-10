@@ -25,7 +25,12 @@ const SKIP = ".next 가 없다 — `npm run build` 뒤에 다시 돌릴 것";
 
 type Seed = {
   positions: { shareSlug: string }[];
-  recipes: { slug: string; name: string; ingredients: { name: string }[] }[];
+  recipes: {
+    slug: string;
+    name: string;
+    ingredients: { name: string }[];
+    sections?: { steps: { title: string }[] }[];
+  }[];
   prepLists: { slug: string }[];
 };
 
@@ -254,8 +259,26 @@ function visibleMarkup(rel: string): string {
 test("★ 배합이 보이는 마크업에 나오는 화면이 없다 (전부 잠금 뒤에 있다)", (t) => {
   if (!built) return t.skip(SKIP);
 
-  /* 식빵 배합의 고유한 낱말로 찾는다. "물"·"설탕" 은 아무 데나 있어서 못 쓴다 */
-  const probes = ["강력분", "드라이이스트", "탈지분유"];
+  /* ★ 탐침을 **시드에서 뽑는다.**
+   *
+   *  처음에는 `["강력분","드라이이스트","탈지분유"]` 세 낱말로 박아뒀는데,
+   *  그래서 **`/shoot` 이 통과했다** — 거기에는 그 세 낱말이 없고 대신
+   *  레시피 이름 10개와 만드는 순서가 통째로 나와 있었다.
+   *  탐침이 좁으면 테스트가 거짓 안심을 준다. 그게 이번 작업 내내
+   *  없애려던 바로 그것이다. (2026-09-10)
+   *
+   *  ⚠️ 흔한 낱말은 뺀다 — "물"·"설탕"·"우유" 는 체크리스트에도 있어서
+   *  공개 화면까지 잡아버린다. 그래서 **네 글자 이상**만 쓴다. */
+  /* ★ 레시피 **이름**은 안 넣는다. 메뉴판은 벽에 붙어 있고 신입도 본다 —
+     비밀은 **배합과 만드는 순서**다. 이름까지 넣으면 첫 화면의
+     `레시피 찾기` 목록까지 잡아서, 진짜 유출과 구분이 안 된다. */
+  const probes = [
+    ...seed.recipes.flatMap((r) => r.ingredients.map((i) => i.name)),
+    ...seed.recipes.flatMap((r) =>
+      (r.sections ?? []).flatMap((sec) => sec.steps.map((t) => t.title)),
+    ),
+  ].filter((x) => typeof x === "string" && x.length >= 4);
+
   const leaking: string[] = [];
 
   const walk = (dir: string) => {
@@ -266,7 +289,12 @@ test("★ 배합이 보이는 마크업에 나오는 화면이 없다 (전부 �
         const rel = path.relative(OUT, p).split(path.sep).join("/");
         const vis = visibleMarkup(rel);
         const hit = probes.filter((x) => vis.includes(x));
-        if (hit.length) leaking.push(`${rel} (${hit.join(", ")})`);
+        if (hit.length) {
+          const shown = hit.slice(0, 3).join(", ");
+          leaking.push(
+            `${rel} (${hit.length}건: ${shown}${hit.length > 3 ? " …" : ""})`,
+          );
+        }
       }
     }
   };
@@ -300,4 +328,47 @@ test("★ 레시피를 다루는 라우트에 게이트가 붙어 있다 (코드
     if (!/<ServerStoreGate\b/.test(src)) naked.push(rel);
   }
   assert.deepEqual(naked, [], `서버 게이트가 빠진 라우트: ${naked.join(", ")}`);
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 크래시가 흰 화면으로 끝나지 않는가
+ *
+ *   2026-09-10 에 실제로 봤다 — 모양이 깨진 레시피 하나에
+ *   `Application error: a client-side exception has occurred` 한 줄만 남았다.
+ *   그 원인은 고쳤지만 **그런 일이 또 없으리라는 보장은 없다.**
+ *   심사 시연 중 태블릿이 흰 화면이 되면 거기서 끝이다.
+ * ------------------------------------------------------------------ */
+
+test("★ 오류 화면이 있다 (없으면 크래시 = 흰 화면 + 영어 한 줄)", () => {
+  const app = path.join(process.cwd(), "src", "app");
+  for (const name of ["error.tsx", "global-error.tsx"]) {
+    assert.ok(
+      fs.existsSync(path.join(app, name)),
+      `${name} 이 없다 — 이게 없으면 Next 기본 화면(영어 한 줄)이 뜬다`,
+    );
+  }
+});
+
+test("★ 오류 화면이 '무엇을 하면 되는지' 를 준다", () => {
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "src", "app", "error.tsx"),
+    "utf-8",
+  );
+  assert.match(src, /reset\(\)|onClick=\{reset\}/, "다시 시도할 방법이 없다");
+  assert.match(src, /href="\/"/, "처음으로 갈 방법이 없다");
+  // 기록이 남아 있다는 것을 말해줘야 한다. 사장님이 제일 먼저 걱정하는 것이다
+  assert.match(src, /기록은/, "입력한 것이 무사한지 말해주지 않는다");
+  // 영어 스택을 그대로 띄우지 않는다 (도움도 안 되고 경로가 섞여 나온다)
+  assert.ok(!/\{error\.message\}|\{error\.stack\}/.test(src), "오류 원문을 띄운다");
+});
+
+test("★ global-error 는 공통 컴포넌트에 기대지 않는다", () => {
+  /* layout 이 터졌을 때 뜨는 마지막 그물이다. 그 상황에서 공통 컴포넌트를
+     쓰면 **그중 하나가 터진 것일 수도** 있어서 같이 죽는다. */
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "src", "app", "global-error.tsx"),
+    "utf-8",
+  );
+  assert.ok(!/@\/components/.test(src), "공통 컴포넌트를 쓴다 — 같이 죽을 수 있다");
+  assert.match(src, /<html/, "layout 없이 뜨는 화면인데 html 을 안 만든다");
 });
