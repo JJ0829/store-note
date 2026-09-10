@@ -21,7 +21,8 @@ function focusHref(f: ShiftFocus): string {
     case "prep":
       return `/prep/${f.slug}`;
     case "recipes":
-      return "/r";
+      // 프렙과 레시피를 합친 화면으로 보낸다 (2026-09-10). `/r` 도 그대로 산다
+      return "/make";
   }
 }
 

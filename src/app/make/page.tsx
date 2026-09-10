@@ -1,0 +1,106 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import RecipeSearch from "@/components/RecipeSearch";
+import StoreGate from "@/components/StoreGate";
+import {
+  countedTasks,
+  getStore,
+  irreversibleTasks,
+  listPrepLists,
+  listRecipes,
+} from "@/lib/repo";
+
+/* ------------------------------------------------------------------ *
+ * 만들기 — 프렙과 레시피를 한 화면에 (2026-09-10)
+ *
+ * ★ 왜 합쳤나 (사장님 지적: "아이콘이 왜 아직 프렙, 레시피 따로 있노")
+ *
+ *   프렙 항목 안에 레시피가 통째로 들어간 뒤로(재료 + 만드는 순서),
+ *   탭에 둘을 나란히 두면 **무엇이 다른지 알 수 없다.**
+ *
+ *   실제로 다른 것은 이것이다 —
+ *     프렙   : **오늘 할 것.** 시간이 정해져 있다 (14:00 오후 프렙)
+ *     레시피 : **주문 받고 찾는 것.** 아메리카노는 프렙 항목이 아니다
+ *   그건 탭 두 개가 아니라 **한 화면의 두 묶음**이면 된다.
+ *
+ * ⚠️ 이 화면은 `StoreGate` 안에 있다. 레시피가 여기 있기 때문이다.
+ *   `/prep/` 은 잠금이 없으므로 프렙 목록으로 **들어가는 것**은 막히지 않는다 —
+ *   이 화면이 막는 것은 **레시피 목록을 훑는 것**이다.
+ *   (그마저도 가림막이다 — `21_화면명세.md` §4)
+ * ------------------------------------------------------------------ */
+
+export const metadata: Metadata = {
+  title: "만들기",
+  robots: { index: false, follow: false },
+};
+
+export default function MakePage() {
+  const store = getStore();
+  const prepLists = listPrepLists();
+  const recipes = listRecipes();
+
+  return (
+    <StoreGate title="만들기">
+      <main className="mx-auto min-h-dvh w-full max-w-[720px] bg-zinc-50 px-4 py-8 pb-28 dark:bg-zinc-950">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
+        <h1 className="mt-1 text-2xl font-bold">만들기</h1>
+
+        {/* ---------- 오늘 할 것 ---------- */}
+        <section className="mt-6">
+          <h2 className="text-[15px] font-bold">오늘 할 것</h2>
+          <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
+            오늘 해야 내일 쓸 수 있는 것들입니다.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {prepLists.map((list) => {
+              const cannotBuy = irreversibleTasks(list).length;
+              return (
+                <li key={list.id}>
+                  <Link
+                    href={`/prep/${list.slug}`}
+                    className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3.5 active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:active:bg-zinc-800"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-bold">{list.name}</span>
+                      <span className="mt-0.5 block text-[12px] text-zinc-500 dark:text-zinc-400">
+                        {/* 홈·프렙 화면과 같은 규칙으로 센다 (repo.countedTasks) */}
+                        {countedTasks(list)}개
+                        {cannotBuy > 0 && (
+                          <>
+                            {" · "}
+                            <b className="text-red-600 dark:text-red-400">
+                              까먹지 말 것 {cannotBuy}개
+                            </b>
+                          </>
+                        )}
+                      </span>
+                    </span>
+                    <span aria-hidden className="shrink-0 text-zinc-400">
+                      ›
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        {/* ---------- 주문 받고 찾을 때 ---------- */}
+        <section className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+          <h2 className="text-[15px] font-bold">주문 받고 찾을 때</h2>
+          <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
+            프렙 목록에 없는 메뉴는 여기서 이름으로 찾습니다.
+          </p>
+          <RecipeSearch recipes={recipes} />
+        </section>
+
+        <p className="mt-8 rounded-xl bg-zinc-100 px-3.5 py-3 text-[12px] leading-relaxed text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+          레시피는 매장 자산입니다. 검색에 노출되지 않게 막아두었고, 매장 번호를
+          걸면 화면에 바로 뜨지 않습니다. 다만 <b>이건 가림막이지 잠금이 아닙니다</b>
+          — 링크를 받은 사람이 페이지 소스를 열면 내용이 보입니다. 진짜 차단은
+          서버를 붙일 때 됩니다. <b>레시피 링크는 매장 밖으로 보내지 마세요.</b>
+        </p>
+      </main>
+    </StoreGate>
+  );
+}

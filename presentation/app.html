@@ -190,6 +190,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .rows { display: flex; flex-direction: column; gap: 10px; }
 
 .opts { border-top: 1px dashed var(--line); background: var(--sunken); padding: 12px 14px; }
+.sec-h { font-size: 15px; margin: 26px 0 0; padding-top: 18px; border-top: 1px solid var(--line); }
 .scaler-sm { border-top: 1px solid var(--line); padding: 10px 12px; }
 .steps { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .steps > summary { cursor: pointer; list-style: none; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
@@ -1312,6 +1313,7 @@ function ownerOpen() {
  * ------------------------------------------------------------------ */
 const routes = {
   "": renderHome,
+  "make": renderMake,
   "prep": renderPrep,
   "recipes": renderRecipes,
   "recipe": renderRecipe,
@@ -1380,23 +1382,52 @@ function topbar({ title, sub, back, right }) {
   if (right) t.appendChild(right);
 }
 
+/* ★ 탭은 **매일 누르는 것**만 둔다 (2026-09-10).
+   예전에는 오늘·프렙·레시피·근무표·교육·운영 여섯이었는데,
+   근무표는 주 1회 · 교육은 신입 올 때만인데 탭에 있었고
+   **하루 두 번 찍는 출퇴근과 매일 아침 여는 발주가 탭에 없었다.**
+   매일 누르는 게 탭에 없고 한 달에 한 번 쓰는 게 탭에 있었던 것이다.
+   (CLAUDE.md — "기능 추가 요청이 오면 매일 열리는 이유를 늘리는지 먼저 따질 것")
+
+   그리고 프렙과 레시피를 `만들기` 하나로 합쳤다. 프렙 항목 안에 레시피가
+   통째로 들어간 뒤로(2026-09-10) 둘을 나란히 두면 무엇이 다른지 알 수 없다.
+   실제로 다른 것은 **오늘 할 것(프렙)** 과 **주문 받고 찾는 것(레시피)** 인데,
+   그건 한 화면 안의 두 묶음이면 된다.
+
+   근무표는 운영으로, 교육은 홈의 포지션 카드로 간다. */
 const TABS = [
-  { key:"",        label:"오늘",   icon:'<path d="M3 10.5 12 4l9 6.5V19a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>' },
-  { key:"prep",    label:"프렙",   icon:'<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/>' },
-  { key:"recipes", label:"레시피", icon:'<path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2z"/><path d="M6 16h12"/>' },
-  { key:"roster",  label:"근무표", icon:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' },
-  { key:"study",   label:"교육",   icon:'<path d="M12 5 3 8l9 3 9-3z"/><path d="M7 10v5c0 1.5 2.2 3 5 3s5-1.5 5-3v-5"/>' },
-  { key:"ops",     label:"운영",   icon:'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>' }
+  { key:"",       label:"오늘",   icon:'<path d="M3 10.5 12 4l9 6.5V19a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>' },
+  { key:"make",   label:"만들기", icon:'<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/>' },
+  { key:"order",  label:"발주",   icon:'<path d="M3 6h13l2 9H6z"/><circle cx="8" cy="19" r="1.6"/><circle cx="16" cy="19" r="1.6"/>' },
+  { key:"attend", label:"출퇴근", icon:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>' },
+  { key:"ops",    label:"운영",   icon:'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>' }
 ];
+
+/**
+ * 진행률에 세는 항목 수. **프렙 화면과 홈이 같은 값을 써야 한다.**
+ *
+ * 묶음 머리(자식이 optional 아닌 카드)는 할 일이 아니라 이름표라 안 세고,
+ * 옵션(매장에 따라 안 하는 것)도 안 센다.
+ * → src/lib/types.ts 의 optionOf / optional 주석
+ */
+function countedTasks(list) {
+  const kids = {};
+  list.tasks.forEach(t => { if (t.option) (kids[t.option] = kids[t.option] || []).push(t); });
+  const isHead = id => (kids[id] || []).some(k => !k.optional);
+  return list.tasks.filter(t => (t.option ? !t.optional : !isHead(t.id))).length;
+}
 
 function renderTabs(active) {
   const wrap = document.getElementById("tabs");
   wrap.innerHTML = "";
   // 하위 화면에서도 상위 탭이 켜져 있어야 지금 어디인지 알 수 있다
-  const OPS_KEYS = ["attend","contracts","sales","cost","order","vendors"];
-  const cur = ["recipe"].includes(active) ? "recipes"
-    : ["list"].includes(active) ? "study"
-    : OPS_KEYS.includes(active) ? "ops" : active;
+  /* 하위 화면에서도 상위 탭이 켜져 있어야 지금 어디인지 안다.
+     발주·출퇴근은 이제 제 탭이 있으므로 운영에서 뺀다. */
+  const OPS_KEYS = ["contracts","sales","cost","vendors","roster"];
+  const MAKE_KEYS = ["make","prep","recipes","recipe"];
+  const cur = MAKE_KEYS.includes(active) ? "make"
+    : OPS_KEYS.includes(active) ? "ops"
+    : active;
   for (const t of TABS) {
     const b = el(`<button type="button" ${cur === t.key ? 'aria-current="page"' : ""}>
       <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${t.icon}</svg>${t.label}</button>`);
@@ -1466,9 +1497,12 @@ function renderHome() {
   /* 프렙 */
   const sec1 = el(`<section class="sec"><h2>프렙</h2><p class="hint">오늘 해야 내일 쓸 수 있는 것들입니다.</p><div class="rows"></div></section>`);
   DATA.prepLists.forEach(l => {
+    /* ★ 프렙 화면과 같은 규칙으로 센다. `l.tasks.length` 를 그대로 쓰면
+       홈은 "11개" 인데 들어가면 "0/5" 라 숫자가 어긋난다 (2026-09-10 수정) */
+    const n = countedTasks(l);
     const keep = l.tasks.filter(t => !t.recoverable).length;
     const b = el(`<button type="button" class="nav-row"><span><b>${esc(l.name)}</b>
-      <span class="meta">${l.tasks.length}개${keep ? ` · <b style="color:var(--danger)">까먹지 말 것 ${keep}개</b>` : ""}</span></span>
+      <span class="meta">${n}개${keep ? ` · <b style="color:var(--danger)">까먹지 말 것 ${keep}개</b>` : ""}</span></span>
       <span class="chev">›</span></button>`);
     b.onclick = () => go(`#/prep/${l.slug}`);
     sec1.querySelector(".rows").appendChild(b);
@@ -1478,7 +1512,7 @@ function renderHome() {
   /* 레시피 · 근무표 */
   const sec2 = el(`<section class="sec"><h2>바로 가기</h2><div class="rows"></div></section>`);
   [
-    { label: "레시피 찾기", meta: `${DATA.recipes.length}개 · 이름으로 찾고 배수 계산`, to: "#/recipes" },
+    { label: "레시피 찾기", meta: `${DATA.recipes.length}개 · 이름으로 찾고 배수 계산`, to: "#/make" },
     { label: "이번 주 근무표", meta: "짜서 전 직원에게 메일 발송", to: "#/roster" },
     /* 근무표 바로 아래에 둔다 — 근무표가 계획이고 출퇴근이 실제라 짝이다 */
     { label: "출퇴근 · 근태", meta: "버튼 두 개로 찍고, 근무표와 비교해 지각·연장을 봅니다", to: "#/attend" },
@@ -1817,8 +1851,33 @@ function renderPrep(slug) {
  * ------------------------------------------------------------------ */
 function myRecipes() { return store.get("recipes:mine", []); }
 
-function renderRecipes() {
-  topbar({ title: "레시피", sub: DATA.store.name, back: true });
+/* ★ 만들기 — 프렙과 레시피를 한 화면에 (2026-09-10)
+   위는 **오늘 할 것**(프렙 목록), 아래는 **주문 받고 찾는 것**(레시피).
+   둘을 탭으로 나눠 두면 무엇이 다른지 알 수 없다. */
+function renderMake() {
+  topbar({ title: "만들기", sub: DATA.store.name });
+  const v = document.getElementById("view");
+
+  const sec = el(`<section class="sec"><h2>오늘 할 것</h2>
+    <p class="muted" style="margin:2px 0 10px">오늘 해야 내일 쓸 수 있는 것들입니다.</p>
+    <div class="rows"></div></section>`);
+  DATA.prepLists.forEach(l => {
+    const n = countedTasks(l);
+    const keep = l.tasks.filter(t => !t.recoverable).length;
+    const b = el(`<button type="button" class="nav-row"><span><b>${esc(l.name)}</b>
+      <span class="meta">${n}개${keep ? ` · <b style="color:var(--danger)">까먹지 말 것 ${keep}개</b>` : ""}</span></span>
+      <span class="chev">›</span></button>`);
+    b.onclick = () => go(`#/prep/${l.slug}`);
+    sec.querySelector(".rows").appendChild(b);
+  });
+  v.appendChild(sec);
+
+  v.appendChild(el(`<h2 class="sec-h">주문 받고 찾을 때</h2>`));
+  renderRecipes(true);
+}
+
+function renderRecipes(embed) {
+  if (!embed) topbar({ title: "레시피", sub: DATA.store.name, back: true });
   const v = document.getElementById("view");
   const all = () => [...DATA.recipes, ...myRecipes()];
 

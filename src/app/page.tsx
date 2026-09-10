@@ -6,6 +6,7 @@ import { StoreLockButton } from "@/components/StoreGate";
 import {
   countCritical,
   countTasks,
+  countedTasks,
   getStore,
   irreversibleTasks,
   listPositions,
@@ -89,7 +90,9 @@ export default function Home() {
                       {list.name}
                     </span>
                     <span className="mt-0.5 block text-[12px] text-zinc-500 dark:text-zinc-400">
-                      {list.tasks.length}개
+                      {/* ★ 프렙 화면과 같은 규칙으로 센다. `list.tasks.length` 를
+                          그대로 쓰면 홈은 "11개" 인데 들어가면 "0/5" 다 (2026-09-10) */}
+                      {countedTasks(list)}개
                       {cannotBuy > 0 && (
                         <>
                           {" · "}
@@ -261,7 +264,7 @@ export default function Home() {
         </p>
 
         <Link
-          href="/r"
+          href="/make"
           className="mt-3 flex items-center justify-between rounded-2xl bg-zinc-900 px-4 py-3.5 text-white active:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
         >
           <span className="text-[15px] font-bold">

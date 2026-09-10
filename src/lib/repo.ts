@@ -45,6 +45,30 @@ export function countTasks(position: Position): number {
   return position.sections.reduce((sum, s) => sum + s.steps.length, 0);
 }
 
+/**
+ * 프렙 목록에서 **진행률에 세는 항목 수**.
+ *
+ * ★ 홈과 프렙 화면이 **같은 값**을 써야 한다 (2026-09-10).
+ *   `list.tasks.length` 를 그대로 쓰면 홈은 "11개" 인데 들어가면 "0/5" 다.
+ *   숫자가 어긋나면 사람은 둘 다 안 믿는다.
+ *
+ * 규칙은 `PrepView` 와 같다 —
+ *   묶음 머리(자식이 `optional` 아닌 카드)는 할 일이 아니라 이름표라 안 세고,
+ *   옵션(매장에 따라 안 하는 것)도 안 센다.
+ * → `src/lib/types.ts` 의 `optionOf` / `optional` 주석
+ */
+export function countedTasks(list: PrepList): number {
+  const kids = new Map<string, PrepTask[]>();
+  for (const t of list.tasks) {
+    if (!t.optionOf) continue;
+    const cur = kids.get(t.optionOf);
+    if (cur) cur.push(t);
+    else kids.set(t.optionOf, [t]);
+  }
+  const isHeader = (id: string) => (kids.get(id) ?? []).some((k) => !k.optional);
+  return list.tasks.filter((t) => (t.optionOf ? !t.optional : !isHeader(t.id))).length;
+}
+
 export function countCritical(position: Position): number {
   return position.sections.reduce(
     (sum, s) => sum + s.steps.filter((t) => t.critical).length,

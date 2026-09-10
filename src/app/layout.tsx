@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import TabBar from "@/components/TabBar";
 
 /**
  * 배포 주소. 배포처(Vercel 등)에서 환경변수로 넣는다.
@@ -42,7 +43,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        {/* 매장 태블릿은 전체화면 키오스크라 주소창이 없는 경우가 많다.
+            탭바가 없으면 깊이 들어갔을 때 `‹ 뒤로` 를 여러 번 눌러야 나온다.
+            교육 모드·체크리스트에서는 TabBar 가 스스로 안 그린다 */}
+        <TabBar />
+      </body>
     </html>
   );
 }
