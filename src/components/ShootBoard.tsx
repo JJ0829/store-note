@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
+import ShootPlanner from "@/components/ShootPlanner";
 import { expectedNames, probeAll, type Found } from "@/lib/mediaProbe";
 
 /* ------------------------------------------------------------------ *
@@ -176,6 +177,11 @@ export default function ShootBoard({
           </ul>
         </section>
       ))}
+
+      {/* ★ AI — 아래 목록은 **이미 있는 항목**의 촬영 진행이다.
+          여기는 **없는 것을 무엇을 찍을지** 만드는 자리다.
+          그래서 목록 아래에 둔다: 있는 걸 다 찍고 나서 볼 것이다 */}
+      <ShootPlanner />
     </main>
   );
 }

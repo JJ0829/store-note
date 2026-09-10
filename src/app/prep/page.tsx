@@ -11,7 +11,7 @@ import {
 } from "@/lib/repo";
 
 /* ------------------------------------------------------------------ *
- * 만들기 — 프렙과 레시피를 한 화면에 (2026-09-10)
+ * 프렙 — 목록과 레시피 찾기를 한 화면에 (2026-09-10)
  *
  * ★ 왜 합쳤나 (사장님 지적: "아이콘이 왜 아직 프렙, 레시피 따로 있노")
  *
@@ -23,6 +23,11 @@ import {
  *     레시피 : **주문 받고 찾는 것.** 아메리카노는 프렙 항목이 아니다
  *   그건 탭 두 개가 아니라 **한 화면의 두 묶음**이면 된다.
  *
+ * ⚠️ **이름은 `프렙` 그대로다.** 한때 `만들기` 로 바꿨다가 되돌렸다 —
+ *   프렙은 **매장에서 쓰는 말**이고 내가 지어낼 것이 아니다.
+ *   화면 이름을 바꾸면 직원이 서로 다른 말로 부르게 된다.
+ *   (사장님 지적 2026-09-10: "왜 프렙을 만들기로 니 맘대로 바꾸는데")
+ *
  * ⚠️ 이 화면은 `StoreGate` 안에 있다. 레시피가 여기 있기 때문이다.
  *   `/prep/` 은 잠금이 없으므로 프렙 목록으로 **들어가는 것**은 막히지 않는다 —
  *   이 화면이 막는 것은 **레시피 목록을 훑는 것**이다.
@@ -30,20 +35,20 @@ import {
  * ------------------------------------------------------------------ */
 
 export const metadata: Metadata = {
-  title: "만들기",
+  title: "프렙",
   robots: { index: false, follow: false },
 };
 
-export default function MakePage() {
+export default function PrepIndexPage() {
   const store = getStore();
   const prepLists = listPrepLists();
   const recipes = listRecipes();
 
   return (
-    <StoreGate title="만들기">
+    <StoreGate title="프렙">
       <main className="mx-auto min-h-dvh w-full max-w-[720px] bg-zinc-50 px-4 py-8 pb-28 dark:bg-zinc-950">
         <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
-        <h1 className="mt-1 text-2xl font-bold">만들기</h1>
+        <h1 className="mt-1 text-2xl font-bold">프렙</h1>
 
         {/* ---------- 오늘 할 것 ---------- */}
         <section className="mt-6">

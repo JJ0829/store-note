@@ -1322,8 +1322,8 @@ function ownerOpen() {
  * ------------------------------------------------------------------ */
 const routes = {
   "": renderHome,
-  "make": renderMake,
-  "prep": renderPrep,
+  /* 인자가 없으면 목록 화면(renderPrepIndex), 있으면 그 목록 */
+  "prep": (slug) => (slug ? renderPrep(slug) : renderPrepIndex()),
   "recipes": renderRecipes,
   "recipe": renderRecipe,
   "roster": renderRoster,
@@ -1406,7 +1406,7 @@ function topbar({ title, sub, back, right }) {
    근무표는 운영으로, 교육은 홈의 포지션 카드로 간다. */
 const TABS = [
   { key:"",       label:"오늘",   icon:'<path d="M3 10.5 12 4l9 6.5V19a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>' },
-  { key:"make",   label:"만들기", icon:'<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/>' },
+  { key:"prep",   label:"프렙",   icon:'<path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/>' },
   { key:"order",  label:"발주",   icon:'<path d="M3 6h13l2 9H6z"/><circle cx="8" cy="19" r="1.6"/><circle cx="16" cy="19" r="1.6"/>' },
   { key:"attend", label:"출퇴근", icon:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>' },
   { key:"ops",    label:"운영",   icon:'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>' }
@@ -1433,8 +1433,8 @@ function renderTabs(active) {
   /* 하위 화면에서도 상위 탭이 켜져 있어야 지금 어디인지 안다.
      발주·출퇴근은 이제 제 탭이 있으므로 운영에서 뺀다. */
   const OPS_KEYS = ["contracts","sales","cost","vendors","roster"];
-  const MAKE_KEYS = ["make","prep","recipes","recipe"];
-  const cur = MAKE_KEYS.includes(active) ? "make"
+  const PREP_KEYS = ["prep","recipes","recipe"];
+  const cur = PREP_KEYS.includes(active) ? "prep"
     : OPS_KEYS.includes(active) ? "ops"
     : active;
   for (const t of TABS) {
@@ -1521,7 +1521,7 @@ function renderHome() {
   /* 레시피 · 근무표 */
   const sec2 = el(`<section class="sec"><h2>바로 가기</h2><div class="rows"></div></section>`);
   [
-    { label: "레시피 찾기", meta: `${DATA.recipes.length}개 · 이름으로 찾고 배수 계산`, to: "#/make" },
+    { label: "레시피 찾기", meta: `${DATA.recipes.length}개 · 이름으로 찾고 배수 계산`, to: "#/prep" },
     { label: "이번 주 근무표", meta: "짜서 전 직원에게 메일 발송", to: "#/roster" },
     /* 근무표 바로 아래에 둔다 — 근무표가 계획이고 출퇴근이 실제라 짝이다 */
     { label: "출퇴근 · 근태", meta: "버튼 두 개로 찍고, 근무표와 비교해 지각·연장을 봅니다", to: "#/attend" },
@@ -1860,11 +1860,12 @@ function renderPrep(slug) {
  * ------------------------------------------------------------------ */
 function myRecipes() { return store.get("recipes:mine", []); }
 
-/* ★ 만들기 — 프렙과 레시피를 한 화면에 (2026-09-10)
+/* ★ 프렙 — 목록과 레시피 찾기를 한 화면에 (2026-09-10)
    위는 **오늘 할 것**(프렙 목록), 아래는 **주문 받고 찾는 것**(레시피).
-   둘을 탭으로 나눠 두면 무엇이 다른지 알 수 없다. */
-function renderMake() {
-  topbar({ title: "만들기", sub: DATA.store.name });
+   둘을 탭으로 나눠 두면 무엇이 다른지 알 수 없다.
+   ⚠️ 이름은 `프렙` 그대로다 — 매장에서 쓰는 말이라 내가 지어낼 것이 아니다. */
+function renderPrepIndex() {
+  topbar({ title: "프렙", sub: DATA.store.name });
   const v = document.getElementById("view");
 
   const sec = el(`<section class="sec"><h2>오늘 할 것</h2>

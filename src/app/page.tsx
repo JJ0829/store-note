@@ -264,7 +264,7 @@ export default function Home() {
         </p>
 
         <Link
-          href="/make"
+          href="/prep"
           className="mt-3 flex items-center justify-between rounded-2xl bg-zinc-900 px-4 py-3.5 text-white active:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
         >
           <span className="text-[15px] font-bold">
