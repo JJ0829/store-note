@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BackupReminder from "@/components/BackupReminder";
+import StorageAlarm from "@/components/StorageAlarm";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import NowPanel from "@/components/NowPanel";
 import { OwnerLockButton } from "@/components/OwnerGate";
@@ -67,6 +68,11 @@ export default function Home() {
     <main className="mx-auto min-h-dvh w-full max-w-[560px] bg-zinc-50 px-4 py-8 dark:bg-zinc-950">
       <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
       <h1 className="mt-1 text-2xl font-bold">오늘</h1>
+
+      {/* ---------- 저장이 아예 안 되는 상태 ----------
+          재촉보다 위다. 저장이 안 되면 백업 날짜도 안 남으므로
+          이쪽이 먼저 해결돼야 한다. */}
+      <StorageAlarm />
 
       {/* ---------- 백업 재촉 ----------
           "지금 뭘 해야 하는가" 보다 위에 둔다. 잃을 기록이 7일치 넘게

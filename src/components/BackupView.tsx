@@ -16,6 +16,7 @@ import {
   type BackupFile,
 } from "@/lib/backup";
 import { logEvent } from "@/lib/metrics";
+import StorageUsage from "@/components/StorageUsage";
 
 /* ------------------------------------------------------------------ *
  * 내보내기 · 되돌리기.
@@ -356,6 +357,8 @@ export default function BackupView({
           </div>
         )}
       </Card>
+
+      <StorageUsage />
 
       {/* ★ 이 칸은 "무엇이 안 담기는가"를 말한다. 틀리면 사장님이 담긴 줄 알고
           태블릿을 바꾼다. 담는 것을 늘릴 때 여기도 같이 고칠 것.
