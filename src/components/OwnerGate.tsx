@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { checkPin, hasPin, isUnlocked, lock, needsPin, setPin, unlock } from "@/lib/ownerGate";
+import { checkPin, hasPin, isUnlocked, lock, needsPin, resetPin, setPin, unlock } from "@/lib/ownerGate";
 import { BTN, BTN_PRIMARY, Card, INPUT, Screen } from "@/components/ui";
 
 /* ------------------------------------------------------------------ *
@@ -33,6 +33,7 @@ export default function OwnerGate({
   const [pin, setPinInput] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
+  const [forgot, setForgot] = useState(false);
 
   useEffect(() => {
     if (!hasPin()) setState("open");
@@ -153,6 +154,86 @@ export default function OwnerGate({
           >
             열기
           </button>
+
+          {/* ★ 번호를 잊었을 때 (2026-09-10 · 01_MVP기획서 §10.3 (다) #17)
+              현재 번호를 안 묻는다 — 이 잠금은 가림막이라 물어봐야 막지도 못하면서
+              잊은 사람만 가둔다. 대신 그 뜻을 화면이 그대로 말한다. */}
+          {!forgot ? (
+            <button
+              type="button"
+              onClick={() => {
+                setForgot(true);
+                setError("");
+                setPinInput("");
+                setConfirm("");
+              }}
+              className="mt-3 self-start text-[13px] font-semibold text-zinc-500 underline underline-offset-2 dark:text-zinc-400"
+            >
+              번호를 잊으셨나요?
+            </button>
+          ) : (
+            <div className="mt-3 rounded-xl border-2 border-zinc-300 p-3 dark:border-zinc-700">
+              <p className="text-[13px] font-bold">새 번호로 바꾸기</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                예전 번호를 묻지 않습니다. 이 잠금은 <b>같은 기기를 쓰는 사람이 실수로
+                열어보는 것</b>까지만 막는 가림막이라, 물어봐도 막지 못하고{" "}
+                <b>잊은 사람만 갇힙니다</b>. 즉 <b>이 태블릿을 만질 수 있는 사람은
+                누구나 새로 정할 수 있습니다.</b>
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                <b>기록은 안 지웁니다.</b> 출퇴근·근로계약은 근로기준법 제42조로 3년 보존해야 하는 기록이라, 번호를 잊었다고 함께 지우면 안 됩니다.
+              </p>
+              <div className="mt-2.5 flex flex-col gap-2">
+                <input
+                  value={pin}
+                  onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="new-password"
+                  placeholder="새 번호 (4자리 이상)"
+                  aria-label="새 잠금번호"
+                  className={INPUT}
+                />
+                <input
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))}
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="new-password"
+                  placeholder="한 번 더"
+                  aria-label="새 잠금번호 확인"
+                  className={INPUT}
+                />
+                <button
+                  type="button"
+                  className={BTN_PRIMARY}
+                  onClick={() => {
+                    if (pin.length < 4) return setError("4자리 이상으로 해주세요.");
+                    if (pin !== confirm) return setError("두 번 입력한 번호가 다릅니다.");
+                    if (!resetPin(pin)) return setError("이 태블릿에 저장할 수 없습니다.");
+                    setError("");
+                    setForgot(false);
+                    unlock();
+                    setState("open");
+                  }}
+                >
+                  새 번호로 바꾸고 들어가기
+                </button>
+                <button
+                  type="button"
+                  className={BTN}
+                  onClick={() => {
+                    setForgot(false);
+                    setError("");
+                    setPinInput("");
+                    setConfirm("");
+                  }}
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
     </Screen>

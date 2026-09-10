@@ -64,6 +64,29 @@ export function setPin(pin: string): boolean {
   }
 }
 
+/**
+ * ★ 번호를 잊었을 때 새로 정한다 (2026-09-10).
+ *
+ * **왜 현재 번호를 안 묻는가.** 이 잠금은 처음부터 **가림막**이다 —
+ * 검사가 브라우저 안에서 돌고 데이터는 저장소에 그대로 있어서, 기기를 가진
+ * 사람은 개발자 도구로 그냥 본다(`06_보안설계.md` V-19 · 서버가 HTML 에 재료를 실어 보내기까지 한다). 그런 잠금에
+ * "현재 번호를 대야 바꿔준다" 를 붙이면 **막지도 못하면서 사장님만 가둔다.**
+ *
+ * 실제로 가두는 것이 무엇인지가 문제다 — 사장님이 직접 넣은 레시피(`sop:recipes`)가 이 잠금 뒤에 있다.
+ * 번호를 잊으면 **그 레시피를 다시 볼 방법이 없어진다** — 유일한 사본이
+ * 이 브라우저 저장소다(`01_MVP기획서.md` §6.5.1).
+ *
+ * 그래서 재설정을 연다. 대신 **화면이 그 뜻을 정직하게 말한다** —
+ * "이 태블릿을 만질 수 있는 사람은 누구나 새로 정할 수 있습니다."
+ * 없는 안전을 광고하지 않는 것이 이 프로젝트의 규칙이다.
+ *
+ * ⚠️ 데이터는 **안 지운다.** 번호만 바꾼다.
+ */
+export function resetPin(next: string): boolean {
+  if (next.length < 4) return false;
+  return setPin(next);
+}
+
 export function checkPin(pin: string): boolean {
   try {
     const saved = localStorage.getItem(PIN_KEY);

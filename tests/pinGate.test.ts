@@ -151,3 +151,77 @@ test("잠금 해제는 sessionStorage에 둔다 — 브라우저를 닫으면 �
   assert.equal(store.isUnlocked(), false); // 열린 상태는 사라진다
   assert.equal(store.needsPin(), true);
 });
+
+/* ------------------------------------------------------------------ *
+ * 번호를 잊었을 때 (2026-09-10)
+ *
+ * ★ 이 절이 막는 사고: **번호를 잊어서 3년 보존 대상 데이터가 갇히는 것.**
+ *   `/backup` 이 사장님 잠금 뒤에 있고, 거기에 출퇴근·근로계약이 있다.
+ *   근로기준법 제42조가 3년 보존을 요구하는 기록인데 꺼낼 방법이 없어진다.
+ *   → 01_MVP기획서 §10.3 (다) #17
+ *
+ * ★★ 재설정이 **예전 번호를 안 묻는다.** 이 잠금은 가림막이라
+ *   (검사가 브라우저 안에서 돌고 데이터는 저장소에 그대로 있다)
+ *   물어봐야 막지도 못하면서 잊은 사람만 가둔다.
+ *   화면이 그 사실을 그대로 말하는 것이 이 설계의 조건이다.
+ * ------------------------------------------------------------------ */
+
+test("★ 번호를 잊어도 새로 정할 수 있다 — 예전 번호를 안 묻는다", () => {
+  local.clear();
+  owner.setPin("1234");
+  assert.equal(owner.checkPin("1234"), true);
+
+  assert.equal(owner.resetPin("9876"), true);
+  assert.equal(owner.checkPin("9876"), true);
+  assert.equal(owner.checkPin("1234"), false, "예전 번호가 아직 통한다");
+});
+
+test("★ 재설정해도 데이터는 안 지운다 — 그게 이 기능의 목적이다", () => {
+  // 번호를 잊었다고 3년 보존 대상 기록을 같이 지우면 본말이 뒤집힌다
+  local.clear();
+  owner.setPin("1234");
+  local.setItem("sop:punch", '{"st1":{"2026-09-01":{}}}');
+  local.setItem("sop:contracts", "[{}]");
+
+  owner.resetPin("5555");
+
+  assert.ok(local.getItem("sop:punch"), "출퇴근이 지워졌다");
+  assert.ok(local.getItem("sop:contracts"), "근로계약이 지워졌다");
+});
+
+test("재설정도 4자리 미만은 거절한다", () => {
+  local.clear();
+  owner.setPin("1234");
+  assert.equal(owner.resetPin("12"), false);
+  assert.equal(owner.checkPin("1234"), true, "거절했는데 예전 번호가 깨졌다");
+});
+
+test("★ 매장 번호도 같은 방식으로 재설정된다", () => {
+  local.clear();
+  store.setPin("1111");
+  assert.equal(store.resetPin("2222"), true);
+  assert.equal(store.checkPin("2222"), true);
+  assert.equal(store.checkPin("1111"), false);
+});
+
+test("★ 재설정한 뒤에는 잠금이 열려 있다 — 다시 안 묻는다", () => {
+  // 새 번호를 방금 정한 사람에게 그 번호를 또 넣으라고 하면 화면이 멍청해 보인다
+  local.clear();
+  owner.setPin("1234");
+  owner.lock();
+  assert.equal(owner.isUnlocked(), false);
+
+  owner.resetPin("9999");
+  assert.equal(owner.isUnlocked(), true, "재설정 후에도 잠겨 있다");
+});
+
+test("★ 두 잠금의 재설정이 서로를 안 건드린다", () => {
+  local.clear();
+  owner.setPin("1234");
+  store.setPin("5678");
+
+  store.resetPin("0000");
+
+  assert.equal(owner.checkPin("1234"), true, "매장 번호를 바꿨는데 사장님 번호가 바뀌었다");
+  assert.equal(store.checkPin("0000"), true);
+});
