@@ -171,7 +171,7 @@ test("제대로 된 백업은 통과하고 건수를 돌려준다", () => {
   const r = checkRestore(good());
   assert.equal(r.ok, true);
   if (!r.ok) return;
-  assert.deepEqual(r.counts, { staff: 2, punches: 1, contracts: 1 });
+  assert.deepEqual(r.counts, { staff: 2, punches: 1, contracts: 1, cycle: 0 });
 });
 
 test("★ JSON이 아니면 거부한다", () => {

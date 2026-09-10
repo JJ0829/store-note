@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import MediaSlot from "@/components/MediaSlot";
+import { SaveFailed, useSaveState } from "@/components/ui";
 import { SCALES, scaled } from "@/lib/scale";
 import { businessDay, dayKey, pruneDayKeys } from "@/lib/businessDay";
 import { arrivesIn, readyAt, triggerLabel } from "@/lib/leadTime";
@@ -216,6 +217,11 @@ export default function PrepView({
   /* 주기는 **매장이 정한다.** 시드에는 없다 — 제빙기를 매일 닦는 매장에
      `1개월마다` 를 띄우면 처음부터 틀린 말이다 (사장님 지적 2026-09-08) */
   const [cycleEvery, setCycleEveryState] = useState<CycleEvery>({});
+  /* ★ 주기 기록은 **오래 남아야 하는 값**이라 저장 실패를 알린다.
+     그날 체크(`prep:{slug}:{영업일}`)는 일부러 조용하다 — 잃어도 그날 일은
+     계속해야 한다. 여기는 다르다: 보건증을 언제 갱신했는지가 사라지면
+     그 사실을 되찾을 방법이 없다. → 21_화면명세 §7-① */
+  const save = useSaveState();
 
   const recipeBySlug = useMemo(
     () => new Map(recipes.map((r) => [r.slug, r])),
@@ -310,14 +316,14 @@ export default function PrepView({
     (task: PrepTask) => {
       const next = toggleCycleDone(cycleDone, task.id, businessDay());
       setCycleDone(next);
-      saveCycleDone(next);
+      save.report(saveCycleDone(next));
       log("prep_check", {
         prepSlug: list.slug,
         taskId: task.id,
         recoverable: task.recoverable,
       });
     },
-    [cycleDone, list.slug],
+    [cycleDone, list.slug, save],
   );
 
   /** 주기 항목인가 */
@@ -352,9 +358,9 @@ export default function PrepView({
     (id: string, day: string) => {
       const next = setCycleDay(cycleDone, id, day || null);
       setCycleDone(next);
-      saveCycleDone(next);
+      save.report(saveCycleDone(next));
     },
-    [cycleDone],
+    [cycleDone, save],
   );
 
   /** 매장이 정하는 주기(일). 비우면 "안 정함" 이 되고 기한 판단을 멈춘다 */
@@ -363,9 +369,9 @@ export default function PrepView({
       const n = raw.trim() === "" ? null : Number(raw);
       const next = setCycleEvery(cycleEvery, id, n);
       setCycleEveryState(next);
-      saveCycleEvery(next);
+      save.report(saveCycleEvery(next));
     },
-    [cycleEvery],
+    [cycleEvery, save],
   );
 
   const setScale = useCallback(
@@ -424,6 +430,15 @@ export default function PrepView({
           />
         </div>
       </header>
+
+      {save.failed && (
+        <div className="px-4 pt-4">
+          <SaveFailed
+            what="점검 기록"
+            retry={() => save.report(saveCycleDone(cycleDone) && saveCycleEvery(cycleEvery))}
+          />
+        </div>
+      )}
 
       {/* ---------- 주기 목록: 지금 해야 할 것 ---------- *
           "되돌릴 수 없는 것" 안내는 여기서 뜻이 약하다(13개 중 1개).

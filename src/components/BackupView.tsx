@@ -8,6 +8,7 @@ import {
   buildBackup,
   checkRestore,
   contractRows,
+  cycleRows,
   punchRows,
   toCsv,
   today,
@@ -61,7 +62,14 @@ function download(name: string, text: string, mime: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function BackupView({ storeName }: { storeName: string }) {
+export default function BackupView({
+  storeName,
+  cycleLabels = {},
+}: {
+  storeName: string;
+  /** 점검 항목 id → 이름·묶음. 시드에서 서버가 만들어 넘긴다 */
+  cycleLabels?: Record<string, { title: string; group: string }>;
+}) {
   // localStorage는 서버 렌더에서 못 본다. 마운트 뒤에 읽는다
   const [ready, setReady] = useState(false);
   const [snap, setSnap] = useState<BackupFile | null>(null);
@@ -88,7 +96,8 @@ export default function BackupView({ storeName }: { storeName: string }) {
 
   const c = backupCounts(snap);
   const stamp = today();
-  const empty = c.staff === 0 && c.punches === 0 && c.contracts === 0;
+  // 점검 기록만 있고 나머지가 비어도 백업할 값이 있다 — 그것도 잃으면 못 되찾는다
+  const empty = c.staff === 0 && c.punches === 0 && c.contracts === 0 && c.cycle === 0;
 
   return (
     <Screen title="내보내기 · 되돌리기" storeName={storeName}>
@@ -101,6 +110,7 @@ export default function BackupView({ storeName }: { storeName: string }) {
           <Row label="직원" value={`${c.staff}명`} />
           <Row label="출퇴근 기록" value={`${c.punches}건`} />
           <Row label="근로계약" value={`${c.contracts}건`} />
+          <Row label="점검 기록" value={`${c.cycle}건`} />
         </div>
 
         {empty && (
@@ -153,6 +163,23 @@ export default function BackupView({ storeName }: { storeName: string }) {
             }
           >
             📄 근로계약 (엑셀 · CSV)
+          </button>
+
+          <button
+            type="button"
+            className={BTN}
+            disabled={c.cycle === 0}
+            onClick={() =>
+              download(
+                `점검기록_${stamp}.csv`,
+                toCsv(
+                  cycleRows(snap.cycleDone ?? {}, snap.cycleEvery ?? {}, cycleLabels),
+                ),
+                "text/csv",
+              )
+            }
+          >
+            📄 주기 점검 기록 (엑셀 · CSV)
           </button>
 
           <button

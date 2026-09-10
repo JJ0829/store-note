@@ -24,9 +24,23 @@
 import { loadPunches, savePunches, type PunchData, type Punch } from "./attendance.ts";
 import { loadContracts, saveContracts, type Contract } from "./contracts.ts";
 import { loadRoster, saveRoster, type RosterData, type Staff } from "./roster.ts";
+import {
+  loadCycleDone,
+  loadCycleEvery,
+  saveCycleDone,
+  saveCycleEvery,
+  statusLine,
+  type CycleDone,
+  type CycleEvery,
+} from "./cycleDone.ts";
 
-/** 백업 파일 형식 번호. 나중에 모양이 바뀌면 올리고, 되돌리기에서 분기한다 */
-export const BACKUP_VERSION = 1;
+/**
+ * 백업 파일 형식 번호. 나중에 모양이 바뀌면 올리고, 되돌리기에서 분기한다.
+ *
+ * v2 (2026-09-10) — 주기 점검 기록을 넣었다. **v1 파일도 그대로 되돌릴 수 있다**
+ * (아래 `checkRestore`·`applyRestore` 의 주기 부분은 있을 때만 본다).
+ */
+export const BACKUP_VERSION = 2;
 
 export type BackupFile = {
   kind: "store-note-backup";
@@ -37,6 +51,20 @@ export type BackupFile = {
   roster: RosterData;
   punches: PunchData;
   contracts: Contract[];
+
+  /**
+   * ★ 주기 점검 (v2 부터). **v1 파일에는 없다 — 그래서 선택 사항이다.**
+   *
+   * 왜 넣었나: 보건증·소방시설·위생교육은 **점검했다는 기록 자체가 증빙**이다.
+   * 그런데 이 값은 태블릿 브라우저에만 있어서, 기기를 바꾸거나 사이트 데이터를
+   * 지우면 "마지막으로 언제 했는지" 가 통째로 사라진다. 그러면 화면이 다시
+   * `기록 없음` 으로 돌아가고, 사장님은 그걸 되찾을 방법이 없다.
+   *
+   * `cycleEvery` 도 같이 넣는다. 주기는 사장님이 관할 기관에 확인해서 넣은
+   * 값이라 다시 알아내려면 또 전화를 돌려야 한다.
+   */
+  cycleDone?: CycleDone;
+  cycleEvery?: CycleEvery;
 };
 
 /* ------------------------------------------------------------------ */
@@ -196,6 +224,43 @@ export function contractRows(
   ];
 }
 
+const CYCLE_HEADER = ["항목", "묶음", "마지막으로 한 날", "주기(일)", "상태", "항목ID"];
+
+/**
+ * 주기 점검 CSV.
+ *
+ * ★ 제목은 시드에 있고 기록은 저장소에 있다. 그래서 `labels` 를 밖에서 받는다 —
+ *   이 파일은 서버 데이터를 못 읽는다(클라이언트에서 돈다).
+ *   제목을 못 찾으면 **id 를 그대로 적는다.** 빈칸으로 두면 무엇을 점검한
+ *   기록인지 알 수 없어 증빙으로 쓸 수 없다.
+ *
+ * 보건증·소방시설·위생교육은 **점검했다는 기록 자체가 증빙**이라
+ * 엑셀로 뽑아 보관·제출할 수 있어야 한다.
+ */
+export function cycleRows(
+  done: CycleDone,
+  every: CycleEvery,
+  labels: Record<string, { title: string; group: string }> = {},
+  todayDay?: string,
+): (string | number | boolean)[][] {
+  const ids = [...new Set([...Object.keys(done), ...Object.keys(every)])].sort();
+  return [
+    CYCLE_HEADER,
+    ...ids.map((id) => {
+      const meta = labels[id];
+      const st = statusLine(done, id, every[id] ?? null, todayDay);
+      return [
+        meta ? meta.title : id,
+        meta ? meta.group : "",
+        done[id] ?? "",
+        every[id] ?? "",
+        st.text,
+        id,
+      ];
+    }),
+  ];
+}
+
 /* ------------------------------------------------------------------ */
 /* 모으기                                                              */
 /* ------------------------------------------------------------------ */
@@ -209,6 +274,8 @@ export function buildBackup(storeName: string): BackupFile {
     roster: loadRoster(),
     punches: loadPunches(),
     contracts: loadContracts(),
+    cycleDone: loadCycleDone(),
+    cycleEvery: loadCycleEvery(),
   };
 }
 
@@ -223,6 +290,7 @@ export function backupCounts(b: BackupFile): {
   staff: number;
   punches: number;
   contracts: number;
+  cycle: number;
 } {
   let punches = 0;
   for (const byDate of Object.values(b.punches ?? {})) {
@@ -232,6 +300,9 @@ export function backupCounts(b: BackupFile): {
     staff: (b.roster?.staff ?? []).length,
     punches,
     contracts: (b.contracts ?? []).length,
+    // 주기는 "마지막으로 한 날" 이 적힌 항목 수다. 주기만 정하고 아직 한 적이
+    // 없는 것은 세지 않는다 — 잃을 것이 없기 때문이다
+    cycle: Object.keys(b.cycleDone ?? {}).length,
   };
 }
 
@@ -281,6 +352,16 @@ export function checkRestore(text: string): RestoreCheck {
   if (!rosterOk || !punchesOk || !contractsOk) {
     return { ok: false, reason: "백업 파일이 손상되었습니다. 안에 있어야 할 항목이 빠졌습니다." };
   }
+  /* 주기 점검은 v2 에 생겼다. **v1 파일에는 없는 게 정상**이므로 없어도 통과시킨다.
+     다만 있는데 모양이 틀리면 그건 손상이다 — 조용히 넘기면 되돌린 뒤에
+     점검 기록만 사라진 것을 나중에야 알게 된다. */
+  const cycleDoneOk =
+    f.cycleDone === undefined || (typeof f.cycleDone === "object" && f.cycleDone !== null);
+  const cycleEveryOk =
+    f.cycleEvery === undefined || (typeof f.cycleEvery === "object" && f.cycleEvery !== null);
+  if (!cycleDoneOk || !cycleEveryOk) {
+    return { ok: false, reason: "백업 파일의 점검 기록이 손상되었습니다." };
+  }
 
   const file = f as BackupFile;
   return { ok: true, file, counts: backupCounts(file) };
@@ -299,5 +380,17 @@ export function applyRestore(file: BackupFile): { ok: boolean; failed: string[] 
   if (!saveRoster(file.roster)) failed.push("직원 명단");
   if (!savePunches(file.punches)) failed.push("출퇴근");
   if (!saveContracts(file.contracts)) failed.push("근로계약");
+
+  /* ★ 주기 점검은 **있을 때만** 덮어쓴다.
+     v1 백업(주기 칸이 아예 없는 파일)으로 되돌릴 때 여기서 빈 값을 써버리면,
+     그 백업이 담은 적도 없는 점검 기록을 지우는 셈이 된다.
+     "덮어쓴다, 합치지 않는다" 는 원칙은 **백업이 그 덩이를 담고 있을 때** 적용된다.
+     v2 백업이 빈 점검 기록을 담고 있으면 그건 "비어 있음" 을 담은 것이므로 덮어쓴다. */
+  if (file.cycleDone !== undefined && !saveCycleDone(file.cycleDone)) {
+    failed.push("점검 기록");
+  }
+  if (file.cycleEvery !== undefined && !saveCycleEvery(file.cycleEvery)) {
+    failed.push("점검 주기");
+  }
   return { ok: failed.length === 0, failed };
 }

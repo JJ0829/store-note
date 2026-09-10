@@ -110,12 +110,12 @@ test("buildBackup 은 지금 저장소를 그대로 담는다", () => {
   assert.equal(b.kind, "store-note-backup");
   assert.equal(b.version, BACKUP_VERSION);
   assert.equal(b.storeName, "○○ 베이커리 카페");
-  assert.deepEqual(backupCounts(b), { staff: 2, punches: 2, contracts: 1 });
+  assert.deepEqual(backupCounts(b), { staff: 2, punches: 2, contracts: 1, cycle: 0 });
 });
 
 test("빈 저장소도 백업된다 (0건 매장)", () => {
   local.clear();
-  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0 });
+  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0, cycle: 0 });
 });
 
 test("exportedAt 이 ISO 시각으로 들어간다 — 어느 것이 최신인지 사람이 본다", () => {
@@ -217,7 +217,7 @@ test("빈 백업으로 되돌리면 전부 비워진다", () => {
     punches: {},
     contracts: [],
   });
-  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0 });
+  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0, cycle: 0 });
 });
 
 /* ---------- 왕복 ---------- */
@@ -230,10 +230,10 @@ test("내보내기 → 되돌리기 왕복에서 건수가 유지된다", () => 
   });
   const saved = JSON.parse(JSON.stringify(buildBackup("○○")));
   local.clear(); // 태블릿을 잃었다
-  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0 });
+  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0, cycle: 0 });
 
   applyRestore(saved);
-  assert.deepEqual(currentCounts(), { staff: 2, punches: 2, contracts: 1 });
+  assert.deepEqual(currentCounts(), { staff: 2, punches: 2, contracts: 1, cycle: 0 });
 });
 
 test("퇴사자 기록도 왕복에서 살아남는다 (3년 보존)", () => {
@@ -294,4 +294,103 @@ test("일부만 실패해도 실패한 것만 나열한다", () => {
   assert.deepEqual(r.failed, ["출퇴근"]);
   // 나머지는 들어갔다 — 부분 성공을 숨기지 않는다
   assert.equal(buildBackup("○○").roster.staff.length, 1);
+});
+
+/* ------------------------------------------------------------------ *
+ * 주기 점검 기록 (백업 v2 · 2026-09-10)
+ *
+ * ★ 왜 넣었나: 보건증·소방시설·위생교육은 **점검했다는 기록 자체가 증빙**이다.
+ *   그런데 그 값은 태블릿 브라우저에만 있어서, 기기를 바꾸거나 사이트 데이터를
+ *   지우면 "마지막으로 언제 했는지" 가 통째로 사라진다.
+ *
+ * ★★ 이 절이 지키는 가장 중요한 것: **v1 백업으로 되돌려도 점검 기록을 안 지운다.**
+ *   "덮어쓴다, 합치지 않는다" 는 원칙은 백업이 그 덩이를 담고 있을 때 적용된다.
+ *   담은 적도 없는 것을 지우면 그건 덮어쓰기가 아니라 유실이다.
+ * ------------------------------------------------------------------ */
+
+const { loadCycleDone, loadCycleEvery, saveCycleDone, saveCycleEvery } = await import(
+  "../src/lib/cycleDone.ts"
+);
+
+const BASE = {
+  kind: "store-note-backup" as const,
+  version: BACKUP_VERSION,
+  exportedAt: "2026-09-10T00:00:00.000Z",
+  storeName: "○○",
+  roster: { staff: [], assign: {} },
+  punches: {},
+  contracts: [],
+};
+
+test("★ 백업이 주기 점검 기록을 담는다", () => {
+  local.clear();
+  saveCycleDone({ "c-4": "2026-05-11" });
+  saveCycleEvery({ "c-4": 365 });
+
+  const b = buildBackup("○○");
+  assert.deepEqual(b.cycleDone, { "c-4": "2026-05-11" });
+  assert.deepEqual(b.cycleEvery, { "c-4": 365 });
+  assert.equal(backupCounts(b).cycle, 1);
+});
+
+test("주기만 정하고 한 적이 없으면 건수에 안 센다 — 잃을 것이 없다", () => {
+  local.clear();
+  saveCycleEvery({ "c-4": 365 });
+  assert.equal(backupCounts(buildBackup("○○")).cycle, 0);
+});
+
+test("★ 되돌리면 점검 기록이 백업 값으로 돌아온다", () => {
+  local.clear();
+  saveCycleDone({ "c-4": "2020-01-01" });
+  saveCycleEvery({ "c-4": 30 });
+
+  const r = applyRestore({
+    ...BASE,
+    cycleDone: { "c-4": "2026-05-11", "c-10": "2026-03-01" },
+    cycleEvery: { "c-4": 365 },
+  });
+
+  assert.equal(r.ok, true);
+  assert.deepEqual(loadCycleDone(), { "c-4": "2026-05-11", "c-10": "2026-03-01" });
+  assert.deepEqual(loadCycleEvery(), { "c-4": 365 });
+});
+
+test("★★ v1 백업(점검 칸이 없는 파일)으로 되돌려도 점검 기록을 안 지운다", () => {
+  // 담은 적도 없는 것을 지우면 덮어쓰기가 아니라 유실이다.
+  // 옛 백업으로 출퇴근만 되돌렸다가 보건증 기록이 사라지면 되찾을 방법이 없다
+  local.clear();
+  saveCycleDone({ "c-4": "2026-05-11" });
+  saveCycleEvery({ "c-4": 365 });
+
+  const v1 = { ...BASE, version: 1 };
+  // @ts-expect-error v1 파일에는 이 칸이 아예 없다
+  delete v1.cycleDone;
+
+  const r = applyRestore(v1);
+  assert.equal(r.ok, true);
+  assert.deepEqual(loadCycleDone(), { "c-4": "2026-05-11" }, "v1 되돌리기가 점검 기록을 지웠다");
+  assert.deepEqual(loadCycleEvery(), { "c-4": 365 }, "v1 되돌리기가 점검 주기를 지웠다");
+});
+
+test("★ 비어 있는 점검 기록을 담은 v2 백업은 덮어쓴다 — '비어 있음' 도 담긴 값이다", () => {
+  // 위 규칙은 '칸이 없을 때' 다. 빈 객체가 들어 있으면 그건 의도한 상태다
+  local.clear();
+  saveCycleDone({ "c-4": "2026-05-11" });
+
+  applyRestore({ ...BASE, cycleDone: {}, cycleEvery: {} });
+  assert.deepEqual(loadCycleDone(), {});
+});
+
+test("내보내기 → 되돌리기 왕복에서 점검 기록이 살아남는다", () => {
+  local.clear();
+  saveCycleDone({ "c-1": "2026-05-11", "c-11": "2026-01-20" });
+  saveCycleEvery({ "c-1": 120 });
+
+  const file = JSON.parse(JSON.stringify(buildBackup("○○")));
+  local.clear();
+  assert.deepEqual(loadCycleDone(), {}, "지워진 상태에서 시작해야 왕복이 뜻이 있다");
+
+  applyRestore(file);
+  assert.deepEqual(loadCycleDone(), { "c-1": "2026-05-11", "c-11": "2026-01-20" });
+  assert.deepEqual(loadCycleEvery(), { "c-1": 120 });
 });
