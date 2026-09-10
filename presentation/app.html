@@ -429,59 +429,59 @@ const DATA = {
     { slug:"cafe-open", name:"오픈조", subtitle:"첫날 체크리스트",
       summary:"07:30 출근해서 08:00 오픈까지 30분입니다. 순서대로 하시면 시간 안에 끝납니다. 빨간 표시는 절대 건너뛰면 안 되는 항목이에요.",
       sections:[
-        { title:"들어오자마자", note:"머신 예열이 20~30분 걸려서 이게 제일 먼저입니다", steps:[
-          { title:"손 씻고 위생 복장 착용", desc:"손목까지 30초 이상. 앞치마, 모자, 편한 신발까지 갖추고 시작합니다.", critical:true, tip:null },
-          { title:"에스프레소 머신 전원 켜기", desc:"예열에 20~30분 걸립니다. 다른 걸 먼저 하면 오픈 시간에 못 맞춥니다.", critical:false, tip:"이것만 먼저 켜두고 나머지를 하세요." },
-          { title:"냉장·냉동고 온도 확인 후 기록", desc:"냉장 0~5℃, 냉동 -18℃ 이하. 벗어나 있으면 그 자리에서 점장에게 알립니다.", critical:true, tip:"기록은 나중에 몰아서 쓰면 의미가 없습니다. 본 순간에 적으세요." }
+        { id:"sec-open-1", title:"들어오자마자", note:"머신 예열이 20~30분 걸려서 이게 제일 먼저입니다", steps:[
+          { id:"t-open-1", title:"손 씻고 위생 복장 착용", desc:"손목까지 30초 이상. 앞치마, 모자, 편한 신발까지 갖추고 시작합니다.", critical:true, tip:null },
+          { id:"t-open-2", title:"에스프레소 머신 전원 켜기", desc:"예열에 20~30분 걸립니다. 다른 걸 먼저 하면 오픈 시간에 못 맞춥니다.", critical:false, tip:"이것만 먼저 켜두고 나머지를 하세요." },
+          { id:"t-open-3", title:"냉장·냉동고 온도 확인 후 기록", desc:"냉장 0~5℃, 냉동 -18℃ 이하. 벗어나 있으면 그 자리에서 점장에게 알립니다.", critical:true, tip:"기록은 나중에 몰아서 쓰면 의미가 없습니다. 본 순간에 적으세요." }
         ]},
-        { title:"바 세팅", note:null, steps:[
-          { title:"그룹헤드 물 흘리기", desc:"밤새 고인 물을 5초 정도 빼냅니다. 첫 잔 맛이 달라집니다.", critical:false, tip:null },
-          { title:"추출 테스트 (원두를 새로 깠을 때만)", desc:"매일 하는 게 아닙니다. 원두를 새로 개봉했거나, 로스팅 날짜가 바뀌었거나, 그라인더를 청소한 뒤에 합니다.", critical:false, tip:"합격 기준은 영상으로 보세요. 글로는 설명이 안 되는 항목입니다." },
-          { title:"우유 소분, 스팀피처·행주 세팅", desc:"피처는 사이즈별로, 행주는 스팀용과 작업대용을 따로 둡니다. 섞이면 위생 사고입니다.", critical:true, tip:null },
-          { title:"어제 담근 콜드브루 여과·병입", desc:"어제 오후에 걸어둔 것을 오늘 아침에 받아냅니다. 그대로 두면 과추출로 씁니다.", critical:false, tip:"여과하면서 오늘 분량이 충분한지 봅니다. 모자라면 오후 프렙 때 양을 늘려야 합니다." }
+        { id:"sec-open-2", title:"바 세팅", note:null, steps:[
+          { id:"t-open-4", title:"그룹헤드 물 흘리기", desc:"밤새 고인 물을 5초 정도 빼냅니다. 첫 잔 맛이 달라집니다.", critical:false, tip:null },
+          { id:"t-open-5", title:"추출 테스트 (원두를 새로 깠을 때만)", desc:"매일 하는 게 아닙니다. 원두를 새로 개봉했거나, 로스팅 날짜가 바뀌었거나, 그라인더를 청소한 뒤에 합니다.", critical:false, tip:"합격 기준은 영상으로 보세요. 글로는 설명이 안 되는 항목입니다." },
+          { id:"t-open-6", title:"우유 소분, 스팀피처·행주 세팅", desc:"피처는 사이즈별로, 행주는 스팀용과 작업대용을 따로 둡니다. 섞이면 위생 사고입니다.", critical:true, tip:null },
+          { id:"t-open-7", title:"어제 담근 콜드브루 여과·병입", desc:"어제 오후에 걸어둔 것을 오늘 아침에 받아냅니다. 그대로 두면 과추출로 씁니다.", critical:false, tip:"여과하면서 오늘 분량이 충분한지 봅니다. 모자라면 오후 프렙 때 양을 늘려야 합니다." }
         ]},
-        { title:"매장 열기", note:null, steps:[
-          { title:"쇼케이스 진열 + 가격표·알레르기 표시", desc:"제빵조가 구운 것을 받아 진열합니다. 알레르기 표시가 빠지면 법적 문제가 됩니다.", critical:true, tip:null },
-          { title:"POS 개시, 잔돈 확인", desc:"시재 확인하고 영수증 용지 남은 양도 같이 봅니다.", critical:false, tip:null }
+        { id:"sec-open-3", title:"매장 열기", note:null, steps:[
+          { id:"t-open-8", title:"쇼케이스 진열 + 가격표·알레르기 표시", desc:"제빵조가 구운 것을 받아 진열합니다. 알레르기 표시가 빠지면 법적 문제가 됩니다.", critical:true, tip:null },
+          { id:"t-open-9", title:"POS 개시, 잔돈 확인", desc:"시재 확인하고 영수증 용지 남은 양도 같이 봅니다.", critical:false, tip:null }
         ]}
       ]},
 
     { slug:"cafe-close", name:"마감조", subtitle:"첫날 체크리스트",
       summary:"영업 끝나고 하는 마감입니다. 내일 아침 오픈조가 바로 시작할 수 있는 상태로 만들어두는 게 목표예요. 빠르게보다 빠짐없이가 중요합니다 — 여기서 빠뜨린 건 내일 아침에 드러납니다. 빨간 표시는 건너뛰지 마세요.",
       sections:[
-        { title:"기계", note:null, steps:[
-          { title:"에스프레소 머신 백플러시 + 세제 청소", desc:"세제 넣고 백플러시 5회, 헹굼 5회. 거르면 다음날 커피에서 쩐내가 납니다.", critical:true, tip:null },
-          { title:"그라인더 청소", desc:"호퍼 원두 비우고 안쪽까지 닦습니다. 남은 원두 기름이 굳으면 다음날 맛이 무너집니다.", critical:false, tip:null }
+        { id:"sec-close-1", title:"기계", note:null, steps:[
+          { id:"t-close-1", title:"에스프레소 머신 백플러시 + 세제 청소", desc:"세제 넣고 백플러시 5회, 헹굼 5회. 거르면 다음날 커피에서 쩐내가 납니다.", critical:true, tip:null },
+          { id:"t-close-2", title:"그라인더 청소", desc:"호퍼 원두 비우고 안쪽까지 닦습니다. 남은 원두 기름이 굳으면 다음날 맛이 무너집니다.", critical:false, tip:null }
         ]},
-        { title:"재료·위생", note:null, steps:[
-          { title:"우유 폐기 / 보관, 개봉일 라벨", desc:"개봉한 우유는 날짜를 적어둡니다. 라벨 없는 우유는 다음 사람이 못 씁니다.", critical:true, tip:null },
-          { title:"쇼케이스 비우고 청소", desc:"남은 베이커리는 폐기 기준에 따라 처리하고, 유리면까지 닦습니다.", critical:false, tip:null },
-          { title:"냉장·냉동고 온도 재확인 후 기록", desc:"아침과 같은 방식으로 한 번 더 기록합니다.", critical:true, tip:null },
-          { title:"폐기 기록 작성", desc:"무엇을 몇 개 버렸는지 적습니다. 이 기록이 다음 발주 수량의 근거가 됩니다.", critical:false, tip:null }
+        { id:"sec-close-2", title:"재료·위생", note:null, steps:[
+          { id:"t-close-3", title:"우유 폐기 / 보관, 개봉일 라벨", desc:"개봉한 우유는 날짜를 적어둡니다. 라벨 없는 우유는 다음 사람이 못 씁니다.", critical:true, tip:null },
+          { id:"t-close-4", title:"쇼케이스 비우고 청소", desc:"남은 베이커리는 폐기 기준에 따라 처리하고, 유리면까지 닦습니다.", critical:false, tip:null },
+          { id:"t-close-5", title:"냉장·냉동고 온도 재확인 후 기록", desc:"아침과 같은 방식으로 한 번 더 기록합니다.", critical:true, tip:null },
+          { id:"t-close-6", title:"폐기 기록 작성", desc:"무엇을 몇 개 버렸는지 적습니다. 이 기록이 다음 발주 수량의 근거가 됩니다.", critical:false, tip:null }
         ]},
-        { title:"내일 준비 확인 · 문단속", note:"여기서 빠뜨리면 내일 아침에 터집니다", steps:[
-          { title:"내일 제빵용 반죽·재료 걸려 있는지 확인", desc:"냉장고에 내일 쓸 반죽이 실제로 들어 있는지 눈으로 봅니다. 없으면 지금이 마지막 기회입니다.", critical:true, tip:"\"했겠지\"가 제일 위험합니다. 열어서 확인하세요." },
-          { title:"가스·전원·문단속", desc:"가스 밸브 잠금, 오븐 전원, 조명, 출입문 순서로 확인합니다.", critical:true, tip:null },
-          { title:"정산", desc:"POS 마감하고 시재 맞춰서 기록합니다.", critical:false, tip:null }
+        { id:"sec-close-3", title:"내일 준비 확인 · 문단속", note:"여기서 빠뜨리면 내일 아침에 터집니다", steps:[
+          { id:"t-close-7", title:"내일 제빵용 반죽·재료 걸려 있는지 확인", desc:"냉장고에 내일 쓸 반죽이 실제로 들어 있는지 눈으로 봅니다. 없으면 지금이 마지막 기회입니다.", critical:true, tip:"\"했겠지\"가 제일 위험합니다. 열어서 확인하세요." },
+          { id:"t-close-8", title:"가스·전원·문단속", desc:"가스 밸브 잠금, 오븐 전원, 조명, 출입문 순서로 확인합니다.", critical:true, tip:null },
+          { id:"t-close-9", title:"정산", desc:"POS 마감하고 시재 맞춰서 기록합니다.", critical:false, tip:null }
         ]}
       ]},
 
     { slug:"bakery-morning", name:"제빵", subtitle:"새벽 05:00~",
       summary:"어제 걸어둔 것을 받아서 오늘 진열분을 만듭니다. 그리고 내일 것을 다시 걸어둡니다. 이 두 가지가 매일 반복됩니다.",
       sections:[
-        { title:"어제 것 받기", note:null, steps:[
-          { title:"르방 상태 확인", desc:"부피가 2배 정도 올랐는지, 냄새가 시큼하고 상쾌한지 봅니다. 시큼하다 못해 쏘면 과발효입니다.", critical:false, tip:"판단이 어려우면 영상을 보세요. 이게 사람마다 제일 다른 항목입니다." },
-          { title:"냉장 발효 반죽 꺼내 실온 복원", desc:"어제 만들어둔 반죽을 꺼냅니다. 차가운 채로 성형하면 안 됩니다.", critical:false, tip:null }
+        { id:"sec-bake-1", title:"어제 것 받기", note:null, steps:[
+          { id:"t-bake-1", title:"르방 상태 확인", desc:"부피가 2배 정도 올랐는지, 냄새가 시큼하고 상쾌한지 봅니다. 시큼하다 못해 쏘면 과발효입니다.", critical:false, tip:"판단이 어려우면 영상을 보세요. 이게 사람마다 제일 다른 항목입니다." },
+          { id:"t-bake-2", title:"냉장 발효 반죽 꺼내 실온 복원", desc:"어제 만들어둔 반죽을 꺼냅니다. 차가운 채로 성형하면 안 됩니다.", critical:false, tip:null }
         ]},
-        { title:"오늘 것 만들기", note:null, steps:[
-          { title:"성형 → 2차 발효", desc:"품목별 성형 후 발효기에 넣습니다. 완료 판단은 손가락 자국 테스트로 합니다.", critical:false, tip:null },
-          { title:"굽기", desc:"품목별 온도·시간은 레시피를 보세요.", critical:false, tip:null },
-          { title:"식힘 · 포장 · 쇼케이스로 넘기기", desc:"완전히 식기 전에 포장하면 물이 생겨서 눅눅해집니다.", critical:false, tip:null }
+        { id:"sec-bake-2", title:"오늘 것 만들기", note:null, steps:[
+          { id:"t-bake-3", title:"성형 → 2차 발효", desc:"품목별 성형 후 발효기에 넣습니다. 완료 판단은 손가락 자국 테스트로 합니다.", critical:false, tip:null },
+          { id:"t-bake-4", title:"굽기", desc:"품목별 온도·시간은 레시피를 보세요.", critical:false, tip:null },
+          { id:"t-bake-5", title:"식힘 · 포장 · 쇼케이스로 넘기기", desc:"완전히 식기 전에 포장하면 물이 생겨서 눅눅해집니다.", critical:false, tip:null }
         ]},
-        { title:"내일 것 걸어두기", note:"오늘은 아무 일도 안 생깁니다. 안 하면 내일 아침에 터집니다", steps:[
-          { title:"내일용 반죽 제조 후 냉장", desc:"12~18시간 냉장 발효합니다. 오늘 안 만들면 내일 아침에 구울 게 없습니다.", critical:true, tip:null },
-          { title:"르방 갱신", desc:"매일 해야 합니다. 하루 거르면 살리는 데 2~3일 걸립니다.", critical:true, tip:null },
-          { title:"오븐·발효기·작업대 청소", desc:"밀가루가 남아 있으면 벌레가 생깁니다.", critical:false, tip:null }
+        { id:"sec-bake-3", title:"내일 것 걸어두기", note:"오늘은 아무 일도 안 생깁니다. 안 하면 내일 아침에 터집니다", steps:[
+          { id:"t-bake-6", title:"내일용 반죽 제조 후 냉장", desc:"12~18시간 냉장 발효합니다. 오늘 안 만들면 내일 아침에 구울 게 없습니다.", critical:true, tip:null },
+          { id:"t-bake-7", title:"르방 갱신", desc:"매일 해야 합니다. 하루 거르면 살리는 데 2~3일 걸립니다.", critical:true, tip:null },
+          { id:"t-bake-8", title:"오븐·발효기·작업대 청소", desc:"밀가루가 남아 있으면 벌레가 생깁니다.", critical:false, tip:null }
         ]}
       ]}
   ],
@@ -2392,7 +2392,7 @@ function renderStudy(slug) {
  * ------------------------------------------------------------------ */
 function renderChecklist(slug) {
   const pos = DATA.positions.find(p => p.slug === slug) || DATA.positions[0];
-  const flat = pos.sections.flatMap(s => s.steps.map((t, i) => ({ ...t, key: `${s.title}-${i}` })));
+  const flat = pos.sections.flatMap(s => s.steps);
   const prefix = `list:${pos.slug}:`;
   pruneDayKeys(prefix, bizDay());
   const key = prefix + bizDay();
@@ -2412,19 +2412,20 @@ function renderChecklist(slug) {
 
   pos.sections.forEach(sec => {
     const s = el(`<section class="sec"><h2>${esc(sec.title)}</h2>${sec.note ? `<p class="hint">${esc(sec.note)}</p>` : ""}<div class="rows"></div></section>`);
-    sec.steps.forEach((t, i) => {
-      const k = `${sec.title}-${i}`;
-      const card = el(`<div class="task ${t.critical ? "keep" : ""} ${done.has(k) ? "done" : ""}"></div>`);
-      const hit = el(`<button type="button" class="task-hit" aria-pressed="${done.has(k)}"></button>`);
+    /* 체크 저장 키는 반드시 t.id 다. 섹션제목+순번으로 만들면 섹션 이름을 고치거나
+       항목을 중간에 끼웠을 때 체크가 조용히 다른 항목으로 옮겨간다. 원본 앱도 task.id 를 쓴다. */
+    sec.steps.forEach(t => {
+      const card = el(`<div class="task ${t.critical ? "keep" : ""} ${done.has(t.id) ? "done" : ""}"></div>`);
+      const hit = el(`<button type="button" class="task-hit" aria-pressed="${done.has(t.id)}"></button>`);
       hit.append(el(`<span class="tick" aria-hidden="true">${CHECK}</span>`), el(`<div style="min-width:0;flex:1">
         ${t.critical ? '<div class="tags"><span class="pill crit">꼭 지키기</span></div>' : ""}
         <h3>${esc(t.title)}</h3><p class="desc">${esc(t.desc)}</p>
         ${t.tip ? `<p class="slot" style="font-weight:400;color:var(--ink-2)"><b style="font-family:var(--sans)">선배 한마디</b> ${esc(t.tip)}</p>` : ""}</div>`));
       hit.onclick = () => {
-        done.has(k) ? done.delete(k) : done.add(k);
+        done.has(t.id) ? done.delete(t.id) : done.add(t.id);
         store.set(key, [...done]);
-        card.classList.toggle("done", done.has(k));
-        hit.setAttribute("aria-pressed", String(done.has(k)));
+        card.classList.toggle("done", done.has(t.id));
+        hit.setAttribute("aria-pressed", String(done.has(t.id)));
         refresh();
       };
       card.appendChild(hit);

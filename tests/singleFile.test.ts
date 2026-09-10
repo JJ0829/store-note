@@ -22,7 +22,9 @@ const FILES = ["presentation/매장수첩.html", "presentation/app.html"] as con
 
 function scriptOf(path: string): string {
   const html = readFileSync(path, "utf8");
-  const m = html.match(/<script>\n([\s\S]*?)<\/script>/);
+  // \r?\n — git 은 LF 로 저장하지만 Windows 에서 체크아웃하면 CRLF 가 된다.
+  // \n 만 보면 이 파일을 처음 만든 작업 폴더에서만 통과하고 새 체크아웃에서는 전부 깨진다.
+  const m = html.match(/<script>\r?\n([\s\S]*?)<\/script>/);
   assert.ok(m, `${path}: <script> 블록을 못 찾았다`);
   return m[1];
 }
@@ -88,3 +90,73 @@ test("마감조 문구에 시간 압박이 없다", () => {
   assert.ok(m, "마감조 summary 를 못 찾았다");
   assert.doesNotMatch(m[1], /분 안에 끝/, "마감조 문구에 시간 압박이 돌아왔다");
 });
+
+/* ------------------------------------------------------------------ *
+ * ★ 체크 저장 키 — 2026-09-10 에 실제로 틀리고 있던 것.
+ *
+ * 키가 `${섹션제목}-${순번}` 이었다. 섹션 이름을 고치거나 항목을 중간에
+ * 끼우면 체크가 조용히 다른 항목으로 옮겨간다. 화면은 아무 말도 안 한다 —
+ * 시연 자산의 데이터가 아무 말 없이 틀리는 종류의 고장이다.
+ * 원본 앱은 task.id 를 쓴다. 단일 파일도 그래야 한다.
+ *
+ * 뿌리는 키 계산이 아니라 데이터였다 — seed.json 을 복사해 넣으면서
+ * steps[].id 와 sections[].id 가 통째로 빠져서 쓸 키가 없었다.
+ * 그래서 아래 두 검사가 짝으로 있어야 한다.
+ * ------------------------------------------------------------------ */
+
+type Named = { id: string; title: string };
+
+/** 단일 파일 안에 박아둔 positions 블록만 잘라낸다 */
+function positionsOf(path: string): string {
+  const html = readFileSync(path, "utf8");
+  const from = html.indexOf("  positions: [");
+  const to = html.indexOf("\n  prepLists:", from);
+  assert.ok(from > 0 && to > from, `${path}: positions 블록을 못 찾았다`);
+  return html.slice(from, to);
+}
+
+/** `{ id:"...", title:"...", desc:` 또는 `..., note:` 를 순서대로 뽑는다 */
+const pick = (block: string, tail: string): Named[] =>
+  [
+    ...block.matchAll(
+      new RegExp(`\\{ id:"([^"]*)", title:"([^"]*)", ${tail}`, "g"),
+    ),
+  ].map((m) => ({ id: m[1], title: m[2] }));
+
+function seedFlat() {
+  const seed = JSON.parse(readFileSync("data/seed.json", "utf8")) as {
+    positions: { sections: (Named & { steps: Named[] })[] }[];
+  };
+  const sections: Named[] = [];
+  const steps: Named[] = [];
+  for (const p of seed.positions) {
+    for (const s of p.sections) {
+      sections.push({ id: s.id, title: s.title });
+      for (const t of s.steps) steps.push({ id: t.id, title: t.title });
+    }
+  }
+  return { sections, steps };
+}
+
+for (const path of FILES) {
+  test(`★ ${path} — 체크리스트가 t.id 로 저장한다`, () => {
+    const js = scriptOf(path);
+    const from = js.indexOf("function renderChecklist(");
+    assert.ok(from > 0, "renderChecklist 를 못 찾았다");
+    const body = js.slice(from, js.indexOf("\nrender();", from));
+
+    assert.ok(
+      !/\$\{s(ec)?\.title\}-\$\{i\}/.test(body),
+      "제목+순번 키가 돌아왔다 — 섹션 이름을 고치면 체크가 다른 항목으로 옮겨간다",
+    );
+    assert.match(body, /store\.set\(key, \[\.\.\.done\]\)/, "저장 호출이 사라졌다");
+    assert.match(body, /done\.(has|add|delete)\(t\.id\)/, "체크 판정이 t.id 가 아니다");
+  });
+
+  test(`★ ${path} — 박아둔 항목의 id·제목이 시드와 같다`, () => {
+    const block = positionsOf(path);
+    const seed = seedFlat();
+    assert.deepEqual(pick(block, "desc:"), seed.steps, "항목이 시드와 어긋났다");
+    assert.deepEqual(pick(block, "note:"), seed.sections, "섹션이 시드와 어긋났다");
+  });
+}
