@@ -52,7 +52,7 @@ npm run dev
 | 런타임 의존성 | **3개** (`next` · `react` · `react-dom`). AI 도 SDK 없이 REST |
 | 저장 | **전부 localStorage.** 서버 DB 없음 |
 | 배포 | ⛔ **아직 안 함.** D-007 은 **"배포한다"로 확정**됐고 게이트는 다 닫혔다 → [배포.md](배포.md) |
-| 브랜치 | `claude/musing-hermann-db7d28` — **main 보다 44 커밋 앞서 있다. 머지가 배포보다 먼저다** |
+| 브랜치 | `claude/musing-hermann-db7d28` — **main 보다 40커밋 넘게 앞서 있다. 머지가 배포보다 먼저다** (`git rev-list --count main..HEAD`) |
 | 단일 파일 | `presentation/매장수첩.html` — 인터넷·설치 없이 열리는 시연본 (**외부 요청 0건**) |
 | 문서 | `docs/deliverables/` **25개** (번호 01~22 + 진행표 + 부속 2) + `docs/wireframes/` |
 | 사진·영상 | ⛔ **0장.** 핵심 가치 셋 중 하나인데 실사가 하나도 없다 |
