@@ -6,6 +6,7 @@ import {
   applyRestore,
   backupCounts,
   buildBackup,
+  markBackedUp,
   checkRestore,
   contractRows,
   cycleRows,
@@ -14,6 +15,7 @@ import {
   today,
   type BackupFile,
 } from "@/lib/backup";
+import { logEvent } from "@/lib/metrics";
 
 /* ------------------------------------------------------------------ *
  * 내보내기 · 되돌리기.
@@ -186,13 +188,19 @@ export default function BackupView({
             type="button"
             className={BTN_PRIMARY}
             disabled={empty}
-            onClick={() =>
+            onClick={() => {
+              const file = buildBackup(storeName);
               download(
                 `매장수첩_백업_${stamp}.json`,
-                JSON.stringify(buildBackup(storeName), null, 2),
+                JSON.stringify(file, null, 2),
                 "application/json",
-              )
-            }
+              );
+              /* ★ 여기서만 "백업했다" 를 기록한다. CSV 는 되돌릴 수 없으므로 안 센다.
+                 → backup.ts 의 markBackedUp 주석 */
+              const marked = markBackedUp();
+              /* 재촉이 실제로 먹히는지 보려면 이게 필요하다. 파일 내용은 안 담는다 */
+              logEvent("backup", { counts: backupCounts(file), marked });
+            }}
           >
             💾 전체 백업 (되돌리기용 · JSON)
           </button>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import BackButton from "@/components/BackButton";
 import MediaSlot from "@/components/MediaSlot";
+import { logEvent as log } from "@/lib/metrics";
 import type { Position, Step } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -25,19 +26,6 @@ type RunState = {
 
 function newRunId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-function log(event: string, payload: Record<string, unknown>) {
-  try {
-    void fetch("/api/log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event, ...payload }),
-      keepalive: true,
-    });
-  } catch {
-    /* 로깅 실패가 교육을 막으면 안 된다 */
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -64,6 +52,13 @@ export default function TrainingMode({
   const [run, setRun] = useState<RunState | null>(null);
   const [finished, setFinished] = useState(false);
   const [asked, setAsked] = useState<string | null>(null);
+  /**
+   * ★ 끝난 회차의 runId. 설문이 `training_complete` 와 이어지는 열쇠다.
+   *
+   * 끝낼 때 `save(null)` 로 `run` 을 비우기 때문에(공용 태블릿이라 진도를
+   * 남기면 다음 신입에게 보인다) `run?.runId` 로는 못 얻는다. 따로 붙든다.
+   */
+  const [lastRunId, setLastRunId] = useState<string | null>(null);
 
   // 새로고침으로 진행 중인 교육이 날아가지 않게 복원한다
   useEffect(() => {
@@ -97,6 +92,7 @@ export default function TrainingMode({
     };
     setFinished(false);
     setAsked(null);
+    setLastRunId(null);
     save(fresh);
     log("training_start", {
       positionSlug: position.shareSlug,
@@ -136,6 +132,7 @@ export default function TrainingMode({
           confirmedCount: run.confirmed.length,
         });
         setFinished(true);
+        setLastRunId(run.runId); // 설문에서 쓸 열쇠. save(null) 전에 붙든다
         save(null);
         return;
       }
@@ -220,6 +217,9 @@ export default function TrainingMode({
                       positionSlug: position.shareSlug,
                       askedSenior: label,
                       mode: "training",
+                      // ★ 이 한 줄이 training_complete 와 이어주는 열쇠다.
+                      //   없으면 "몇 분 걸렸나" 와 "몇 번 물었나" 를 못 붙인다
+                      runId: lastRunId,
                     });
                   }}
                   className="rounded-2xl border-2 border-orange-300 bg-white py-6 text-xl font-bold text-orange-700 active:bg-orange-100 dark:border-orange-800 dark:bg-zinc-900 dark:text-orange-300"
@@ -240,6 +240,7 @@ export default function TrainingMode({
           onClick={() => {
             setFinished(false);
             setAsked(null);
+            setLastRunId(null);
           }}
           className="mt-12 rounded-2xl border-2 border-zinc-300 px-12 py-5 text-xl font-semibold text-zinc-600 active:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300"
         >

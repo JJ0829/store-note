@@ -394,3 +394,133 @@ export function applyRestore(file: BackupFile): { ok: boolean; failed: string[] 
   }
   return { ok: failed.length === 0, failed };
 }
+
+/* ------------------------------------------------------------------ *
+ * 얼마나 위험한가 — 첫 화면 재촉의 근거.
+ *
+ * 백업 화면 안에만 알려주면 아무 의미가 없다. 백업을 안 하는 사람은
+ * 그 화면을 열지 않는다. 그래서 첫 화면(`BackupReminder`)에 띄우는데,
+ * **조용해야 할 때 조용하지 않으면 사람은 경고 자체를 무시하게 된다.**
+ * 그래서 단계를 나눈다 — 전부 빨간 불로 띄우지 않는다.
+ * ------------------------------------------------------------------ */
+
+const LAST_KEY = "sop:lastBackup";
+
+/** 노란(경고) 단계로 넘어가는 기준 — 백업 안 된 기록 일수 */
+export const WARN_DAYS = 7;
+/** 빨간 단계 */
+export const DANGER_DAYS = 14;
+
+export type Level = "none" | "info" | "warn" | "danger";
+
+export type BackupStatus = {
+  /** 마지막 전체 백업 시각 (ISO). 한 번도 안 받았으면 null */
+  lastAt: string | null;
+  /** 그 뒤에 생긴 기록이 며칠치인가 */
+  unbackedDays: number;
+  level: Level;
+  /** 화면에 그대로 띄우는 문장 */
+  message: string;
+};
+
+/** 이 기기가 마지막으로 전체 백업한 시각 */
+export function loadLastBackup(): string | null {
+  try {
+    const raw = localStorage.getItem(LAST_KEY);
+    return raw && !Number.isNaN(Date.parse(raw)) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 전체 백업을 받았다고 기록한다.
+ *
+ * ★ CSV 를 받은 것은 여기에 쓰지 않는다. CSV 는 앱으로 되돌릴 수 없고,
+ *   출퇴근만 받으면 거래처 단가·설정·레시피는 그대로 위험하다.
+ *   "엑셀로 하나 받았으니 됐다" 고 재촉이 꺼지면 그게 제일 나쁘다.
+ */
+export function markBackedUp(now: Date = new Date()): boolean {
+  try {
+    localStorage.setItem(LAST_KEY, now.toISOString());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** "YYYY-MM-DD" 로 보이는 것만 날짜로 센다 */
+function isDateKey(s: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+
+/**
+ * 기록이 있는 날짜를 전부 모은다.
+ *
+ * 출퇴근과 매출만 본다. 이 둘이 **날짜마다 쌓이는** 것이고, 보존 의무가
+ * 걸린 쪽이며, 잃으면 되메울 방법이 없다. 거래처 단가나 설정은 한 번 넣고
+ * 두는 것이라 "며칠치" 라는 말이 성립하지 않는다.
+ */
+export function recordDates(
+  punches: Record<string, Record<string, unknown>>,
+  sales: Record<string, unknown>,
+): string[] {
+  const days = new Set<string>();
+  for (const byDate of Object.values(punches ?? {})) {
+    for (const d of Object.keys(byDate ?? {})) if (isDateKey(d)) days.add(d);
+  }
+  for (const d of Object.keys(sales ?? {})) if (isDateKey(d)) days.add(d);
+  return [...days].sort();
+}
+
+/**
+ * 지금 얼마나 위험한가.
+ *
+ * 오늘 날짜는 세지 않는다. 마감을 아직 안 한 날을 "백업 안 된 기록" 으로
+ * 세면 매일 아침 재촉이 한 칸씩 늘고, 그건 사실이 아니다.
+ */
+export function backupStatus(
+  dates: string[],
+  lastAt: string | null,
+  now: Date = new Date(),
+): BackupStatus {
+  const dayOf = today;
+  const t = dayOf(now);
+  const since = lastAt ? dayOf(new Date(lastAt)) : null;
+
+  // 마지막 백업일보다 뒤에 생긴 기록만 센다. 백업한 날 자체는 그날 기록까지
+  // 담겼다고 본다 (백업은 그날 마감 후에 받는 게 보통이다).
+  const pending = dates.filter((d) => d < t && (since === null || d > since));
+  const unbackedDays = pending.length;
+
+  if (unbackedDays === 0) {
+    return {
+      lastAt,
+      unbackedDays: 0,
+      level: "none",
+      message: lastAt
+        ? "백업 이후로 새로 쌓인 기록이 없습니다."
+        : "아직 백업할 기록이 없습니다.",
+    };
+  }
+
+  const level: Level =
+    unbackedDays >= DANGER_DAYS
+      ? "danger"
+      : unbackedDays >= WARN_DAYS
+        ? "warn"
+        : "info";
+
+  const head = lastAt
+    ? `마지막 백업 뒤로 ${unbackedDays}일치가 쌓였습니다`
+    : `백업을 한 번도 받지 않았습니다 (${unbackedDays}일치)`;
+
+  const tail =
+    level === "danger"
+      ? " 지금 태블릿이 초기화되면 이만큼이 그대로 사라집니다."
+      : level === "warn"
+        ? " 받아서 태블릿 밖에 두세요."
+        : "";
+
+  return { lastAt, unbackedDays, level, message: head + "." + tail };
+}

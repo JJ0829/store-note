@@ -214,3 +214,141 @@ test("파일명 날짜는 로컬 날짜다 (UTC로 밀리면 하루 전 파일�
   const d = new Date(2026, 8, 7, 0, 30);
   assert.equal(today(d), "2026-09-07");
 });
+
+/* ------------------------------------------------------------------ *
+ * 재촉 — 조용해야 할 때 조용한가                                       *
+ *
+ * 이 로직에서 중요한 건 "경고가 뜨는가"가 아니라 **안 떠야 할 때 안 뜨는가**다.
+ * 쓸데없이 뜨는 경고를 두세 번 보면 사람은 경고 자체를 무시하기 시작하고,
+ * 그때부터 진짜 경고도 안 보인다. `PrepView`가 되돌릴 수 없는 항목만
+ * 빨갛게 띄우는 것과 같은 이유다.
+ * ------------------------------------------------------------------ */
+
+import {
+  DANGER_DAYS,
+  WARN_DAYS,
+  backupStatus,
+  recordDates,
+} from "../src/lib/backup.ts";
+
+const NOW = new Date(2026, 8, 20, 18, 0); // 2026-09-20 18:00
+
+/** 기준일부터 뒤로 n일치 날짜 (오늘 제외) */
+function daysBefore(n: number, from: Date = NOW): string[] {
+  const out: string[] = [];
+  for (let i = 1; i <= n; i++) {
+    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() - i);
+    const p = (x: number) => String(x).padStart(2, "0");
+    out.push(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
+  }
+  return out.sort();
+}
+
+test("★ 기록이 없으면 재촉하지 않는다 (빈 백업을 받게 만들지 않는다)", () => {
+  const s = backupStatus([], null, NOW);
+  assert.equal(s.level, "none");
+  assert.equal(s.unbackedDays, 0);
+});
+
+test("★ 오늘 하루만 넣은 기기는 조용하다 (시연·심사 기기가 이 경우다)", () => {
+  const p = (x: number) => String(x).padStart(2, "0");
+  const today = `${NOW.getFullYear()}-${p(NOW.getMonth() + 1)}-${p(NOW.getDate())}`;
+  const s = backupStatus([today], null, NOW);
+
+  // 오늘은 아직 마감을 안 했으므로 "백업 안 된 기록"으로 세지 않는다
+  assert.equal(s.unbackedDays, 0);
+  assert.equal(s.level, "none");
+});
+
+test("★ 문 닫고 쉬는 주에는 재촉하지 않는다", () => {
+  // 2주 전에 백업했고, 그 뒤로 기록이 하나도 안 쌓였다
+  const dates = daysBefore(3, new Date(2026, 8, 6));
+  const s = backupStatus(dates, new Date(2026, 8, 6, 22, 0).toISOString(), NOW);
+
+  assert.equal(s.unbackedDays, 0);
+  assert.equal(s.level, "none");
+  assert.match(s.message, /새로 쌓인 기록이 없습니다/);
+});
+
+test("6일치까지는 첫 화면에 안 띄운다 (info)", () => {
+  const s = backupStatus(daysBefore(6), null, NOW);
+  assert.equal(s.unbackedDays, 6);
+  assert.equal(s.level, "info");
+});
+
+test(`${WARN_DAYS}일치부터 경고한다`, () => {
+  assert.equal(backupStatus(daysBefore(WARN_DAYS), null, NOW).level, "warn");
+  assert.equal(backupStatus(daysBefore(WARN_DAYS - 1), null, NOW).level, "info");
+});
+
+test(`${DANGER_DAYS}일치부터 빨간 단계`, () => {
+  assert.equal(backupStatus(daysBefore(DANGER_DAYS), null, NOW).level, "danger");
+  assert.equal(
+    backupStatus(daysBefore(DANGER_DAYS - 1), null, NOW).level,
+    "warn",
+  );
+});
+
+test("★ 마지막 백업 이후에 생긴 것만 센다", () => {
+  // 30일치가 있지만 5일 전에 백업했다 → 4일치만 남는다 (오늘 제외)
+  const dates = daysBefore(30);
+  const last = new Date(2026, 8, 15, 22, 0).toISOString(); // 09-15
+  const s = backupStatus(dates, last, NOW);
+
+  assert.equal(s.unbackedDays, 4); // 09-16 ~ 09-19
+  assert.equal(s.level, "info");
+});
+
+test("백업한 날 자체의 기록은 담긴 것으로 본다 (마감 후에 받는다)", () => {
+  const s = backupStatus(["2026-09-15"], new Date(2026, 8, 15, 22, 0).toISOString(), NOW);
+  assert.equal(s.unbackedDays, 0);
+});
+
+test("한 번도 안 받았으면 문장이 다르다", () => {
+  assert.match(backupStatus(daysBefore(8), null, NOW).message, /한 번도 받지 않았/);
+  assert.match(
+    backupStatus(daysBefore(8), new Date(2026, 8, 1).toISOString(), NOW).message,
+    /마지막 백업 뒤로/,
+  );
+});
+
+test("★ 한국 시간 새벽에도 날짜가 안 밀린다 (UTC로 자르지 않는다)", () => {
+  // 한국 09-20 01:00 = UTC 09-19 16:00. UTC 기준으로 오늘을 잡으면
+  // 09-19가 "오늘"이 되어 하루치가 사라진다
+  const dawn = new Date(2026, 8, 20, 1, 0);
+  const s = backupStatus(["2026-09-19", "2026-09-20"], null, dawn);
+
+  assert.equal(s.unbackedDays, 1); // 09-19만. 09-20은 오늘이라 안 셈
+});
+
+test("출퇴근과 매출의 날짜를 합쳐서 센다 (중복은 한 번)", () => {
+  const punches = {
+    st1: { "2026-09-18": {}, "2026-09-19": {} },
+    st2: { "2026-09-19": {} },
+  };
+  const sales = { "2026-09-19": {}, "2026-09-17": {} };
+
+  assert.deepEqual(recordDates(punches, sales), [
+    "2026-09-17",
+    "2026-09-18",
+    "2026-09-19",
+  ]);
+});
+
+test("날짜가 아닌 키는 무시한다 (설정·id가 섞여 들어와도 안 센다)", () => {
+  assert.deepEqual(
+    recordDates({ st1: { "2026-09-19": {}, note: {}, "9/19": {} } }, { total: {} }),
+    ["2026-09-19"],
+  );
+});
+
+test("빈 값·없는 값이 들어와도 안 죽는다", () => {
+  assert.deepEqual(recordDates({}, {}), []);
+  assert.deepEqual(
+    recordDates(
+      undefined as unknown as Record<string, Record<string, unknown>>,
+      undefined as unknown as Record<string, unknown>,
+    ),
+    [],
+  );
+});

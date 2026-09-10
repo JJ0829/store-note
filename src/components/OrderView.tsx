@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BTN, Card, Caveat, Chip, Empty, INPUT, Screen, useSaveState } from "@/components/ui";
 import { copyText } from "@/lib/copyText";
+import { logEvent } from "@/lib/metrics";
 import { businessDay, recentDays } from "@/lib/businessDay";
 import { ro } from "@/lib/store";
 import { label as dayLabel } from "@/lib/roster";
@@ -87,8 +88,27 @@ export default function OrderView({
   const pending = pendingFrom(log, past);
 
   function patch(taskId: string, p: Parameters<typeof putState>[3]) {
+    const before = stateOf(log, today, taskId);
     const next = putState(log, today, taskId, p);
     setLog(next);
+    /**
+     * ★ `ordered`/`received` 가 **꺼져 있다가 켜지는 전이**만 남긴다.
+     *
+     * 끄는 것은 오조작 정정이 대부분이고, `memo` 입력은 `onChange` 라
+     * 글자마다 불린다. 재고 싶은 것은 **"주문 마감을 지키는가"** 와
+     * **"주문한 게 들어온 걸 확인하는가"** 둘이다 — 두 단계로 나눠둔
+     * 이유가 그것이다.
+     *
+     * ★ 값이 아니라 전이로 봐야 하는 이유: `들어옴` 을 누르면 `ordered` 도
+     *   파생으로 켠다(들어왔으면 주문한 것이다). 그래서 값만 보면 이미
+     *   켜져 있던 `ordered` 를 또 남긴다.
+     */
+    if (p.ordered === true && !before.ordered) {
+      logEvent("order_mark", { step: "ordered" });
+    }
+    if (p.received === true && !before.received) {
+      logEvent("order_mark", { step: "received" });
+    }
     // ★ "주문함" 이 안 남으면 내일 아침에 안 들어온 것을 못 잡는다.
     //   이 화면의 존재 이유가 바로 그 한 칸이다
     save.report("발주 기록", saveOrderLog(next), () =>
@@ -164,6 +184,8 @@ export default function OrderView({
                     className={BTN}
                     onClick={() => {
                       const next = putState(log, p.date, p.taskId, { received: true });
+                      // 지난 7일 밀린 것을 뒤늦게 확인한 경우. 늦음을 같이 남긴다
+                      logEvent("order_mark", { step: "received", late: true });
                       setLog(next);
                       save.report("발주 기록", saveOrderLog(next));
                     }}

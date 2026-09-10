@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BTN, Card, Caveat, Chip, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { pct, won } from "@/lib/store";
+import { logEvent } from "@/lib/metrics";
 import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData } from "@/lib/roster";
 import {
   dayLaborCost,
@@ -99,11 +100,32 @@ export default function SalesView({
 
   function patch(date: string, p: Partial<ReturnType<typeof getDay>>) {
     const cur = getDay(sales, date);
-    const next = { ...sales, [date]: { ...cur, ...p, date } };
+    const merged = { ...cur, ...p, date };
+    const next = { ...sales, [date]: merged };
     setSales(next);
     save.report("매출 기록", saveSales(next), () =>
       save.report("매출 기록", saveSales(next)),
     );
+    /**
+     * ★ 0 에서 값이 들어오는 **전이**만 남긴다.
+     *
+     * `patch` 는 `onChange` 라 글자마다 불린다. 그대로 남기면 "1250000" 을
+     * 넣는 동안 7건이 쌓인다. 재고 싶은 것은 **"마감을 실제로 넣는가"** 이지
+     * 몇 번 눌렀나가 아니다.
+     *
+     * ★ 칸별로 따로 남기는 이유: 총매출을 먼저 넣으면 그 순간 재료비는
+     *   아직 0 이다. 한 건에 몰아 담으면 "재료비까지 넣었나" 가 항상
+     *   거짓으로 찍힌다. 칸마다 남기면 하루 최대 3건이고, **며칠 중
+     *   며칠에 재료비까지 넣었나** 를 셀 수 있다 — 재료비를 빠뜨리면
+     *   `남은 돈` 이 조용히 낙관적으로 나온다.
+     *
+     * 금액은 담지 않는다. 영업 정보이고 "채워졌는가" 를 세는 데 필요 없다.
+     */
+    for (const f of ["total", "count", "material"] as const) {
+      if (!(cur[f] > 0) && merged[f] > 0) {
+        logEvent("sales_close", { date, field: f });
+      }
+    }
   }
 
   const day = getDay(sales, pick);

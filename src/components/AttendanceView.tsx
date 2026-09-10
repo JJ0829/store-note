@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BTN, BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
+import { logEvent } from "@/lib/metrics";
 import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData } from "@/lib/roster";
 import {
   estimatePay,
@@ -114,6 +115,15 @@ export default function AttendanceView({
         ...(which === "in" ? { inAt: t } : { outAt: t }),
       }),
     );
+    /**
+     * ★ 버튼으로 찍은 것만 남긴다.
+     *
+     * 아래 `edit()`(시각 칸 직접 입력)은 `onChange` 라 글자마다 불려서
+     * 이벤트가 폭주한다. 그리고 재고 싶은 것은 **"하루 2번 찍히는가"** 이므로
+     * 버튼 쪽이 맞다. 이름·시각은 담지 않는다 — 개인정보이고, 세는 데
+     * 필요하지도 않다.
+     */
+    logEvent("punch", { which });
   }
 
   function edit(staffId: string, patch: Partial<ReturnType<typeof newPunch>>) {

@@ -7,6 +7,7 @@ import MediaSlot from "@/components/MediaSlot";
 import { SaveFailed, useSaveState } from "@/components/ui";
 import { SCALES, scaled } from "@/lib/scale";
 import { businessDay, dayKey, pruneDayKeys } from "@/lib/businessDay";
+import { logEvent as log } from "@/lib/metrics";
 import { arrivesIn, readyAt, triggerLabel } from "@/lib/leadTime";
 import {
   loadCycleDone,
@@ -31,34 +32,6 @@ import type { PrepList, PrepTask, Recipe } from "@/lib/types";
  *   2) 되돌릴 수 있는 것과 없는 것을 구분한다 (종이는 전부 같은 줄)
  *   3) 수량이 매일 바뀌는 항목은 배수를 눌러서 그 자리에서 환산한다
  * ------------------------------------------------------------------ */
-
-
-function getSessionId(): string {
-  const KEY = "sop:sid";
-  try {
-    let sid = localStorage.getItem(KEY);
-    if (!sid) {
-      sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem(KEY, sid);
-    }
-    return sid;
-  } catch {
-    return "no-storage";
-  }
-}
-
-function log(event: string, payload: Record<string, unknown>) {
-  try {
-    void fetch("/api/log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
-      keepalive: true,
-    });
-  } catch {
-    /* 로깅 실패가 사용을 막으면 안 된다 */
-  }
-}
 
 /* 리드타임 계산(readyAt · arrivesIn · triggerLabel)은 @/lib/leadTime 으로
    옮겼다. 이 파일 안에 있으면 테스트를 돌릴 수 없기 때문이다.

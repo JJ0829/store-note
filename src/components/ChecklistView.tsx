@@ -5,42 +5,13 @@ import BackButton from "@/components/BackButton";
 import MediaSlot from "@/components/MediaSlot";
 import type { Position, Step } from "@/lib/types";
 import { businessDay, dayKey, pruneDayKeys } from "@/lib/businessDay";
+import { logEvent as log } from "@/lib/metrics";
 
 /* ------------------------------------------------------------------ */
 /* 저장은 전부 localStorage. 회원가입이 없는 게 이 MVP의 핵심이라서,     */
 /* 체크 상태를 서버에 보관하지 않는다. 영업일이 바뀌면 초기화된다.            */
 /* 하루의 경계는 자정이 아니라 새벽 4시다 — 마감조가 자정을 넘겨 일한다.    */
 /* → src/lib/businessDay.ts                                                */
-/* ------------------------------------------------------------------ */
-
-
-function getSessionId(): string {
-  const KEY = "sop:sid";
-  try {
-    let sid = localStorage.getItem(KEY);
-    if (!sid) {
-      sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem(KEY, sid);
-    }
-    return sid;
-  } catch {
-    return "no-storage";
-  }
-}
-
-function log(event: string, payload: Record<string, unknown>) {
-  try {
-    void fetch("/api/log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
-      keepalive: true,
-    });
-  } catch {
-    /* 로깅 실패가 체크리스트 사용을 막으면 안 된다 */
-  }
-}
-
 /* ------------------------------------------------------------------ */
 
 export default function ChecklistView({
@@ -83,21 +54,47 @@ export default function ChecklistView({
     log("view", { positionSlug: position.shareSlug });
   }, [storageKey, keyPrefix, position.shareSlug]);
 
+  /**
+   * ★ 체크 한 건도 지표로 남긴다.
+   *
+   * 지금까지는 화면을 열었다(`view`)와 끝나고 물었다(`survey`)만 있어서,
+   * **"신입이 항목을 실제로 하나씩 짚어 갔는가 / 어디서 멈췄는가"** 를 셀
+   * 경로가 0건이었다.
+   *
+   * 켤 때만 남긴다 — 끄는 것은 오조작 정정이 대부분이다.
+   * `critical` 을 같이 실어서 "위생·안전 항목을 실제로 체크했는가" 를 본다.
+   */
   const toggle = useCallback(
     (taskId: string) => {
-      setDone((prev) => {
-        const next = new Set(prev);
-        if (next.has(taskId)) next.delete(taskId);
-        else next.add(taskId);
-        try {
-          localStorage.setItem(storageKey, JSON.stringify([...next]));
-        } catch {
-          /* 저장 실패해도 화면에서는 계속 쓸 수 있게 둔다 */
-        }
-        return next;
-      });
+      /* ★ 저장과 로깅은 `setDone` 의 updater **밖**에서 한다.
+         React 는 개발 모드(Strict Mode)에서 updater 를 두 번 부른다. 안에 넣으면
+         한 번 눌렀는데 `check` 이벤트가 두 건 쌓인다 — 실제로 그렇게 찍혀서
+         고쳤다(2026-09-10 브라우저 확인). 부수효과를 updater 에 넣지 않는다.
+         `PrepView` 의 `toggleCycle` 도 같은 모양이다. */
+      const next = new Set(done);
+      const turningOn = !next.has(taskId);
+      if (turningOn) next.add(taskId);
+      else next.delete(taskId);
+
+      setDone(next);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify([...next]));
+      } catch {
+        /* 저장 실패해도 화면에서는 계속 쓸 수 있게 둔다 */
+      }
+
+      if (turningOn) {
+        log("check", {
+          positionSlug: position.shareSlug,
+          taskId,
+          critical: allTasks.find((t) => t.id === taskId)?.critical ?? false,
+          // 몇 개째인지. 중도 이탈 지점을 보려면 필요하다
+          doneCount: next.size,
+          total,
+        });
+      }
     },
-    [storageKey],
+    [done, storageKey, allTasks, position.shareSlug, total],
   );
 
   const reset = useCallback(() => {
@@ -252,16 +249,26 @@ export default function ChecklistView({
         </section>
       ))}
 
-      {/* ---------- 다 끝냈을 때: 가설 검증용 한 줄 설문 ---------- */}
-      {finished && (
+      {/* ---------- 하루 끝 설문 (가설 검증용) ----------
+           ★ 예전에는 `finished`(전 항목 체크)에서만 띄웠다. 그래서
+             **중도 이탈자는 설문이 아예 발생하지 않았고**, `askedSenior`
+             표본이 완주자로 치우쳤다.
+
+             그런데 이 질문은 "오늘 선배에게 몇 번 물었나" 다 — **체크리스트
+             완주와 무관한 하루 끝 질문**이다. 게다가 그날 해당 없는 항목이
+             있으면 100%가 될 수 없다. 완주에 매달아 둔 것이 설계 실수였다.
+
+             그래서 **하나라도 체크했으면** 보여준다. 완주 여부는 `finished`
+             로 페이로드에 실어서 분석할 때 나눌 수 있게 한다. */}
+      {hydrated && doneCount > 0 && (
         <section className="mx-4 mt-8 rounded-2xl border border-orange-200 bg-orange-50 p-5 dark:border-orange-900/60 dark:bg-orange-950/40">
           <p className="text-base font-bold text-orange-900 dark:text-orange-100">
-            오늘 하루 수고하셨습니다
+            {finished ? "오늘 하루 수고하셨습니다" : "일 마치기 전에"}
           </p>
           {asked === null ? (
             <>
               <p className="mt-1 text-[13px] text-orange-900/80 dark:text-orange-100/80">
-                마지막으로 하나만 알려주세요. 오늘 선배에게 몇 번 물어보셨나요?
+                하나만 알려주세요. 오늘 선배에게 몇 번 물어보셨나요?
               </p>
               <div className="mt-3 grid grid-cols-4 gap-2">
                 {["0번", "1~2번", "3~5번", "6번 이상"].map((label) => (
@@ -273,6 +280,10 @@ export default function ChecklistView({
                       log("survey", {
                         positionSlug: position.shareSlug,
                         askedSenior: label,
+                        // ★ 완주자와 이탈자를 구분할 수 있게 같이 남긴다
+                        finished,
+                        doneCount,
+                        total,
                       });
                     }}
                     className="rounded-xl border border-orange-300 bg-white py-2.5 text-[13px] font-semibold text-orange-800 active:bg-orange-100 dark:border-orange-800 dark:bg-zinc-900 dark:text-orange-200"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import MediaSlot from "@/components/MediaSlot";
 import { SCALES, scaled } from "@/lib/scale";
+import { logEvent as log } from "@/lib/metrics";
 import type { Recipe } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -13,33 +14,6 @@ import type { Recipe } from "@/lib/types";
  * 메뉴 30개는 벽에 못 붙인다. 여기가 태블릿이 종이를 확실히 이기는 자리다.
  * 그리고 "1배합=6개인데 9개 필요"를 매번 암산하게 두면 실수가 난다.
  * ------------------------------------------------------------------ */
-
-function getSessionId(): string {
-  const KEY = "sop:sid";
-  try {
-    let sid = localStorage.getItem(KEY);
-    if (!sid) {
-      sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem(KEY, sid);
-    }
-    return sid;
-  } catch {
-    return "no-storage";
-  }
-}
-
-function log(event: string, payload: Record<string, unknown>) {
-  try {
-    void fetch("/api/log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
-      keepalive: true,
-    });
-  } catch {
-    /* 로깅 실패가 사용을 막으면 안 된다 */
-  }
-}
 
 export default function RecipeDetail({
   recipe,

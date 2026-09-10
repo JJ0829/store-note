@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BackupReminder from "@/components/BackupReminder";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import NowPanel from "@/components/NowPanel";
 import { OwnerLockButton } from "@/components/OwnerGate";
@@ -66,6 +67,11 @@ export default function Home() {
     <main className="mx-auto min-h-dvh w-full max-w-[560px] bg-zinc-50 px-4 py-8 dark:bg-zinc-950">
       <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
       <h1 className="mt-1 text-2xl font-bold">오늘</h1>
+
+      {/* ---------- 백업 재촉 ----------
+          "지금 뭘 해야 하는가" 보다 위에 둔다. 잃을 기록이 7일치 넘게
+          쌓였을 때만 뜨므로, 뜬 날은 그게 그날 가장 급한 일이다. */}
+      <BackupReminder />
 
       {/* ---------- 지금 시간에 맞는 화면 ---------- */}
       <NowPanel shifts={shifts} />
