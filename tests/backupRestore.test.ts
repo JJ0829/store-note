@@ -110,12 +110,30 @@ test("buildBackup 은 지금 저장소를 그대로 담는다", () => {
   assert.equal(b.kind, "store-note-backup");
   assert.equal(b.version, BACKUP_VERSION);
   assert.equal(b.storeName, "○○ 베이커리 카페");
-  assert.deepEqual(backupCounts(b), { staff: 2, punches: 2, contracts: 1, cycle: 0 });
+  assert.deepEqual(backupCounts(b), {
+    staff: 2,
+    punches: 2,
+    contracts: 1,
+    cycle: 0,
+    salesDays: 0,
+    vendors: 0,
+    recipes: 0,
+    orderDays: 0,
+  });
 });
 
 test("빈 저장소도 백업된다 (0건 매장)", () => {
   local.clear();
-  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0, cycle: 0 });
+  assert.deepEqual(currentCounts(), {
+    staff: 0,
+    punches: 0,
+    contracts: 0,
+    cycle: 0,
+    salesDays: 0,
+    vendors: 0,
+    recipes: 0,
+    orderDays: 0,
+  });
 });
 
 test("exportedAt 이 ISO 시각으로 들어간다 — 어느 것이 최신인지 사람이 본다", () => {
@@ -217,7 +235,16 @@ test("빈 백업으로 되돌리면 전부 비워진다", () => {
     punches: {},
     contracts: [],
   });
-  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0, cycle: 0 });
+  assert.deepEqual(currentCounts(), {
+    staff: 0,
+    punches: 0,
+    contracts: 0,
+    cycle: 0,
+    salesDays: 0,
+    vendors: 0,
+    recipes: 0,
+    orderDays: 0,
+  });
 });
 
 /* ---------- 왕복 ---------- */
@@ -230,10 +257,28 @@ test("내보내기 → 되돌리기 왕복에서 건수가 유지된다", () => 
   });
   const saved = JSON.parse(JSON.stringify(buildBackup("○○")));
   local.clear(); // 태블릿을 잃었다
-  assert.deepEqual(currentCounts(), { staff: 0, punches: 0, contracts: 0, cycle: 0 });
+  assert.deepEqual(currentCounts(), {
+    staff: 0,
+    punches: 0,
+    contracts: 0,
+    cycle: 0,
+    salesDays: 0,
+    vendors: 0,
+    recipes: 0,
+    orderDays: 0,
+  });
 
   applyRestore(saved);
-  assert.deepEqual(currentCounts(), { staff: 2, punches: 2, contracts: 1, cycle: 0 });
+  assert.deepEqual(currentCounts(), {
+    staff: 2,
+    punches: 2,
+    contracts: 1,
+    cycle: 0,
+    salesDays: 0,
+    vendors: 0,
+    recipes: 0,
+    orderDays: 0,
+  });
 });
 
 test("퇴사자 기록도 왕복에서 살아남는다 (3년 보존)", () => {
@@ -401,4 +446,92 @@ test("★ 되돌리기 전에 보여주는 건수에 점검 기록이 들어 있
   local.clear();
   saveCycleDone({ "c-4": "2026-05-11", "c-10": "2026-03-01" });
   assert.equal(backupCounts(buildBackup("○○")).cycle, 2);
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ v3 덩이 — 2026-09-10 까지 **백업에서 통째로 빠져 있던 것들**.
+ *
+ * 운영 기능 7종을 붙이면서 저장 키가 늘었는데 백업 목록을 같이 안 늘렸다.
+ * 매출·거래처 단가·설정·내 레시피·발주 기록이 안 담겼고, 화면은 멀쩡했다.
+ * 태블릿이 죽으면 거래처 단가와 매출이 그냥 사라지는 상태였다.
+ *
+ * 아래가 그때 있었다면 잡혔을 테스트다.
+ * ------------------------------------------------------------------ */
+
+/** 운영 화면들이 입력해둔 상태를 흉내낸다 */
+function seedOps() {
+  local.setItem(
+    "sop:sales",
+    JSON.stringify({
+      "2026-09-01": { date: "2026-09-01", total: 1_250_000, count: 180, material: 300_000, note: "" },
+      "2026-09-02": { date: "2026-09-02", total: 980_000, count: 150, material: 250_000, note: "" },
+    }),
+  );
+  local.setItem(
+    "sop:vendors",
+    JSON.stringify({
+      vendors: [{ id: "v1", name: "○○ 유통", phone: "", how: "전화", cutoff: "15:00", days: [1, 3, 5], lead: 1, note: "" }],
+      items: [{ id: "vi1", vendorId: "v1", name: "우유", packAmount: 1000, packUnit: "ml", packPrice: 2_400, note: "" }],
+    }),
+  );
+  local.setItem("sop:settings", JSON.stringify({ minWage: 10_320, fiveOrMore: false }));
+  local.setItem(
+    "sop:recipes",
+    JSON.stringify([{ id: "my-1", slug: "my-1", name: "우리집 스콘", yield: "6개", steps: [], items: [] }]),
+  );
+  local.setItem(
+    "sop:orderLog",
+    JSON.stringify({ "2026-09-01": { "pt-1": { ordered: true, received: false, memo: "" } } }),
+  );
+  local.setItem("sop:orderLinks", JSON.stringify({ "pt-1": "v1" }));
+}
+
+test("★ 매출·거래처·설정·레시피·발주가 백업에 담긴다 (예전엔 통째로 빠져 있었다)", () => {
+  local.clear();
+  seedOps();
+  const b = buildBackup("○○");
+
+  assert.deepEqual(Object.keys(b.sales ?? {}).sort(), ["2026-09-01", "2026-09-02"]);
+  assert.equal((b.vendors?.vendors ?? []).length, 1);
+  assert.equal((b.vendors?.items ?? []).length, 1, "품목 단가가 빠지면 원가를 못 되살린다");
+  assert.equal(b.settings?.minWage, 10_320);
+  assert.equal((b.recipes ?? []).length, 1);
+  assert.ok(b.orderLog?.["2026-09-01"], "발주 기록이 안 담겼다");
+  assert.equal(b.orderLinks?.["pt-1"], "v1");
+});
+
+test("★ 태블릿을 잃어도 거래처 단가가 왕복에서 살아남는다", () => {
+  local.clear();
+  seedOps();
+  const saved = JSON.parse(JSON.stringify(buildBackup("○○")));
+
+  local.clear(); // 태블릿을 잃었다
+  assert.equal(buildBackup("○○").vendors?.items.length, 0);
+
+  applyRestore(saved);
+  const after = buildBackup("○○");
+  // 단가가 살아나야 원가 화면이 다시 돈다. 이게 없으면 전화를 다시 돌려야 한다
+  assert.equal(after.vendors?.items[0].packPrice, 2_400);
+  assert.equal(after.sales?.["2026-09-01"].total, 1_250_000);
+  assert.equal(after.recipes?.[0].name, "우리집 스콘");
+});
+
+test("★ v1 백업(옛 파일)으로 되돌려도 v3 덩이를 지우지 않는다", () => {
+  /* v1 파일은 매출·거래처를 **담은 적이 없다.** 그걸 '빈 값' 으로 읽고
+     덮어쓰면, 그 백업이 담은 적도 없는 거래처 단가를 지우는 셈이 된다. */
+  local.clear();
+  seedOps();
+  applyRestore({
+    kind: "store-note-backup",
+    version: 1,
+    exportedAt: "2026-09-01T00:00:00.000Z",
+    storeName: "○○",
+    roster: { staff: [], assign: {} },
+    punches: {},
+    contracts: [],
+  });
+
+  const after = buildBackup("○○");
+  assert.equal(after.vendors?.items.length, 1, "v1 복원이 거래처 단가를 지웠다");
+  assert.equal(Object.keys(after.sales ?? {}).length, 2, "v1 복원이 매출을 지웠다");
 });

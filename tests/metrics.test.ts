@@ -306,3 +306,60 @@ test("체크 이벤트가 critical을 함께 남긴다 (2차 지표)", () => {
   assert.match(m[0], /critical:/, "critical이 없다 — '위생 항목 누락'을 못 센다");
   assert.match(m[0], /doneCount/, "doneCount가 없다 — 중도 이탈 지점을 못 본다");
 });
+
+/* ------------------------------------------------------------------ */
+/* 서버가 받아주는가 — 어긋나면 이벤트가 조용히 버려진다               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * ★ `/api/log` 는 모르는 이벤트 이름을 400으로 막는다(공개 엔드포인트라
+ *   아무 문자열이나 디스크에 쌓이면 안 된다). 그런데 `logEvent` 는
+ *   **실패를 무시한다** — 화면을 막으면 안 되기 때문이다.
+ *
+ *   그래서 코드가 새 이벤트를 쏘는데 서버 목록에 안 넣으면 **아무 오류도
+ *   없이 그 이벤트만 사라진다.** 이 테스트가 그 어긋남을 잡는다.
+ */
+test("★ 코드가 쏘는 이벤트를 /api/log 가 전부 받아준다", () => {
+  const route = fs.readFileSync(
+    path.join(process.cwd(), "src", "app", "api", "log", "route.ts"),
+    "utf-8",
+  );
+  const m = route.match(/const ALLOWED = new Set\(\[([\s\S]*?)\]\)/);
+  assert.ok(m, "route.ts 의 ALLOWED 목록을 못 찾았다");
+  const allowed = [...m[1].matchAll(/"([a-z_]+)"/g)].map((x) => x[1]).sort();
+
+  const actual = eventNames();
+  const rejected = actual.filter((e) => !allowed.includes(e));
+  const unused = allowed.filter((e) => !actual.includes(e));
+
+  assert.deepEqual(
+    { rejected, unused },
+    { rejected: [], unused: [] },
+    "화면이 쏘는 이벤트와 /api/log 의 ALLOWED 가 어긋났다. " +
+      "rejected 는 서버가 400으로 버리는 것이고, 클라이언트는 그걸 모른다.",
+  );
+});
+
+/**
+ * ★ 저장 실패를 `{ok:true}` 로 덮지 않는다.
+ *
+ * Vercel 처럼 디스크가 읽기 전용인 곳에 올리면 한 줄도 안 쌓인다.
+ * 예전에는 그래도 `{ok:true}` 를 돌려줘서 **지표가 0건인 것을 배포하고
+ * 한참 뒤에야 알게 되는** 구조였다. 배포 점검에서 이 값을 본다.
+ */
+test("★ /api/log 가 저장 여부를 사실대로 돌려준다", () => {
+  const route = fs.readFileSync(
+    path.join(process.cwd(), "src", "app", "api", "log", "route.ts"),
+    "utf-8",
+  );
+  assert.match(
+    route,
+    /return Response\.json\(\{ ok: true, stored \}\)/,
+    "저장 실패를 ok:true 로 덮고 있다 — 배포하면 지표 0건인 것을 모른다",
+  );
+  assert.doesNotMatch(
+    route,
+    /return Response\.json\(\{ ok: true \}\)/,
+    "stored 없이 ok:true 만 돌려주는 경로가 남아 있다",
+  );
+});

@@ -98,8 +98,10 @@ export default function BackupView({
 
   const c = backupCounts(snap);
   const stamp = today();
-  // 점검 기록만 있고 나머지가 비어도 백업할 값이 있다 — 그것도 잃으면 못 되찾는다
-  const empty = c.staff === 0 && c.punches === 0 && c.contracts === 0 && c.cycle === 0;
+  /* 한 덩이라도 있으면 백업할 값이 있다. 어느 것이든 잃으면 못 되찾는다 —
+     그래서 "비었다" 판정에 여덟 가지를 다 본다. 하나만 보고 판정하면
+     거래처 단가만 넣어둔 매장에게 "저장된 것이 없습니다" 라고 말하게 된다. */
+  const empty = Object.values(c).every((n) => n === 0);
 
   return (
     <Screen title="내보내기 · 되돌리기" storeName={storeName}>
@@ -113,6 +115,12 @@ export default function BackupView({
           <Row label="출퇴근 기록" value={`${c.punches}건`} />
           <Row label="근로계약" value={`${c.contracts}건`} />
           <Row label="점검 기록" value={`${c.cycle}건`} />
+          {/* ★ 아래 넷은 v3 부터 담긴다. 그전에는 화면에도 없고 백업에도
+              없었다 — 사장님은 담긴 줄 알고 있었다 (2026-09-10) */}
+          <Row label="매출" value={`${c.salesDays}일치`} />
+          <Row label="거래처" value={`${c.vendors}곳`} />
+          <Row label="내 레시피" value={`${c.recipes}개`} />
+          <Row label="발주 기록" value={`${c.orderDays}일치`} />
         </div>
 
         {empty && (
@@ -284,15 +292,22 @@ export default function BackupView({
               <Row label="직원" value={`${stage.counts.staff}명`} />
               <Row label="출퇴근" value={`${stage.counts.punches}건`} />
               <Row label="근로계약" value={`${stage.counts.contracts}건`} />
-              {/* ★ 되돌리기가 점검 기록도 덮어쓰는데 여기에 없었다 (2026-09-10 점검) */}
+              {/* ★ 되돌리기가 덮어쓰는 것은 전부 여기 적는다. 화면에 없는 것을
+                  덮어쓰면 사람은 무엇을 잃는지 모르고 누른다 (2026-09-10 점검) */}
               <Row label="점검 기록" value={`${stage.counts.cycle}건`} />
+              <Row label="매출" value={`${stage.counts.salesDays}일치`} />
+              <Row label="거래처" value={`${stage.counts.vendors}곳`} />
+              <Row label="내 레시피" value={`${stage.counts.recipes}개`} />
+              <Row label="발주 기록" value={`${stage.counts.orderDays}일치`} />
             </div>
 
             <p className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-[12px] leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300">
               <b>지금 이 태블릿에 있는 것은 사라집니다.</b> 합치지 않고
               덮어씁니다 (직원 {stage.losing.staff}명 · 출퇴근{" "}
               {stage.losing.punches}건 · 계약 {stage.losing.contracts}건 · 점검{" "}
-              {stage.losing.cycle}건). 지금
+              {stage.losing.cycle}건 · 매출 {stage.losing.salesDays}일치 · 거래처{" "}
+              {stage.losing.vendors}곳 · 레시피 {stage.losing.recipes}개 · 발주{" "}
+              {stage.losing.orderDays}일치). 지금
               것이 더 최신이면 <b>먼저 전체 백업을 내려받으세요.</b>
             </p>
 
@@ -342,10 +357,16 @@ export default function BackupView({
         )}
       </Card>
 
+      {/* ★ 이 칸은 "무엇이 안 담기는가"를 말한다. 틀리면 사장님이 담긴 줄 알고
+          태블릿을 바꾼다. 담는 것을 늘릴 때 여기도 같이 고칠 것.
+          (2026-09-10 까지 "매출·거래처는 아직 포함되지 않습니다"라고 적혀
+          있었고, 실제로도 안 담기고 있었다. 이제 담는다.) */}
       <p className="mt-4 rounded-xl bg-zinc-100 px-3.5 py-3 text-[12px] leading-relaxed text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
-        여기서 다루는 것은 <b>출퇴근 · 근로계약 · 직원 명단</b>입니다. 매출 ·
-        거래처 단가 · 발주 기록은 아직 포함되지 않습니다 — 법정 보존 대상이
-        먼저라서 그것부터 붙였습니다.
+        <b>전체 백업(JSON)</b>은 위에 적힌 여덟 가지를 전부 담습니다 — 직원 ·
+        출퇴근 · 근로계약 · 점검 기록 · 매출 · 거래처 단가 · 내 레시피 · 발주
+        기록. <b>담지 않는 것은 잠금번호뿐입니다</b> (파일이 돌아다니면 그대로
+        보이니까요). 오늘 체크한 체크리스트·프렙은 어차피 다음 영업일에
+        초기화되므로 담지 않습니다.
       </p>
     </Screen>
   );

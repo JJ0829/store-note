@@ -171,7 +171,17 @@ test("제대로 된 백업은 통과하고 건수를 돌려준다", () => {
   const r = checkRestore(good());
   assert.equal(r.ok, true);
   if (!r.ok) return;
-  assert.deepEqual(r.counts, { staff: 2, punches: 1, contracts: 1, cycle: 0 });
+  // v1 파일에는 v2·v3 칸이 없다. 없는 것은 0 으로 세고 **거부하지 않는다**
+  assert.deepEqual(r.counts, {
+    staff: 2,
+    punches: 1,
+    contracts: 1,
+    cycle: 0,
+    salesDays: 0,
+    vendors: 0,
+    recipes: 0,
+    orderDays: 0,
+  });
 });
 
 test("★ JSON이 아니면 거부한다", () => {
@@ -351,4 +361,92 @@ test("빈 값·없는 값이 들어와도 안 죽는다", () => {
     ),
     [],
   );
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 백업에서 조용히 빠진 것이 없는가 — 2026-09-10 에 실제로 여섯 덩이가 빠져 있었다.
+ *
+ * 운영 기능 7종을 붙이면서 저장 키가 늘었는데 백업 목록을 같이 안 늘렸다.
+ * 매출·거래처 단가·설정·내 레시피·발주 기록이 **통째로 안 담기고 있었다.**
+ * 화면은 멀쩡하고 백업도 "N종을 받았습니다" 라고 말해서 아무도 몰랐다.
+ *
+ * 더 나빴던 것: 첫 화면 재촉이 **매출 날짜를 세면서** 재촉하는데 백업은
+ * 매출을 안 담았다. 눌러도 매출은 안 담긴 채 재촉만 꺼졌다 — 거짓 안심이다.
+ *
+ * 그래서 여기서 못 박는다. `src/lib` 이 쓰는 키는 **담기거나, 안 담는 이유가
+ * 적혀 있거나** 둘 중 하나여야 한다. 새 키를 만들고 어느 쪽에도 안 넣으면 걸린다.
+ * ------------------------------------------------------------------ */
+
+import fs from "node:fs";
+import path from "node:path";
+import { BACKUP_KEYS, EXCLUDED_KEYS, buildBackup } from "../src/lib/backup.ts";
+
+/** src/lib 안에서 실제로 쓰는 localStorage 키를 전부 긁는다 */
+function libKeys(): string[] {
+  const dir = path.join(process.cwd(), "src", "lib");
+  const found = new Set<string>();
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith(".ts")) continue;
+    const src = fs.readFileSync(path.join(dir, name), "utf-8");
+    // backup.ts 자신의 목록은 세지 않는다 — 그건 선언이지 사용이 아니다
+    const body = name === "backup.ts" ? src.slice(src.indexOf("export function")) : src;
+    for (const m of body.matchAll(/"(sop:[a-zA-Z]+)"/g)) found.add(m[1]);
+  }
+  return [...found].sort();
+}
+
+test("★ src/lib 의 저장 키가 전부 백업 목록 또는 제외 목록에 있다", () => {
+  const known = new Set<string>([...BACKUP_KEYS, ...EXCLUDED_KEYS]);
+  const orphans = libKeys().filter((k) => !known.has(k));
+
+  assert.deepEqual(
+    orphans,
+    [],
+    `백업 목록에도 제외 목록에도 없는 저장 키: ${orphans.join(", ")}. ` +
+      "담을 것이면 BACKUP_KEYS 와 buildBackup 에, 안 담을 것이면 EXCLUDED_KEYS 에 " +
+      "**이유와 함께** 넣을 것. 그냥 두면 그 화면만 조용히 백업에서 빠진다.",
+  );
+});
+
+test("★ BACKUP_KEYS 에 적어둔 것을 buildBackup 이 실제로 담는다", () => {
+  // 목록만 늘리고 buildBackup 을 안 고치면 목록이 거짓말이 된다
+  const file = buildBackup("○○ 베이커리 카페");
+  const carried: Record<string, unknown> = {
+    "sop:roster": file.roster,
+    "sop:punch": file.punches,
+    "sop:contracts": file.contracts,
+    "sop:cycleDone": file.cycleDone,
+    "sop:cycleEvery": file.cycleEvery,
+    "sop:sales": file.sales,
+    "sop:vendors": file.vendors,
+    "sop:settings": file.settings,
+    "sop:recipes": file.recipes,
+    "sop:orderLog": file.orderLog,
+    "sop:orderLinks": file.orderLinks,
+  };
+
+  // 위 표가 BACKUP_KEYS 와 같은 것을 다루는지부터 본다
+  assert.deepEqual(Object.keys(carried).sort(), [...BACKUP_KEYS].sort());
+  for (const k of BACKUP_KEYS) {
+    assert.notEqual(carried[k], undefined, `${k} 가 백업 파일에 안 담긴다`);
+  }
+});
+
+test("★ 잠금번호는 백업 파일에 절대 안 담긴다", () => {
+  // 파일은 메일·USB로 돌아다닌다. 열면 그대로 보인다
+  const text = JSON.stringify(buildBackup("○○ 베이커리 카페"));
+  for (const k of ["ownerPin", "storePin", "sop:sid", "lastBackup"]) {
+    assert.ok(!text.includes(k), `백업 파일에 ${k} 가 들어갔다`);
+  }
+});
+
+test("★ 재촉이 세는 것을 백업이 담는다 (거짓 안심 방지)", () => {
+  // backupStatus 는 출퇴근과 매출 날짜를 세서 "며칠치가 안 백업됐다" 고 말한다.
+  // 그 둘이 백업에 안 담기면, 눌러도 안 담긴 채 재촉만 꺼진다
+  for (const k of ["sop:punch", "sop:sales"] as const) {
+    assert.ok(
+      (BACKUP_KEYS as readonly string[]).includes(k),
+      `재촉은 ${k} 를 세는데 백업이 안 담는다 — 누르면 거짓 안심만 준다`,
+    );
+  }
 });

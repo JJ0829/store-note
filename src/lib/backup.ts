@@ -24,6 +24,19 @@
 import { loadPunches, savePunches, type PunchData, type Punch } from "./attendance.ts";
 import { loadContracts, saveContracts, type Contract } from "./contracts.ts";
 import { loadRoster, saveRoster, type RosterData, type Staff } from "./roster.ts";
+import { loadSales, saveSales, type SalesData } from "./sales.ts";
+import { loadVendors, saveVendors, type VendorData } from "./vendors.ts";
+import { loadSettings, saveSettings, type Settings } from "./settings.ts";
+import { loadLocalRecipes, saveLocalRecipes } from "./localRecipes.ts";
+import {
+  loadOrderLinks,
+  loadOrderLog,
+  saveOrderLinks,
+  saveOrderLog,
+  type OrderLinks,
+  type OrderLog,
+} from "./orders.ts";
+import type { Recipe } from "./types.ts";
 import {
   loadCycleDone,
   loadCycleEvery,
@@ -40,7 +53,72 @@ import {
  * v2 (2026-09-10) — 주기 점검 기록을 넣었다. **v1 파일도 그대로 되돌릴 수 있다**
  * (아래 `checkRestore`·`applyRestore` 의 주기 부분은 있을 때만 본다).
  */
-export const BACKUP_VERSION = 2;
+/**
+ * 백업 파일 형식 번호. 모양이 바뀌면 올리고, 되돌리기에서 분기한다.
+ *
+ * v3 (2026-09-10) — **매출·거래처·설정·내 레시피·발주를 넣었다.**
+ *   그전까지 백업은 직원·출퇴근·계약·주기 점검 넷뿐이었다. 앱은 그 밖에도
+ *   여섯 덩이를 저장하고 있었는데 **백업에서 통째로 빠져 있었다** —
+ *   태블릿이 죽으면 거래처 단가와 매출 기록이 그냥 사라지는 상태였다.
+ *   그리고 첫 화면 재촉은 **매출 날짜를 세면서** 재촉하고 있었으므로,
+ *   사장님이 백업을 눌러도 매출은 안 담긴 채 재촉만 꺼졌다. 그게 제일 나빴다.
+ *
+ *   ★ 이런 누락이 다시 생기지 않게 `tests/backup.test.ts` 가
+ *     **각 lib 의 저장 키와 이 파일이 담는 것을 맞춰본다.**
+ *
+ * v2 (2026-09-10) — 주기 점검 기록.
+ *
+ * **v1·v2 파일도 그대로 되돌릴 수 있다** (뒤에 붙은 칸은 전부 선택 사항이다).
+ */
+export const BACKUP_VERSION = 3;
+
+/**
+ * 백업이 담는 localStorage 키.
+ *
+ * ★ **새 화면을 만들면서 저장 키를 늘리면 여기에도 넣어야 한다.**
+ *   안 넣으면 그 화면만 조용히 백업에서 빠지고, 사람은 백업했다고 믿는다.
+ *   실제로 그렇게 됐었다 — 운영 기능 7종이 붙으면서 여섯 덩이가 빠져 있었다.
+ *
+ *   `tests/backup.test.ts` 가 `src/lib` 의 키 전부를 긁어서 이 목록 또는
+ *   아래 제외 목록에 있는지 맞춰본다. 어느 쪽에도 없으면 테스트가 걸린다.
+ */
+export const BACKUP_KEYS = [
+  "sop:roster", // 직원 + 근무표(계획)
+  "sop:punch", // 출퇴근(실제)        ★ 근로기준법 제42조 3년
+  "sop:contracts", // 근로계약 조건    ★ 제42조 3년
+  "sop:cycleDone", // 주기 점검을 마지막으로 한 날
+  "sop:cycleEvery", // 매장이 정한 점검 주기
+  "sop:sales", // 매출
+  "sop:vendors", // 거래처 + 품목 단가 — 원가가 여기서 나온다
+  "sop:settings", // 최저임금·목표원가율·판매가·원가 제외
+  "sop:recipes", // 사장님이 직접 넣은 레시피 (영업비밀)
+  "sop:orderLog", // 발주 기록
+  "sop:orderLinks", // 발주 항목 ↔ 거래처 연결
+] as const;
+
+/**
+ * 일부러 담지 않는 키. **왜 안 담는지까지 적어둔다** — 이유가 없으면
+ * 다음 사람이 "빠뜨린 것" 으로 보고 넣게 된다.
+ *
+ *  sop:ownerPin  / sop:storePin  — 잠금번호. 백업 파일에 넣지 않는다.
+ *                  파일은 메일·USB로 돌아다니고, 열면 그대로 보인다
+ *  sop:ownerOpen / sop:storeOpen — sessionStorage. 잠금 해제 상태를 복원할 이유가 없다
+ *  sop:sid       — 지표용 임의 식별자. **기기마다 달라야 한다**
+ *  sop:lastBackup— 이 기기가 마지막으로 백업한 시각.
+ *                  ★ 담으면 안 된다 — 새 태블릿에 복원했을 때 "이미 백업했음" 을
+ *                  물려받아서, 정작 그 기기는 한 번도 안 받았는데 재촉이 안 뜬다
+ *
+ * 날짜별 체크 상태(`sop:<슬러그>:<날짜>`, `sop:run:<슬러그>`)는 lib 이 아니라
+ * 화면에서 만들고, 영업일이 바뀌면 어차피 초기화된다. 그래서 목록에 없다.
+ */
+export const EXCLUDED_KEYS = [
+  "sop:ownerPin",
+  "sop:ownerOpen",
+  "sop:storePin",
+  "sop:storeOpen",
+  "sop:sid",
+  "sop:lastBackup",
+] as const;
 
 export type BackupFile = {
   kind: "store-note-backup";
@@ -65,6 +143,26 @@ export type BackupFile = {
    */
   cycleDone?: CycleDone;
   cycleEvery?: CycleEvery;
+
+  /**
+   * ★ v3 부터. **v1·v2 파일에는 없다 — 그래서 전부 선택 사항이다.**
+   *
+   * 왜 늦게 넣었나: 운영 기능 7종을 붙이면서 저장 키가 늘었는데 백업 목록을
+   * 같이 안 늘렸다. 화면은 멀쩡하고 백업도 "성공" 이라고 말해서 아무도 몰랐다.
+   *
+   * 잃으면 어떻게 되는가 —
+   *   sales    매출 기록. 날짜마다 쌓이고 되메울 방법이 없다
+   *   vendors  거래처 단가. **원가가 여기서 나온다.** 다시 알아내려면 전화를 돌려야 한다
+   *   settings 최저임금·목표원가율·판매가·원가 제외 재료
+   *   recipes  사장님이 직접 넣은 레시피. **영업비밀이고 앱 밖에 사본이 없다**
+   *   orderLog 발주 기록. "주문했는데 안 들어온 것" 의 근거다
+   */
+  sales?: SalesData;
+  vendors?: VendorData;
+  settings?: Settings;
+  recipes?: Recipe[];
+  orderLog?: OrderLog;
+  orderLinks?: OrderLinks;
 };
 
 /* ------------------------------------------------------------------ */
@@ -276,6 +374,12 @@ export function buildBackup(storeName: string): BackupFile {
     contracts: loadContracts(),
     cycleDone: loadCycleDone(),
     cycleEvery: loadCycleEvery(),
+    sales: loadSales(),
+    vendors: loadVendors(),
+    settings: loadSettings(),
+    recipes: loadLocalRecipes(),
+    orderLog: loadOrderLog(),
+    orderLinks: loadOrderLinks(),
   };
 }
 
@@ -291,6 +395,10 @@ export function backupCounts(b: BackupFile): {
   punches: number;
   contracts: number;
   cycle: number;
+  salesDays: number;
+  vendors: number;
+  recipes: number;
+  orderDays: number;
 } {
   let punches = 0;
   for (const byDate of Object.values(b.punches ?? {})) {
@@ -303,6 +411,10 @@ export function backupCounts(b: BackupFile): {
     // 주기는 "마지막으로 한 날" 이 적힌 항목 수다. 주기만 정하고 아직 한 적이
     // 없는 것은 세지 않는다 — 잃을 것이 없기 때문이다
     cycle: Object.keys(b.cycleDone ?? {}).length,
+    salesDays: Object.keys(b.sales ?? {}).length,
+    vendors: (b.vendors?.vendors ?? []).length,
+    recipes: (b.recipes ?? []).length,
+    orderDays: Object.keys(b.orderLog ?? {}).length,
   };
 }
 
@@ -363,6 +475,30 @@ export function checkRestore(text: string): RestoreCheck {
     return { ok: false, reason: "백업 파일의 점검 기록이 손상되었습니다." };
   }
 
+  /* v3 칸도 같은 규칙이다 — **없으면 통과(v1·v2 파일), 있는데 모양이 틀리면 거부.**
+     조용히 넘기면 되돌린 뒤에 거래처 단가만 사라진 것을 나중에야 알게 된다. */
+  const objOk = (v: unknown) => v === undefined || (typeof v === "object" && v !== null);
+  const arrOk = (v: unknown) => v === undefined || Array.isArray(v);
+  const vendorsOk =
+    f.vendors === undefined ||
+    (typeof f.vendors === "object" &&
+      f.vendors !== null &&
+      Array.isArray(f.vendors.vendors) &&
+      Array.isArray(f.vendors.items));
+  if (
+    !objOk(f.sales) ||
+    !objOk(f.settings) ||
+    !objOk(f.orderLog) ||
+    !objOk(f.orderLinks) ||
+    !arrOk(f.recipes) ||
+    !vendorsOk
+  ) {
+    return {
+      ok: false,
+      reason: "백업 파일의 매출·거래처·설정 부분이 손상되었습니다.",
+    };
+  }
+
   const file = f as BackupFile;
   return { ok: true, file, counts: backupCounts(file) };
 }
@@ -391,6 +527,20 @@ export function applyRestore(file: BackupFile): { ok: boolean; failed: string[] 
   }
   if (file.cycleEvery !== undefined && !saveCycleEvery(file.cycleEvery)) {
     failed.push("점검 주기");
+  }
+
+  /* v3 칸. 위와 같은 규칙 — **백업이 그 덩이를 담고 있을 때만 덮어쓴다.**
+     v1·v2 파일로 되돌릴 때 여기서 빈 값을 써버리면, 그 백업이 담은 적도 없는
+     거래처 단가와 매출을 지우는 셈이 된다. */
+  if (file.sales !== undefined && !saveSales(file.sales)) failed.push("매출");
+  if (file.vendors !== undefined && !saveVendors(file.vendors)) failed.push("거래처");
+  if (file.settings !== undefined && !saveSettings(file.settings)) failed.push("설정");
+  if (file.recipes !== undefined && !saveLocalRecipes(file.recipes)) {
+    failed.push("내 레시피");
+  }
+  if (file.orderLog !== undefined && !saveOrderLog(file.orderLog)) failed.push("발주 기록");
+  if (file.orderLinks !== undefined && !saveOrderLinks(file.orderLinks)) {
+    failed.push("발주 거래처 연결");
   }
   return { ok: failed.length === 0, failed };
 }
