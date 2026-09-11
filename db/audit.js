@@ -109,7 +109,9 @@ const 요구 = [
 
   // DBML 의 Ref 줄을 같은 모양으로 만든다
   const dbmlFk = new Set();
-  for (const m of DBML.matchAll(/^Ref:\s*([a-z_]+)\.(\([^)]*\)|[a-z_]+)\s*>\s*([a-z_]+)\./gm)) {
+  // ★ 방향 기호는 > · - · < 셋 다 있다. > 만 보면 1:1 관계를 통째로 놓친다
+  //   (실제로 3차에서 4개를 놓쳤다 — 방향을 고치자마자 대조에서 사라졌다)
+  for (const m of DBML.matchAll(/^Ref:\s*([a-z_]+)\.(\([^)]*\)|[a-z_]+)\s*[>\-<]\s*([a-z_]+)\./gm)) {
     const cols = m[2].startsWith("(")
       ? m[2].slice(1, -1).split(",").map((x) => x.trim()).join(",")
       : m[2];
@@ -152,6 +154,31 @@ const 요구 = [
     ? ok("이행 상태 계산 뷰", 뷰.join(" · "))
     : no("이행 상태 뷰", `있는 뷰: ${뷰.join(", ")}`);
 
+  // ── E. 그림의 관계 "방향" 이 맞는가 (dbdiagram 경고) ────────────────
+  console.log("\n[E] 관계 방향 — 자식 쪽이 유일한데 '여럿' 으로 그리지 않았는가");
+  /* dbdiagram 은 A.(칸들) > B 에서 A 쪽 칸들이 유일하면 경고한다 —
+     그건 "여럿" 이 아니라 1:1 이기 때문이다.
+     실제로 3차에서 4곳이 걸렸다 (store_settings · prep_cycle_state
+     · cost_excluded_items · staff.user_id). 눈으로 찾지 않게 여기서 본다. */
+  const uniqSets = new Map();
+  for (const m of DBML.matchAll(/^Table\s+"?([a-z_]+)"?\s*\{([\s\S]*?)^\}/gm)) {
+    const sets = [];
+    for (const c of m[2].matchAll(/^\s*([a-z_]+)\s+[^[\n]*\[[^\]]*\bpk\b/gm)) sets.push([c[1]]);
+    for (const ix of m[2].matchAll(/\(([^)]*)\)\s*\[[^\]]*\b(pk|unique)\b/g))
+      sets.push(ix[1].split(",").map((x) => x.trim()));
+    uniqSets.set(m[1], new Set(sets.map((x) => [...x].sort().join(","))));
+  }
+  const 방향 = [];
+  for (const m of DBML.matchAll(/^Ref:\s*([a-z_]+)\.(\([^)]*\)|[a-z_]+)\s*(>|-|<)\s*([a-z_]+)\./gm)) {
+    if (m[3] !== ">") continue;
+    const cols = (m[2].startsWith("(") ? m[2].slice(1, -1) : m[2])
+      .split(",").map((x) => x.trim()).sort().join(",");
+    if (uniqSets.get(m[1])?.has(cols))
+      방향.push(`${m[1]}.(${cols}) > ${m[4]} — '-' 로 바꿔야 한다`);
+  }
+  방향.length === 0
+    ? ok("관계 방향", `${uniqSets.size}개 표의 유일 키와 대조 — 어긋남 없음`)
+    : no("관계 방향이 틀린 곳", 방향.join("\n      "));
   console.log("\n" + "=".repeat(74));
   console.log(`  통과 ${pass} · 실패 ${fail}`);
   console.log("=".repeat(74) + "\n");

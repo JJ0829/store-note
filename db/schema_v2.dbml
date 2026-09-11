@@ -951,8 +951,10 @@ Ref: steps.store_id      > stores.id
 Ref: prep_tasks.store_id > stores.id
 Ref: prep_cycle_state.store_id > stores.id
 Ref: daily_checks.store_id > stores.id
-Ref: store_settings.store_id > stores.id
-Ref: staff.user_id > users.id
+// 매장 하나에 설정 한 줄 — 1:1 이므로 '-'
+Ref: store_settings.store_id - stores.id
+// 로그인 계정 하나에 직원 한 명 — 1:1 (대부분의 알바는 계정이 없어서 비어 있다)
+Ref: staff.user_id - users.id
 
 Ref: sections.(position_id, store_id)            > positions.(id, store_id)
 Ref: sections.(menu_recipe_version_id, store_id) > menu_recipe_versions.(id, store_id)
@@ -964,7 +966,8 @@ Ref: prep_tasks.(menu_id, store_id)          > menus.(id, store_id)
 Ref: prep_tasks.(make_recipe_item, store_id) > items.(id, store_id)
 // ★ 옵션의 옵션 금지 — 부모의 is_option 이 false 여야만 통과한다
 Ref: prep_tasks.(option_of, store_id, option_parent_is_root) > prep_tasks.(id, store_id, is_option)
-Ref: prep_cycle_state.(task_id, store_id) > prep_tasks.(id, store_id)
+// 프렙 항목 하나에 주기 기록 한 줄 — 1:1
+Ref: prep_cycle_state.(task_id, store_id) - prep_tasks.(id, store_id)
 
 Ref: shift_focus.(shift_id, store_id)     > shifts.(id, store_id)
 Ref: shift_focus.(position_id, store_id)  > positions.(id, store_id)
@@ -975,7 +978,8 @@ Ref: shift_assignments.(shift_id, store_id) > shifts.(id, store_id)
 Ref: punches.(staff_id, store_id)   > staff.(id, store_id)
 Ref: contracts.(staff_id, store_id) > staff.(id, store_id)
 
-Ref: cost_excluded_items.(item_id, store_id) > items.(id, store_id)
+// 품목 하나에 제외 표시 한 줄 — 1:1
+Ref: cost_excluded_items.(item_id, store_id) - items.(id, store_id)
 Ref: daily_checks.(step_id, store_id)        > steps.(id, store_id)
 Ref: daily_checks.(prep_task_id, store_id)   > prep_tasks.(id, store_id)
 
