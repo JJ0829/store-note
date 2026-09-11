@@ -9,10 +9,11 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test",
-    "check": "npm run typecheck && npm run build && npm test && npm run verify:db",
+    "check": "npm run typecheck && npm run build && npm test && npm run verify:db && npm run audit:db",
     "test:watch": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --watch",
     "test:cov": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage",
-    "verify:db": "node db/verify.js"
+    "verify:db": "node db/verify.js",
+    "audit:db": "node db/audit.js"
   },
   "engines": {
     "node": ">=22.18"

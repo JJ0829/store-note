@@ -39,6 +39,11 @@
 
 create extension if not exists btree_gist;   -- 기간 겹침 방지 (EXCLUDE) 에 필요
 
+--  ★ 단위 칸에 `references units(code)` 를 따로 안 붙인다.
+--    아래에서 `(단위, 계열) -> units(code, family)` 두 칸으로 참조하는데,
+--    그것이 한 칸짜리를 이미 포함한다. 둘 다 걸면 같은 검사가 두 번 돌고
+--    제약 목록에 중복이 남아서 "왜 두 개인가" 를 되묻게 된다.
+
 
 -- ============================================================================
 --  0. 단위 — g 과 ml 을 섞지 못하게 하는 뿌리
@@ -157,7 +162,7 @@ create table items (
        check (kind in ('purchased','made')),
 
   -- 재고·레시피·원가가 전부 이 단위로 환산돼 계산된다
-  base_unit   text not null references units(code),
+  base_unit   text not null,
   base_family text not null,
 
   is_active  boolean not null default true,
@@ -200,7 +205,7 @@ create table item_versions (
 
   unit_cost   numeric(14,4) not null,        -- 한 팩 값 (원)
   per_unit    numeric(14,4) not null,        -- 그 팩의 수량 (1000)
-  pack_unit   text not null references units(code),   -- 그 수량의 단위 (ml)
+  pack_unit   text not null,                          -- 그 수량의 단위 (ml)
   pack_family text not null,
 
   yield_count numeric(14,4),                 -- made 품목의 1배합 산출 개수
@@ -316,7 +321,7 @@ create table menu_recipe_lines (
   version_id uuid not null,
   item_id    uuid not null,
   amount     numeric(14,4) not null check (amount > 0),
-  unit       text not null references units(code),
+  unit       text not null,
   unit_family text not null,
 
   -- ★ 원가에서 빼는 줄. "추출량" 이 여기 해당한다 —
@@ -344,7 +349,7 @@ create table make_recipe_versions (
   item_id  uuid not null,                  -- 만들어지는 품목 (kind='made')
   version  int  not null,
   yield_amount numeric(14,4) not null,     -- 1배합 산출량
-  yield_unit   text not null references units(code),
+  yield_unit   text not null,
   yield_family text not null,
 
   -- 걸어놓고 몇 시간 뒤에 쓸 수 있나. 콜드브루 12~24h · 반죽 12~18h.
@@ -378,7 +383,7 @@ create table make_recipe_lines (
   version_id uuid not null,
   ingredient_item_id uuid not null,
   amount     numeric(14,4) not null check (amount > 0),
-  unit       text not null references units(code),
+  unit       text not null,
   unit_family text not null,
   excluded_from_cost boolean not null default false,
 
@@ -413,7 +418,7 @@ create table order_plans (
   planned_on  date not null default current_date,
   expected_on date,
   qty         numeric(14,4) not null check (qty > 0),
-  unit        text not null references units(code),
+  unit        text not null,
   unit_family text not null,
   memo        text,
   cancelled_at timestamptz,
@@ -517,7 +522,7 @@ create table received_lines (
 
   occurred_on date not null default current_date,
   qty   numeric(14,4) not null check (qty > 0),
-  unit  text not null references units(code),
+  unit  text not null,
   unit_family text not null,
   unit_cost   numeric(14,4),               -- 실제 매입가 (규격 이력과 대조)
   item_version_id uuid,                    -- 그때 규격
@@ -555,7 +560,7 @@ create table baked_lines (
   ready_at    timestamptz,                 -- 사용 가능해지는 시각
   batches     numeric(14,4) not null check (batches > 0),
   qty         numeric(14,4),               -- 실제 산출량
-  unit        text not null references units(code),
+  unit        text not null,
   unit_family text not null,               -- ★ 2차 피드백 2 — 전에는 이 칸이 없었다
   memo        text,
   created_at  timestamptz not null default now(),
@@ -584,7 +589,7 @@ create table waste_lines (
   item_id  uuid not null,
   occurred_on date not null default current_date,
   qty   numeric(14,4) not null check (qty > 0),
-  unit  text not null references units(code),
+  unit  text not null,
   unit_family text not null,
   reason text,                             -- 유통기한 · 품질 · 실수 · 시식
   memo   text,
@@ -604,7 +609,7 @@ create table stock_counts (
   item_id  uuid not null,
   counted_on date not null default current_date,
   qty   numeric(14,4) not null check (qty >= 0),
-  unit  text not null references units(code),
+  unit  text not null,
   unit_family text not null,
 
   -- ★ 그날 도중에 품절됐는가.

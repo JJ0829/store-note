@@ -527,17 +527,28 @@ Table recommendation_inputs {
 //  관계 — ★ 전부 (id, store_id) 복합키다. 이게 지적 1의 답이다.
 // ===========================================================================
 
-// 매장 · 사용자
-Ref: users.store_id     > stores.id
-Ref: suppliers.store_id > stores.id
-Ref: items.store_id     > stores.id
-Ref: menus.store_id     > stores.id
+// 매장 · 사용자 — ★ 모든 표가 매장에 매달린다
+Ref: users.store_id          > stores.id
+Ref: suppliers.store_id      > stores.id
+Ref: items.store_id          > stores.id
+Ref: menus.store_id          > stores.id
+Ref: order_plans.store_id    > stores.id
+Ref: bake_plans.store_id     > stores.id
+Ref: daily_sales.store_id    > stores.id
+Ref: received_lines.store_id > stores.id
+Ref: baked_lines.store_id    > stores.id
+Ref: waste_lines.store_id    > stores.id
+Ref: stock_counts.store_id   > stores.id
 
 // 단위 계열 — ★ B. g 과 ml 을 못 섞게 한다
 Ref: items.(base_unit, base_family)          > units.(code, family)
 Ref: item_versions.(pack_unit, pack_family)  > units.(code, family)
 Ref: menu_recipe_lines.(unit, unit_family)   > units.(code, family)
 Ref: make_recipe_lines.(unit, unit_family)   > units.(code, family)
+Ref: order_plans.(unit, unit_family)         > units.(code, family)
+Ref: received_lines.(unit, unit_family)      > units.(code, family)
+Ref: waste_lines.(unit, unit_family)         > units.(code, family)
+Ref: stock_counts.(unit, unit_family)        > units.(code, family)
 
 // 거래처 · 품목 — ★ 지적 1
 Ref: items.(supplier_id, store_id)         > suppliers.(id, store_id)
