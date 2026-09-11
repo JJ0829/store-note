@@ -357,6 +357,53 @@ async function mustAccept(db, name, sql) {
        ('11111111-1111-1111-1111-111111111111','2026-03-01','c5000000-0000-0000-0000-000000000001');`,
     "uq_daily_checks_prep");
 
+  // ── 6-B. 전수 훑기가 찾아낸 3건 ─────────────────────────────────────
+  log("\n[6-B] 전수 훑기가 찾은 것 — 지적에 없었지만 같은 규칙이 빠져 있던 자리");
+
+  await db.exec(`
+    insert into auth.users (id) values ('bbbbbbbb-0000-0000-0000-000000000009');
+    insert into users (id, store_id, name) values
+      ('bbbbbbbb-0000-0000-0000-000000000009','22222222-2222-2222-2222-222222222222','B직원계정');
+  `);
+  await mustReject(db, "A매장 직원에 B매장 로그인 계정을 붙인다",
+    `insert into staff (store_id, name, user_id)
+     values ('11111111-1111-1111-1111-111111111111','몰래직원','bbbbbbbb-0000-0000-0000-000000000009');`,
+    "fk_staff_user_same_store");
+
+  // 같은 식빵의 레시피를 한 판 더 만든다 (v2)
+  await db.exec(`
+    insert into make_recipe_versions (id, store_id, item_id, version, yield_amount, yield_unit, yield_family, valid_from)
+    values ('a8000000-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111',
+            'a1000000-0000-0000-0000-000000000003', 2, 8,'개','count','2026-06-01');
+  `);
+  await mustReject(db, "★ 계획은 레시피 v1 인데 제조 기록은 v2 를 가리킨다",
+    `insert into baked_lines (store_id, item_id, bake_plan_id, make_recipe_version_id,
+                              occurred_on, batches, unit, unit_family)
+     values ('11111111-1111-1111-1111-111111111111','a1000000-0000-0000-0000-000000000003',
+             'a9000000-0000-0000-0000-000000000001','a8000000-0000-0000-0000-000000000002',
+             '2026-03-02', 1, '개','count');`,
+    "fk_bl_plan_uses_that_recipe");
+
+  await mustAccept(db, "계획과 같은 레시피 판이면 통과한다",
+    `insert into baked_lines (store_id, item_id, bake_plan_id, make_recipe_version_id,
+                              occurred_on, batches, unit, unit_family)
+     values ('11111111-1111-1111-1111-111111111111','a1000000-0000-0000-0000-000000000003',
+             'a9000000-0000-0000-0000-000000000001','a8000000-0000-0000-0000-000000000001',
+             '2026-03-02', 1, '개','count');`);
+
+  // 다른 프렙 목록을 하나 더 만든다
+  await db.exec(`
+    insert into prep_lists (id, store_id, slug, name) values
+      ('c2000000-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','cycle','주기 점검');
+  `);
+  await mustReject(db, "★ 다른 목록의 항목을 옵션으로 붙인다 (주기 점검 → 오후 프렙)",
+    `insert into prep_tasks (store_id, list_id, title, kind, trigger_type, trigger_at,
+                             recoverable, consequence, option_of, optional)
+     values ('11111111-1111-1111-1111-111111111111','c2000000-0000-0000-0000-000000000002',
+             '엉뚱한 옵션','routine','daily','14:00', true, '',
+             'c5000000-0000-0000-0000-000000000001', true);`,
+    "fk_prep_option_same_list");
+
   // ── 7. RLS ──────────────────────────────────────────────────────────
   log("\n[7] 지적 4 — 다른 매장 데이터의 조회와 등록이 모두 차단되는가");
   await db.exec(`

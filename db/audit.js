@@ -166,14 +166,22 @@ const 요구 = [
     for (const c of m[2].matchAll(/^\s*([a-z_]+)\s+[^[\n]*\[[^\]]*\b(pk|unique)\b/gm)) sets.push([c[1]]);
     for (const ix of m[2].matchAll(/\(([^)]*)\)\s*\[[^\]]*\b(pk|unique)\b/g))
       sets.push(ix[1].split(",").map((x) => x.trim()));
-    uniqSets.set(m[1], new Set(sets.map((x) => [...x].sort().join(","))));
+    uniqSets.set(m[1], sets);
   }
+  /* ★ 유일성은 **부분집합**으로 본다.
+     user_id 하나가 unique 면 (user_id, store_id) 도 당연히 unique 다.
+     칸 묶음이 정확히 같을 때만 유일로 보면, 칸을 하나 더 붙인 순간
+     "유일하지 않다" 로 뒤집힌다 — 실제로 그렇게 당했다. */
+  const 유일한가 = (t, colArr) => {
+    const set = new Set(colArr);
+    return (uniqSets.get(t) ?? []).some((u) => u.every((c) => set.has(c)));
+  };
   const 방향 = [];
   for (const m of DBML.matchAll(/^Ref:\s*([a-z_]+)\.(\([^)]*\)|[a-z_]+)\s*(>|-|<)\s*([a-z_]+)\./gm)) {
     const [, child, raw, op, parent] = m;
-    const cols = (raw.startsWith("(") ? raw.slice(1, -1) : raw)
-      .split(",").map((x) => x.trim()).sort().join(",");
-    const 유일 = uniqSets.get(child)?.has(cols) ?? false;
+    const colArr = (raw.startsWith("(") ? raw.slice(1, -1) : raw).split(",").map((x) => x.trim());
+    const cols = [...colArr].sort().join(",");
+    const 유일 = 유일한가(child, colArr);
     if (op === ">" && 유일)
       방향.push(`${child}.(${cols}) > ${parent}  — 자식이 유일하다. '-' 로 바꿀 것`);
     if (op === "-" && !유일)

@@ -102,6 +102,11 @@ create table users (
 );
 create index ix_users_store on users(store_id);
 
+-- ★ 전수 훑기가 찾은 것 (2026-09-11):
+--   staff 가 users 를 번호만으로 가리키고 있었다. A매장 직원이 B매장 계정에
+--   연결될 수 있었다. 아래 유일키가 (계정, 매장) 복합 참조를 가능하게 한다.
+alter table users add constraint uq_users_id_store unique (id, store_id);
+
 -- 영업일 계산. 모든 원장 테이블이 이 함수를 쓴다.
 create or replace function business_date(p_store uuid, p_at timestamptz)
 returns date
@@ -457,6 +462,8 @@ create table bake_plans (
   constraint uq_bake_plans_id_store unique (id, store_id),
   -- ★ 2차 피드백 1 — 제조 기록이 (계획, 매장, 품목) 으로 가리키게 하는 열쇠
   constraint uq_bake_plans_id_store_item unique (id, store_id, item_id),
+  -- ★ 전수 훑기 — 제조 기록이 (계획, 레시피) 를 같이 가리킬 때 짝이 맞아야 한다
+  constraint uq_bake_plans_id_store_recipe unique (id, store_id, make_recipe_version_id),
   constraint fk_bp_item_same_store
     foreign key (item_id, store_id) references items (id, store_id),
   -- ★ 2차 피드백 1 — 제조 계획에 붙는 레시피가 그 품목의 레시피여야 한다.
@@ -575,10 +582,16 @@ create table baked_lines (
   constraint fk_bl_plan_same_item
     foreign key (bake_plan_id, store_id, item_id)
     references bake_plans (id, store_id, item_id),
-  -- ★ 2차 피드백 1 — 그 품목의 레시피여야 한다
+  -- ★ 피드백 1 — 그 품목의 레시피여야 한다
   constraint fk_bl_version_same_item
     foreign key (make_recipe_version_id, store_id, item_id)
-    references make_recipe_versions (id, store_id, item_id)
+    references make_recipe_versions (id, store_id, item_id),
+  -- ★ 전수 훑기가 찾은 것 — 계획과 레시피를 둘 다 가리키면 **그 계획의 레시피**여야 한다.
+  --   전에는 "같은 품목" 까지만 봐서, 같은 식빵이라도 계획은 v1 인데
+  --   기록은 v2 를 가리킬 수 있었다. 그러면 원가가 어느 판으로 계산될지 갈린다.
+  constraint fk_bl_plan_uses_that_recipe
+    foreign key (bake_plan_id, store_id, make_recipe_version_id)
+    references bake_plans (id, store_id, make_recipe_version_id)
 );
 create index ix_baked_by_plan on baked_lines(bake_plan_id);
 
@@ -956,6 +969,8 @@ create table prep_tasks (
 
   constraint uq_prep_tasks_id_store unique (id, store_id),
   constraint uq_prep_tasks_id_store_opt unique (id, store_id, is_option),
+  -- ★ 전수 훑기 — 옵션이 부모와 같은 목록에 있는지까지 보게 하는 열쇠
+  constraint uq_prep_tasks_id_store_list unique (id, store_id, list_id),
 
   constraint fk_prep_list_same_store
     foreign key (list_id, store_id) references prep_lists (id, store_id),
@@ -968,6 +983,12 @@ create table prep_tasks (
   constraint fk_prep_option_one_level
     foreign key (option_of, store_id, option_parent_is_root)
     references prep_tasks (id, store_id, is_option),
+  -- ★ 전수 훑기가 찾은 것 — 옵션은 **부모와 같은 목록** 안에 있어야 한다.
+  --   전에는 오후 프렙의 항목이 주기 점검의 옵션이 될 수 있었다.
+  --   그러면 화면이 다른 목록의 항목을 카드 안에 그린다.
+  constraint fk_prep_option_same_list
+    foreign key (option_of, store_id, list_id)
+    references prep_tasks (id, store_id, list_id),
 
   -- ★ routine 은 리드타임이 없다. 있으면 화면이 없는 약속을 만든다.
   constraint ck_prep_routine check (
@@ -1060,11 +1081,14 @@ create table staff (
   phone    text,
   -- ★ 로그인 계정 하나에 직원 한 명. unique 다.
   --   비어 있는 것은 여럿 허용된다 — 알바는 대부분 계정이 없다.
-  user_id  uuid unique references users(id),
+  user_id  uuid unique,
   is_active  boolean not null default true,
   created_at timestamptz not null default now(),
 
-  constraint uq_staff_id_store unique (id, store_id)
+  constraint uq_staff_id_store unique (id, store_id),
+  -- ★ 전수 훑기가 찾은 것 — 같은 매장 계정만 연결된다
+  constraint fk_staff_user_same_store
+    foreign key (user_id, store_id) references users (id, store_id)
 );
 
 create table shift_assignments (
