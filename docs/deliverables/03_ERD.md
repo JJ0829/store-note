@@ -1802,9 +1802,9 @@ for (const s of data.staff) {
 
 | # | 항목 | 현재 | 배포 전 조치 |
 |---|---|---|---|
-| 1 | **매장 PIN 잠금** | **미구현.** src 전체에 인증 코드 0건. `/roster`는 주소를 아는 누구나 열 수 있고, 그 화면이 이 앱의 **유일한 개인정보 화면**이다(10-2절). `/r`은 "매장 PIN 잠금은 배포 전에 붙입니다"라고 **약속만 해둔 상태**다(`src/app/r/page.tsx:38-40`) | **§10.3 (나) 11** |
-| 2 | `robots.txt` | **없다.** `public/robots.txt`도 `src/app/robots.ts`도 존재하지 않는다 | §10.3 (나) 10 |
-| 3 | `/`, `/t/[slug]`, `/p/[slug]`, `/prep/[slug]`, **`/app.html`**의 noindex | **없다.** 지금 배포하면 홈·교육·체크리스트·프렙 목록, 그리고 **`/app.html`**이 색인 대상. 아래 참조 | §10.3 (나) 8·9 |
+| 1 | **매장 PIN 잠금** | ✅ **해소 (2026-09-07 · 서버 검증은 09-10).** `src/lib/storeGate.ts`(가림막) + `src/lib/serverGate.ts`(서버 검증) + `src/components/ServerStoreGate.tsx`. `/roster` 는 `OwnerGate` 로 잠갔다. ⚠️ **`STORE_PIN` 환경변수가 없으면 서버가 막지 않고 빨간 띠만 띄운다** — 의도된 선택이다(`docs/배포.md` ★). 초안이 적었던 "인증 코드 0건" 은 **더 이상 사실이 아니다** | **§10.3 (나) 11** |
+| 2 | `robots.txt` | ✅ **해소.** `public/robots.txt` 가 있고 `Disallow: /` 다. (`src/app/robots.ts` 는 안 만들었다 — 정적 파일 하나면 충분하다) | §10.3 (나) 10 |
+| 3 | `/`, `/t/[slug]`, `/p/[slug]`, `/prep/[slug]` 의 noindex | ✅ **해소.** `src/app/layout.tsx` 의 `metadata.robots` 로 **전역** 적용. `/app.html` 은 `public/app.html` 을 **삭제**해서 없어졌다(§6.5.2) | §10.3 (나) 8·9 |
 | 4 | 삭제 요청 처리 | **미구현.** 직원 삭제는 배열에서 즉시 제거(confirm 1회)이고 이력이 남지 않는다. DDL의 `staff.deleted_at`이 이걸 위한 칸이다 | §10.3 (나) 14 |
 | 5 | 사용자 인증·로그인 | **없다.** 코드 0건. PIN(#1)과는 다른 층위다 — 이건 LATER다 | — |
 | 6 | 보관 기간에 따른 자동 파기 | **미구현.** 기간 자체가 ❓ 미정이다(10-1절) | §10.3 (나) 14 |
