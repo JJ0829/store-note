@@ -849,7 +849,7 @@ Table staff {
   section  text [note: '제빵 · 바 · 홀 · 주방']
   email    text [note: '근무표를 보낼 주소. 없으면 발송 대상에서 빠진다']
   phone    text
-  user_id  uuid [note: '로그인도 하는 직원이면 연결 (선택)']
+  user_id  uuid [unique, note: '★ 로그인 계정 하나에 직원 한 명. 비어 있는 것은 여럿 허용 — 알바는 대부분 계정이 없다']
   is_active boolean [not null, default: true]
 
   Indexes { (id, store_id) [unique] }

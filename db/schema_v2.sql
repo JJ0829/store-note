@@ -1058,7 +1058,9 @@ create table staff (
   section  text,                          -- 제빵 · 바 · 홀 · 주방
   email    text,                          -- 근무표를 보낼 주소. 없으면 발송 대상에서 빠진다
   phone    text,
-  user_id  uuid references users(id),     -- 로그인도 하는 직원이면 연결 (선택)
+  -- ★ 로그인 계정 하나에 직원 한 명. unique 다.
+  --   비어 있는 것은 여럿 허용된다 — 알바는 대부분 계정이 없다.
+  user_id  uuid unique references users(id),
   is_active  boolean not null default true,
   created_at timestamptz not null default now(),
 
