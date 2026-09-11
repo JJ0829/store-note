@@ -1,0 +1,624 @@
+// ===========================================================================
+//  매장수첩 ERD v2  —  dbdiagram.io 용 DBML
+//  2026-09-11
+//
+//  쓰는 법: dbdiagram.io 접속 → 왼쪽 편집창 전체 지우고 → 이 파일 통째로 붙여넣기
+//           → 저장(Save) 하면 공유 링크가 나옵니다.
+//
+//  1차 설계에 대한 심사 지적 5건 + 자체 발견 2건을 반영했다.
+//    1. 매장 간 데이터가 이어지는 문제 → 모든 참조를 (id, store_id) 복합키로
+//    2. 원가 이력이 매입가에만 있는 문제 → 규격 전체를 기간 이력 + 레시피 판 번호
+//    3. 계획과 실행이 안 이어지는 문제 → 날짜 3분화 + 실행행이 계획을 가리킨다
+//    4. 접근 통제가 없는 문제 → 전 표에 줄 단위 통제 (DBML 로는 표현 안 되므로 주석)
+//    5. 추천 근거가 안 남는 문제 → 실행 기록 + 입력값 스냅샷
+//    A. 재료를 이름으로 잇던 문제 → items 가 재료 원본 명단
+//    B. g 과 ml 이 섞이던 문제 → units 의 계열을 참조에 끼워 넣어 DB 가 막는다
+// ===========================================================================
+
+Project 매장수첩 {
+  database_type: 'PostgreSQL'
+  Note: '''
+  # 매장수첩 v2 — 개인 카페·베이커리 매장 운영 도구
+
+  ## 이 설계의 한 줄
+  1차는 "같은 매장 것끼리만 이어진다"를 **프로그램이 판단**하게 두었다.
+  2차는 그 판단을 **데이터베이스가 직접** 한다.
+
+  ## 읽을 때 핵심
+  모든 연결선이 `(id, store_id)` **두 칸**으로 이어진다.
+  번호 하나로만 이으면 DB 는 "존재하는가"만 보고 "어느 매장인가"는 안 본다.
+
+  ## 주의
+  - 1차 DDL 원문 없이 재구성했다. **표·칸 이름은 1차와 대조가 필요하다.**
+  - 실제 DB 에서 아직 실행해 본 적 없다.
+  '''
+}
+
+// ── 열거형 ────────────────────────────────────────────────────────────────
+Enum unit_family { weight volume count }
+Enum item_kind   { purchased made }
+Enum user_role   { owner manager staff }
+Enum reco_kind   { order bake }
+
+
+// ===========================================================================
+//  1. 기준 · 매장
+// ===========================================================================
+
+Table units {
+  code       text        [pk, note: 'g · kg · ml · L · 개']
+  family     unit_family [not null, note: '무게 / 부피 / 개수']
+  to_base    numeric     [not null, note: '계열 기준단위로의 배수']
+
+  Indexes { (code, family) [unique, name: 'uq_units_code_family'] }
+  Note: '''
+  **B. g 과 ml 을 못 섞게 하는 뿌리.**
+  밀도를 모르면 무게와 부피는 못 바꾼다 (밀가루 0.55 · 우유 1.03).
+  바꾸면 원가가 틀리는데 사람이 못 알아챈다.
+  아래 레시피 줄이 (품목, 매장, **계열**) 세 칸으로 품목을 가리켜서
+  계열이 다른 단위를 적는 것 자체가 불가능해진다.
+  '''
+}
+
+Table stores {
+  id                  uuid [pk]
+  name                text [not null]
+  slug                text [unique, not null]
+  timezone            text [not null, default: 'Asia/Seoul']
+  business_day_start  time [not null, default: '04:00', note: '★ 매장의 하루는 자정이 아니라 새벽 4시에 바뀐다']
+  created_at          timestamptz [not null, default: `now()`]
+
+  Note: '마감조가 특별한 경우 01:00 까지 일한다. 달력 날짜로 집계하면 23:50 과 00:10 의 판매가 다른 날로 갈린다.'
+}
+
+Table users {
+  id         uuid      [pk, note: '로그인 계정 (auth.users)']
+  store_id   uuid      [not null]
+  name       text      [not null]
+  role       user_role [not null, default: 'staff']
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: '★ 지적 4 — 줄 단위 접근 통제의 기준점. 로그인한 사람의 store_id 로 모든 표를 거른다.'
+}
+
+
+// ===========================================================================
+//  2. 거래처 · 품목 · 규격 이력
+// ===========================================================================
+
+Table suppliers {
+  id            uuid [pk]
+  store_id      uuid [not null]
+  name          text [not null]
+  phone         text
+  contact       text
+  order_method  text [note: '전화 · 카톡 · 앱 · 홈페이지']
+  cutoff_time   time [note: '이 시각 넘기면 주문일이 하루 밀린다']
+  delivery_days "smallint[]" [note: '0=일 … 6=토. 비면 매일']
+  lead_days     int  [not null, default: 1]
+  memo          text
+  is_active     boolean [not null, default: true]
+  created_at    timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (id, store_id) [unique, name: 'uq_suppliers_id_store']
+    (store_id, name) [unique]
+  }
+  Note: '일요일 배송을 하는 거래처가 거의 없어서, 금요일에 주말치까지 몰아 주문한다.'
+}
+
+Table items {
+  id          uuid      [pk]
+  store_id    uuid      [not null]
+  supplier_id uuid      [note: '★ 같은 매장 거래처만 붙는다']
+  name        text      [not null, note: '★ 매장 안에서 중복 금지']
+  category    text
+  kind        item_kind [not null, default: 'purchased', note: '사 오는 것 / 매장에서 만드는 부재료']
+  base_unit   text      [not null]
+  base_family unit_family [not null]
+  is_active   boolean   [not null, default: true]
+  created_at  timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (id, store_id) [unique, name: 'uq_items_id_store']
+    (store_id, name) [unique, name: 'uq_items_name']
+    (id, store_id, base_family) [unique, name: 'uq_items_id_store_family']
+  }
+  Note: '''
+  **★ A. 재료 원본 명단. 1차의 "이름으로 잇기" 를 여기서 끝낸다.**
+
+  1차는 레시피의 재료 이름과 거래처 품목 이름을 **문자열로 맞췄다.**
+  "우유" 와 "흰우유" 가 다르면 그 재료가 **원가에서 조용히 빠지고**,
+  원가율이 실제보다 낮게 나오고, 점주가 그 숫자로 판매가를 정한다.
+
+  v2 는 품목이 하나의 실체이고 레시피가 그 번호를 가리킨다.
+  이름으로 맞추는 코드가 아예 없어진다.
+
+  **kind = made** 가 필요한 이유: 바에서 만드는 부재료(르방·수제청·시럽·크림폼)가
+  다시 다른 것의 재료가 된다. 르방은 식빵의 재료다.
+  '''
+}
+
+Table item_versions {
+  id          uuid [pk]
+  store_id    uuid [not null]
+  item_id     uuid [not null]
+  unit_cost   numeric [not null, note: '한 팩 값 (원)']
+  per_unit    numeric [not null, note: '그 팩의 수량 (1000)']
+  pack_unit   text    [not null, note: '그 수량의 단위 (ml)']
+  pack_family unit_family [not null]
+  yield_count numeric [note: '만드는 품목의 1배합 산출 개수']
+  is_tax_free boolean [not null, default: false]
+  tax_rate    numeric [not null, default: 0.10]
+  validity    daterange [not null, note: '★ 적용 구간. 끝이 비면 현재 유효']
+  note        text
+  created_at  timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (id, store_id) [unique]
+    (item_id, validity)
+  }
+  Note: '''
+  **★ 지적 2 — 1차는 매입가만 이력이었다.**
+
+  팩 용량이 1000ml → 900ml 로 줄거나, 1배합 개수가 6 → 8 로 바뀌거나,
+  면세가 과세로 돌아서면 **"3월 원가" 를 다시 뽑았을 때
+  3월 가격 × 지금 규격** 이 섞인 숫자가 나온다. 그리고 틀렸다는 표시가 어디에도 안 뜬다.
+
+  그래서 원가에 들어가는 값을 **한 줄에 통째로, 기간과 함께** 담는다.
+
+  **겹침 금지 제약이 걸린다** (EXCLUDE USING gist).
+  시작·끝을 칸 두 개로 두면 "3/1~" 과 "2/15~" 가 둘 다 살아 있어도 통과하고,
+  그러면 어느 값을 쓸지 조회가 마음대로 고른다.
+  '''
+}
+
+
+// ===========================================================================
+//  3. 메뉴 · 판매가 이력
+// ===========================================================================
+
+Table menus {
+  id        uuid [pk]
+  store_id  uuid [not null]
+  name      text [not null]
+  category  text
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (id, store_id) [unique]
+    (store_id, name) [unique]
+  }
+}
+
+Table menu_prices {
+  id          uuid [pk]
+  store_id    uuid [not null]
+  menu_id     uuid [not null]
+  price       numeric [not null]
+  is_tax_free boolean [not null, default: false]
+  validity    daterange [not null]
+
+  Note: '판매가도 이력이다 — 원가율의 분모이기 때문이다. 가격을 올린 뒤 과거 원가율을 뽑으면 지금 가격으로 계산돼 실제보다 좋아 보인다.'
+}
+
+
+// ===========================================================================
+//  4. 레시피 — 판 번호 구조 (지적 2의 뒷부분)
+// ===========================================================================
+
+Table menu_recipe_versions {
+  id         uuid [pk]
+  store_id   uuid [not null]
+  menu_id    uuid [not null]
+  version    int  [not null, note: '판 번호']
+  valid_from date [not null]
+  valid_to   date [note: '비면 현재 판']
+  note       text [note: '"원두 1g 줄임" 같은 변경 사유']
+  created_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (id, store_id) [unique]
+    (menu_id, version) [unique]
+  }
+  Note: '''
+  **왜 "쓰는 중/안 쓰는 중" 표시가 아니라 판 번호인가**
+
+  - `is_active` 만 두면 재료를 뺀 사실은 남지만 **언제 뺐는지**가 안 남는다.
+  - 줄마다 종료일을 두면 표현은 되는데 **"3월 15일자 레시피 전체"** 를 한 번에 집기 어렵다.
+  - 판으로 두면 판매 기록이 **판 번호 하나만 들면** 그 시점 레시피가 통째로 고정되고,
+    **재료 제거도 자연히 표현된다** (다음 판에 그 줄이 없다).
+  '''
+}
+
+Table menu_recipe_lines {
+  id                 uuid [pk]
+  store_id           uuid [not null]
+  version_id         uuid [not null]
+  item_id            uuid [not null, note: '★ 재료 원본 명단을 번호로 가리킨다']
+  amount             numeric [not null]
+  unit               text [not null]
+  unit_family        unit_family [not null, note: '★ 품목의 기준단위 계열과 같아야 한다']
+  excluded_from_cost boolean [not null, default: false, note: '★ "추출량" 처럼 원가에서 빼는 줄']
+
+  Indexes { (version_id, item_id) [unique] }
+  Note: '''
+  **★ excluded_from_cost 를 빼먹으면 원두가 두 번 계산된다.**
+  아메리카노에 "원두(도징) 18g" 과 "추출량 36g" 이 둘 다 있는데,
+  추출량은 **사는 게 아니라 결과**다.
+  '''
+}
+
+Table make_recipe_versions {
+  id              uuid [pk]
+  store_id        uuid [not null]
+  item_id         uuid [not null, note: '만들어지는 품목 (kind = made)']
+  version         int  [not null]
+  yield_amount    numeric [not null, note: '1배합 산출량']
+  yield_unit      text [not null]
+  yield_family    unit_family [not null]
+  lead_time_hours numeric [note: '★ 걸어놓고 몇 시간 뒤에 쓸 수 있나']
+  recoverable     boolean [not null, default: true, note: '★ 돈으로 되돌릴 수 있나']
+  valid_from      date [not null]
+  valid_to        date
+  note            text
+  created_at      timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (id, store_id) [unique]
+    (item_id, version) [unique]
+  }
+  Note: '''
+  **★ 이 두 칸이 이 제품의 존재 이유다.**
+
+  콜드브루 추출 12~24h · 반죽 냉장 12~18h · 르방 갱신 매일(복구 2~3일) · 냉동생지 해동 12h.
+  **오늘은 아무 일도 안 일어나고 내일 아침에 터진다.**
+  신입이 스스로 알 방법이 없고, 어제 뭘 걸어놨는지 기억에 의존하므로 종이로는 못 잡는다.
+
+  `recoverable = false` 인 것만 화면이 빨갛게 띄운다 —
+  **전부 경고하면 사람은 전부 무시하기 때문이다.**
+  '''
+}
+
+Table make_recipe_lines {
+  id                 uuid [pk]
+  store_id           uuid [not null]
+  version_id         uuid [not null]
+  ingredient_item_id uuid [not null]
+  amount             numeric [not null]
+  unit               text [not null]
+  unit_family        unit_family [not null]
+  excluded_from_cost boolean [not null, default: false]
+
+  Indexes { (version_id, ingredient_item_id) [unique] }
+  Note: '★ 지적 1 — 다른 매장 재료로 제조 레시피를 구성할 수 없다.'
+}
+
+
+// ===========================================================================
+//  5. 계획 — 지적 3의 앞부분 (날짜를 셋으로 나눈다)
+// ===========================================================================
+
+Table order_plans {
+  id           uuid [pk]
+  store_id     uuid [not null]
+  item_id      uuid [not null]
+  supplier_id  uuid
+  run_id       uuid [note: '★ 지적 5 — 어느 추천에서 나왔나']
+  planned_on   date [not null, note: '계획을 세운 날']
+  expected_on  date [note: '★ 들어올 예정일 — 거래처 마감·배송요일·리드타임으로 계산']
+  qty          numeric [not null]
+  unit         text [not null]
+  unit_family  unit_family [not null]
+  memo         text
+  cancelled_at timestamptz
+  created_at   timestamptz [not null, default: `now()`]
+
+  Indexes { (id, store_id) [unique] }
+  Note: '1차는 "확정일" 한 칸이었다. 주문한 날과 도착할 날이 따로 있어야 "금요일에 주말치까지 몰아서" 가 표현된다.'
+}
+
+Table bake_plans {
+  id                     uuid [pk]
+  store_id               uuid [not null]
+  item_id                uuid [not null]
+  make_recipe_version_id uuid
+  run_id                 uuid
+  planned_on             date [not null]
+  expected_on            date [note: '리드타임을 더한 사용 가능 시점']
+  batches                numeric [not null, note: '배수 (1.5배)']
+  memo                   text
+  cancelled_at           timestamptz
+  created_at             timestamptz [not null, default: `now()`]
+
+  Indexes { (id, store_id) [unique] }
+}
+
+
+// ===========================================================================
+//  6. 원장 — 실제로 일어난 일
+// ===========================================================================
+
+Table daily_sales {
+  id            uuid [pk]
+  store_id      uuid [not null]
+  business_date date [not null, note: '★ 달력 날짜가 아니라 영업일 (새벽 4시 경계)']
+  total_amount  numeric [note: 'POS 합계 — 대조용']
+  ticket_count  int
+  memo          text
+  created_at    timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (id, store_id) [unique]
+    (store_id, business_date) [unique]
+  }
+}
+
+Table sales_lines {
+  id                     uuid [pk]
+  store_id               uuid [not null]
+  daily_sales_id         uuid [not null]
+  menu_id                uuid [not null, note: '★ 같은 매장 메뉴만']
+  qty                    numeric [not null]
+  unit_price             numeric
+  menu_recipe_version_id uuid [note: '★ 그때 그 레시피 판. 나중에 고쳐도 과거 원가가 안 흔들린다']
+
+  Note: '★ 지적 1 — 1차에서는 A매장 하루 기록에 B매장 메뉴가 팔린 것으로 남을 수 있었다.'
+}
+
+Table received_lines {
+  id              uuid [pk]
+  store_id        uuid [not null]
+  item_id         uuid [not null]
+  supplier_id     uuid
+  order_plan_id   uuid [note: '★ 지적 3 — 어느 발주 계획이 이행된 것인가. 비워 둘 수 있다']
+  item_version_id uuid [note: '그때 규격']
+  occurred_on     date [not null, note: '실제 들어온 날']
+  qty             numeric [not null]
+  unit            text [not null]
+  unit_family     unit_family [not null]
+  unit_cost       numeric
+  memo            text
+  created_at      timestamptz [not null, default: `now()`]
+
+  Note: '''
+  **order_plan_id 를 비워 둘 수 있게 한 것은 일부러다.**
+  계획 없이 급하게 받은 입고가 실제로 있다 — 쿠팡으로 메운 것 같은.
+  못 넣게 하면 사람이 장부를 아예 안 쓴다.
+
+  그리고 **계획 한 줄에 여러 번 나눠 들어올 수 있어서**,
+  계획 쪽이 아니라 **실행 쪽이 계획을 가리킨다.**
+  '''
+}
+
+Table baked_lines {
+  id                     uuid [pk]
+  store_id               uuid [not null]
+  item_id                uuid [not null]
+  bake_plan_id           uuid [note: '★ 지적 3']
+  make_recipe_version_id uuid
+  occurred_on            date [not null]
+  started_at             timestamptz [note: '걸어둔 시각 — 리드타임의 시작']
+  ready_at               timestamptz [note: '★ 쓸 수 있게 되는 시각']
+  batches                numeric [not null]
+  qty                    numeric
+  unit                   text
+  memo                   text
+  created_at             timestamptz [not null, default: `now()`]
+}
+
+Table waste_lines {
+  id          uuid [pk]
+  store_id    uuid [not null]
+  item_id     uuid [not null]
+  occurred_on date [not null]
+  qty         numeric [not null]
+  unit        text [not null]
+  unit_family unit_family [not null]
+  reason      text [note: '유통기한 · 품질 · 실수 · 시식']
+  memo        text
+  created_at  timestamptz [not null, default: `now()`]
+}
+
+Table stock_counts {
+  id          uuid [pk]
+  store_id    uuid [not null]
+  item_id     uuid [not null]
+  counted_on  date [not null]
+  qty         numeric [not null]
+  unit        text [not null]
+  unit_family unit_family [not null]
+  counted_by  uuid
+  memo        text
+  created_at  timestamptz [not null, default: `now()`]
+
+  Indexes { (store_id, item_id, counted_on) [unique] }
+}
+
+
+// ===========================================================================
+//  7. 추천 근거 — 지적 5
+// ===========================================================================
+
+Table recommendation_runs {
+  id           uuid [pk]
+  store_id     uuid [not null]
+  ran_at       timestamptz [not null, default: `now()`]
+  ran_by       uuid
+  kind         reco_kind [not null]
+  algo_version text [not null, note: '★ 계산식 판 번호. 코드에서 상수로 보낸다']
+  params       jsonb [not null, note: '안전재고일수 · 리드타임 · 반올림 단위']
+  horizon_from date [not null, note: '무엇을 근거로 본 기간']
+  horizon_to   date [not null]
+
+  Indexes { (id, store_id) [unique] }
+  Note: '''
+  **"그때 다시 계산해 보면 되지 않나" 가 안 되는 이유는 원장이 움직이기 때문이다.**
+  판매가 정정되고, 단가 이력이 나중에 소급 입력되고, 계산식이 바뀐다.
+
+  그리고 **"왜 그때 12개를 시켰나" 를 묻는 순간은 거의 항상 사고가 난 다음이다** —
+  재고가 터졌거나 폐기가 났거나. 그때 재현이 안 되면 원인을 영영 못 찾는다.
+  '''
+}
+
+Table recommendation_inputs {
+  run_id          uuid [not null]
+  store_id        uuid [not null]
+  item_id         uuid [not null]
+  sold_qty        numeric [not null, note: '그때 판매량']
+  waste_qty       numeric [not null, default: 0]
+  on_hand         numeric [not null, note: '그때 재고']
+  unit_cost       numeric [note: '그때 단가']
+  item_version_id uuid
+  lead_days       int
+  safety_days     numeric
+  recommended_qty numeric [not null]
+  reason          text [note: '★ 사람이 읽는 한 줄']
+
+  Indexes { (run_id, item_id) [pk] }
+  Note: '''
+  **★ reason 한 칸이 나머지 전부보다 실전에서 쓸모 있다.**
+
+  점주가 보는 것은 숫자 열 개가 아니라 문장 하나다.
+  `최근 14일 하루 평균 3.2개 · 현재고 2개 · 리드타임 2일 · 안전재고 1일 → 12개`
+  처럼 **계산 결과가 아니라 계산 과정**을 문장으로 남긴다.
+
+  나머지 칸은 개발자가 보는 것이고, 이 한 줄은
+  **점주가 추천을 믿을지 말지 정하는 근거**다.
+  '''
+}
+
+
+// ===========================================================================
+//  관계 — ★ 전부 (id, store_id) 복합키다. 이게 지적 1의 답이다.
+// ===========================================================================
+
+// 매장 · 사용자
+Ref: users.store_id     > stores.id
+Ref: suppliers.store_id > stores.id
+Ref: items.store_id     > stores.id
+Ref: menus.store_id     > stores.id
+
+// 단위 계열 — ★ B. g 과 ml 을 못 섞게 한다
+Ref: items.(base_unit, base_family)          > units.(code, family)
+Ref: item_versions.(pack_unit, pack_family)  > units.(code, family)
+Ref: menu_recipe_lines.(unit, unit_family)   > units.(code, family)
+Ref: make_recipe_lines.(unit, unit_family)   > units.(code, family)
+
+// 거래처 · 품목 — ★ 지적 1
+Ref: items.(supplier_id, store_id)         > suppliers.(id, store_id)
+Ref: item_versions.(item_id, store_id)     > items.(id, store_id)
+
+// 메뉴 · 레시피
+Ref: menu_prices.(menu_id, store_id)                 > menus.(id, store_id)
+Ref: menu_recipe_versions.(menu_id, store_id)        > menus.(id, store_id)
+Ref: menu_recipe_lines.(version_id, store_id)        > menu_recipe_versions.(id, store_id)
+Ref: make_recipe_versions.(item_id, store_id)        > items.(id, store_id)
+Ref: make_recipe_lines.(version_id, store_id)        > make_recipe_versions.(id, store_id)
+
+// ★ 레시피 줄 → 품목: 매장과 계열까지 세 칸으로 맞춘다 (지적 1 + B 를 한 번에)
+Ref: menu_recipe_lines.(item_id, store_id, unit_family)            > items.(id, store_id, base_family)
+Ref: make_recipe_lines.(ingredient_item_id, store_id, unit_family) > items.(id, store_id, base_family)
+
+// 계획
+Ref: order_plans.(item_id, store_id, unit_family)   > items.(id, store_id, base_family)
+Ref: order_plans.(supplier_id, store_id)            > suppliers.(id, store_id)
+Ref: bake_plans.(item_id, store_id)                 > items.(id, store_id)
+Ref: bake_plans.(make_recipe_version_id, store_id)  > make_recipe_versions.(id, store_id)
+
+// 원장
+Ref: sales_lines.(daily_sales_id, store_id)          > daily_sales.(id, store_id)
+Ref: sales_lines.(menu_id, store_id)                 > menus.(id, store_id)
+Ref: sales_lines.(menu_recipe_version_id, store_id)  > menu_recipe_versions.(id, store_id)
+Ref: received_lines.(item_id, store_id, unit_family) > items.(id, store_id, base_family)
+Ref: received_lines.(supplier_id, store_id)          > suppliers.(id, store_id)
+Ref: received_lines.(item_version_id, store_id)      > item_versions.(id, store_id)
+Ref: baked_lines.(item_id, store_id)                 > items.(id, store_id)
+Ref: baked_lines.(make_recipe_version_id, store_id)  > make_recipe_versions.(id, store_id)
+Ref: waste_lines.(item_id, store_id, unit_family)    > items.(id, store_id, base_family)
+Ref: stock_counts.(item_id, store_id, unit_family)   > items.(id, store_id, base_family)
+
+// ★ 지적 3 — 실행이 계획을 가리킨다
+Ref: received_lines.(order_plan_id, store_id) > order_plans.(id, store_id)
+Ref: baked_lines.(bake_plan_id, store_id)     > bake_plans.(id, store_id)
+
+// ★ 지적 5 — 계획이 추천을 가리킨다
+Ref: recommendation_runs.store_id                      > stores.id
+Ref: order_plans.(run_id, store_id)                    > recommendation_runs.(id, store_id)
+Ref: bake_plans.(run_id, store_id)                     > recommendation_runs.(id, store_id)
+Ref: recommendation_inputs.(run_id, store_id)          > recommendation_runs.(id, store_id)
+Ref: recommendation_inputs.(item_id, store_id)         > items.(id, store_id)
+Ref: recommendation_inputs.(item_version_id, store_id) > item_versions.(id, store_id)
+
+
+// ===========================================================================
+//  그룹 — dbdiagram 에서 색으로 묶여 보인다
+// ===========================================================================
+
+TableGroup 기준_매장 [note: '모든 것의 뿌리'] {
+  units
+  stores
+  users
+}
+
+TableGroup 거래처_품목 [note: '★ A·B — 재료 원본 명단과 단위 계열'] {
+  suppliers
+  items
+  item_versions
+}
+
+TableGroup 메뉴_레시피 [note: '★ 지적 2 — 판 번호로 과거를 고정한다'] {
+  menus
+  menu_prices
+  menu_recipe_versions
+  menu_recipe_lines
+  make_recipe_versions
+  make_recipe_lines
+}
+
+TableGroup 계획 [note: '★ 지적 3 — 계획일과 예정일을 나눈다'] {
+  order_plans
+  bake_plans
+}
+
+TableGroup 원장 [note: '실제로 일어난 일'] {
+  daily_sales
+  sales_lines
+  received_lines
+  baked_lines
+  waste_lines
+  stock_counts
+}
+
+TableGroup 추천근거 [note: '★ 지적 5 — 왜 그때 그 수량이었나'] {
+  recommendation_runs
+  recommendation_inputs
+}
+
+
+// ===========================================================================
+//  ⚠️ DBML 로 표현할 수 없어 여기 적어 두는 것
+//
+//  1. 줄 단위 접근 통제 (지적 4)
+//     22개 표 전부에 "로그인한 사람의 매장 줄만" 정책을 건다.
+//     읽기 조건과 쓰기 조건을 **둘 다** 걸어야 한다 —
+//     읽기 조건만 걸면 새로 넣는 것은 그대로 통과한다.
+//     그리고 표 주인에게도 적용되도록 강제 옵션을 같이 켠다.
+//     → db/schema_v2.sql 11절
+//
+//  2. 기간 겹침 금지 (지적 2)
+//     item_versions 와 menu_prices 의 validity 가 같은 대상끼리 겹칠 수 없다.
+//     EXCLUDE USING gist (item_id WITH =, validity WITH &&)
+//     → db/schema_v2.sql 4절 · 5절
+//
+//  3. 이행 상태는 저장하지 않고 뷰로 계산한다 (지적 3)
+//     "완료 / 부분입고 / 미이행 / 초과입고" 를 칸으로 만들면
+//     실행이 들어올 때마다 사람이 갱신해야 하고 반드시 원장과 어긋난다.
+//     → db/schema_v2.sql 10절 v_order_fulfillment · v_bake_fulfillment
+//
+//  4. 확인 필요
+//     · 1차 DDL 원문 없이 재구성했다. 표·칸 이름 대조 필요
+//     · 고유번호를 uuid 로 가정했다. 숫자형이면 전부 바꿔야 한다
+//     · 실제 DB 에서 아직 실행해 본 적 없다
+// ===========================================================================
