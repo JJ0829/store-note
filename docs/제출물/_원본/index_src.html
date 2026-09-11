@@ -99,8 +99,20 @@ footer code{font-family:var(--mono);font-size:11.5px}
   </div>
 </a>
 
+<a class="doc" href="storenote_db_architecture_20260911.html">
+  <div class="dh"><span class="dn">02</span><span class="dt">DB 아키텍처 설계</span></div>
+  <p class="dd">
+    데이터 구조를 «무엇이 있는가»가 아니라 <b>«무엇을 DB 가 직접 막는가»</b>로 쓴 것.
+    연결선이 <b>(id, store_id) 두 칸</b>이라서 옆 매장 것을 가리키는 줄은 저장이 거절됩니다 —
+    프로그램이 안 틀려도 됩니다.
+  </p>
+  <div class="jump">
+    <span>#s2 이 설계의 한 줄</span><span>#s4 DB 가 막는 것</span><span>#s7 검사 6종</span>
+  </div>
+</a>
+
 <a class="doc" href="storenote_erd_v3_20260911.html">
-  <div class="dh"><span class="dn">02</span><span class="dt">데이터 설계 (ERD) — 3차</span></div>
+  <div class="dh"><span class="dn">03</span><span class="dt">데이터 설계 (ERD) — 3차</span></div>
   <p class="dd">
     표 37개. 심사 <b>1차 5건 · 2차 2건 · 3차 3건</b>을 전부 반영하고 자체 발견 4건을 더했습니다.
     <b>실제 PostgreSQL 18 에서 동작 55건 · 대조 27건 · 훑기 11건 · 그림 2건</b>을 통과합니다.
@@ -111,7 +123,7 @@ footer code{font-family:var(--mono);font-size:11.5px}
 </a>
 
 <a class="doc" href="storenote_schema_v2_20260911.html">
-  <div class="dh"><span class="dn">03</span><span class="dt">스키마 설명서</span></div>
+  <div class="dh"><span class="dn">04</span><span class="dt">스키마 설명서</span></div>
   <p class="dd">
     같은 설계를 <b>용어 풀이와 함께</b> 풀어 쓴 것. 「외래키」 「RLS」 같은 낱말부터 설명합니다.
     각 지적을 <b>어떤 명령문으로 막았는지</b>까지 적혀 있습니다.
@@ -120,12 +132,23 @@ footer code{font-family:var(--mono);font-size:11.5px}
 </a>
 
 <a class="doc" href="storenote_current_data_20260911.html">
-  <div class="dh"><span class="dn">04</span><span class="dt">현재 앱의 데이터 구조</span></div>
+  <div class="dh"><span class="dn">05</span><span class="dt">현재 앱의 데이터 구조</span></div>
   <p class="dd">
     <b>지금 실제로 도는 것</b>의 구조. 02·03 이 다음 단계(Supabase) 설계라면,
     이것은 오늘 태블릿에서 돌아가는 구조입니다 — 파일 하나와 브라우저 저장소.
   </p>
   <div class="jump"><span>#s2 두 세계</span><span>#s4 경계를 건너는 참조</span></div>
+</a>
+
+<a class="doc" href="storenote_wbs_20260911.html">
+  <div class="dh"><span class="dn">06</span><span class="dt">작업분해구조 (WBS)</span></div>
+  <p class="dd">
+    <b>계획서가 아니라 기록</b>입니다 — 날짜와 상태가 저장소의 커밋에서 나왔습니다.
+    대공정 13개 중 <b>9개가 끝났고</b>, 남은 넷 중 <b>셋이 9월 18일의 임계경로</b>입니다.
+  </p>
+  <div class="jump">
+    <span>#s2 9월 18일을 막는 것</span><span>#s3 작업분해 표</span><span>#s6 Demo Day 이후</span>
+  </div>
 </a>
 
 <div class="note">

@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0}
+img{max-width:100%;height:auto}
+[hidden]{display:none!important}
+section[id]{scroll-margin-top:16px}
+
+/* 목차 */
+.toc{background:var(--surface,#fff);border:1px solid var(--line,#dde2e6);
+  border-radius:5px;padding:14px 18px;margin:0 0 34px}
+.toc h2{font-size:13px!important;margin:0 0 10px!important;
+  font-family:var(--mono,monospace);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3,#8a959e);font-weight:600}
+.toc ol{margin:0;padding-left:0;list-style:none;
+  display:grid;gap:5px 22px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.toc li{font-size:13.5px}
+.toc a{color:var(--ink-2,#55626c);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover,.toc a:focus{color:var(--ink,#14181b);text-decoration:underline}
+.toc .n{font-family:var(--mono,monospace);font-size:11px;color:var(--ink-3,#8a959e);
+  margin-right:7px}
+
+/* 그림이 아직 안 그려졌거나 인터넷이 없을 때도 읽히게 */
+pre.mermaid{font-family:"IBM Plex Mono",Consolas,monospace;font-size:11.5px;
+  text-align:left;white-space:pre;color:#5a6873}
+pre.mermaid[data-processed="true"]{font-size:0}
+
+/* 종이로 뽑을 때 (제출용 PDF) */
+@media print{
+  body{background:#fff!important;color:#000!important}
+  .wrap{max-width:none;padding:0 8mm}
+  .toc{break-after:page}
+  section{break-inside:avoid-page}
+  .dia,.tablebox,.note,.card,pre{break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+  .mapbox,.dia{background:#fff!important}
+}
+</style>
+<title>매장수첩 DB 아키텍처</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#f4f6f7; --surface:#ffffff; --surface-2:#eef1f3; --code-bg:#f0f3f5;
+  --ink:#14181b; --ink-2:#55626c; --ink-3:#8a959e;
+  --line:#dde2e6; --line-2:#c6ced5;
+  --srv:#2d5f86; --srv-bg:#eaf1f7; --srv-line:#b9d0e2;
+  --brw:#8f5510; --brw-bg:#faf1e5; --brw-line:#e5cba4;
+  --fix:#1f6b56; --fix-bg:#e9f4f0; --fix-line:#b2d8cb;
+  --hole:#a33636; --hole-bg:#fbecec; --hole-line:#e7bfbf;
+  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  --sans:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#14181b; --surface:#1c2126; --surface-2:#232a30; --code-bg:#191f24;
+    --ink:#e6eaed; --ink-2:#9aa6b0; --ink-3:#6f7c86;
+    --line:#2c343b; --line-2:#3d474f;
+    --srv:#7db2dc; --srv-bg:#1a2733; --srv-line:#2f4b63;
+    --brw:#dda75a; --brw-bg:#2b2318; --brw-line:#57432a;
+    --fix:#67c0a2; --fix-bg:#162a25; --fix-line:#2e5145;
+    --hole:#e58e8a; --hole-bg:#2e1e1e; --hole-line:#5c3636;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#14181b; --surface:#1c2126; --surface-2:#232a30; --code-bg:#191f24;
+  --ink:#e6eaed; --ink-2:#9aa6b0; --ink-3:#6f7c86;
+  --line:#2c343b; --line-2:#3d474f;
+  --srv:#7db2dc; --srv-bg:#1a2733; --srv-line:#2f4b63;
+  --brw:#dda75a; --brw-bg:#2b2318; --brw-line:#57432a;
+  --fix:#67c0a2; --fix-bg:#162a25; --fix-line:#2e5145;
+  --hole:#e58e8a; --hole-bg:#2e1e1e; --hole-line:#5c3636;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:40px 24px 96px}
+
+.masthead{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:30px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+h1{font-size:clamp(29px,5vw,42px);line-height:1.14;letter-spacing:-.022em;
+  font-weight:700;margin:0 0 14px;text-wrap:balance}
+.thesis{font-size:16.5px;color:var(--ink-2);max-width:62ch;margin:0 0 20px}
+.thesis b{color:var(--ink);font-weight:600}
+.meta{display:flex;flex-wrap:wrap;gap:8px 26px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.meta b{color:var(--ink-2);font-weight:500}
+
+h2{font-size:23px;font-weight:600;letter-spacing:-.018em;margin:0 0 6px;line-height:1.3}
+h3{font-size:16.5px;font-weight:600;margin:24px 0 6px;letter-spacing:-.012em}
+section{margin-bottom:50px}
+.zone-head{display:flex;align-items:baseline;gap:13px;flex-wrap:wrap;
+  padding-bottom:10px;margin-bottom:16px;border-bottom:1px solid var(--line-2)}
+.tag{font-family:var(--mono);font-size:11.5px;padding:2px 9px;border-radius:3px}
+.t-srv{background:var(--srv-bg);color:var(--srv);border:1px solid var(--srv-line)}
+.t-brw{background:var(--brw-bg);color:var(--brw);border:1px solid var(--brw-line)}
+.t-fix{background:var(--fix-bg);color:var(--fix);border:1px solid var(--fix-line)}
+.t-plain{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-2)}
+p{margin:0 0 12px;max-width:78ch;color:var(--ink-2);font-size:14px}
+p b{color:var(--ink);font-weight:600}
+code{font-family:var(--mono);font-size:12.5px;color:var(--ink);
+  background:var(--code-bg);padding:1px 4px;border-radius:3px}
+
+.dia{background:#f7f9fa;border:1px solid var(--line);border-radius:6px;
+  padding:16px 12px;margin:14px 0 10px;overflow-x:auto}
+.dia pre.mermaid{margin:0;background:none;border:0;padding:0;min-width:560px;text-align:center}
+.dcap{font-size:13px;color:var(--ink-2);margin:0 0 22px;padding-left:2px;max-width:76ch}
+.dcap b{color:var(--ink)}
+
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:5px;
+  background:var(--surface);margin:14px 0 20px}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:13px}
+th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{background:var(--surface-2);font-weight:600;font-size:11.5px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-2);border-bottom:1px solid var(--line-2);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td code,th code{font-family:var(--mono);font-size:11.5px;background:none;padding:0}
+.srv{color:var(--srv);font-weight:600}
+.brw{color:var(--brw);font-weight:600}
+.ok{color:var(--fix);font-weight:600}
+.no{color:var(--hole);font-weight:600}
+.sub{font-size:11.5px;color:var(--ink-3)}
+
+pre.tree{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;
+  padding:16px 18px;overflow-x:auto;margin:12px 0 18px;font-family:var(--mono);
+  font-size:12.5px;line-height:1.75;color:var(--ink)}
+pre.tree b{color:var(--srv);font-weight:600}
+pre.tree i{color:var(--ink-3);font-style:normal}
+
+.note{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--fix);
+  border-radius:0 5px 5px 0;padding:13px 16px;margin:16px 0}
+.note.hot{border-left-color:var(--hole)}
+.note.srvb{border-left-color:var(--srv)}
+.note h4{margin:0 0 6px;font-size:13.5px;color:var(--fix)}
+.note.hot h4{color:var(--hole)} .note.srvb h4{color:var(--srv)}
+.note p{margin:0 0 7px;font-size:13px}
+.note p:last-child{margin-bottom:0}
+
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin:14px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:14px 16px}
+.card .big{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--ink);
+  display:block;line-height:1.2;margin-bottom:2px}
+.card h4{margin:0 0 5px;font-size:13px;font-weight:600}
+.card p{margin:0;font-size:12.5px;line-height:1.6}
+
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-3)}
+footer p{margin:0 0 8px;max-width:78ch;font-size:12.5px;color:var(--ink-3)}
+footer code{background:none}
+</style>
+
+<style>
+.dia .elab.good{fill:var(--fix);font-weight:600}
+.dia .xm{stroke:var(--hole);stroke-width:2.2;fill:none}
+.dia svg{display:block;width:100%;height:auto;min-width:620px}
+.dia .zone{fill:var(--surface-2);stroke:var(--line-2);stroke-width:1}
+.dia .zlab{font-family:var(--mono);font-size:11.5px;letter-spacing:.07em;fill:var(--ink-3)}
+.dia .bx{fill:var(--surface);stroke:var(--line-2);stroke-width:1.2}
+.dia .bx.srvb{fill:var(--srv-bg);stroke:var(--srv-line)}
+.dia .bx.brwb{fill:var(--brw-bg);stroke:var(--brw-line)}
+.dia .bx.holeb{fill:var(--hole-bg);stroke:var(--hole-line)}
+.dia .t{font-size:13.5px;font-weight:600;fill:var(--ink)}
+.dia .t.mono{font-family:var(--mono);font-size:12.5px}
+.dia .s2{font-size:11px;fill:var(--ink-3)}
+.dia .s2.em{fill:var(--brw);font-weight:600}
+.dia .s2.mono{font-family:var(--mono)}
+.dia .elab{font-size:11.5px;fill:var(--ink-2)}
+.dia .elab.hot{fill:var(--hole);font-weight:600}
+.dia .ln{fill:none;stroke:var(--ink-3);stroke-width:1.4}
+.dia .ln.dash{stroke-dasharray:5 4}
+.dia .ah{fill:var(--ink-3);stroke:none}
+.verdict{font-size:11.5px;font-weight:600}
+.grp{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));margin:14px 0 22px}
+.grp .g{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:12px 14px}
+.grp .g h4{margin:0 0 6px;font-size:13px;font-weight:600;display:flex;gap:8px;align-items:baseline}
+.grp .g h4 span{font-family:var(--mono);font-size:11px;color:var(--ink-3);font-weight:400}
+.grp .g p{margin:0;font-size:11.5px;line-height:1.65;color:var(--ink-2);font-family:var(--mono)}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">매장수첩 · DB 아키텍처 설계</p>
+  <h1>같은 매장인지를 프로그램이 아니라 DB 가 판단한다</h1>
+  <p class="thesis">
+    1차 설계는 <b>「같은 매장 것끼리만 이어진다」를 프로그램이 지키게</b> 두었다.
+    프로그램은 사람이 고치고, 사람은 한 자리를 빼먹는다. 2차 설계는 그 판단을
+    <b>데이터베이스가 직접</b> 한다 — 연결선이 <code>(id, store_id)</code>
+    <b>두 칸</b>으로 이어지므로, 옆 매장 것을 가리키는 줄은 <b>저장 자체가 거절된다.</b>
+  </p>
+  <div class="meta">
+    <span><b>표</b> 37 · <b>외래키</b> 93 · <b>2칸 이상</b> 68 · <b>3칸</b> 20 · <b>정책</b> 38</span>
+    <span><b>검사</b> 6종</span>
+    <span><b>2026-09-11</b></span>
+  </div>
+</header>
+
+<nav class="toc"><h2>목차</h2><ol>
+<li><a href="#s1"><span class="n">01</span>한 장으로 — 두 세계</a></li>
+<li><a href="#s2"><span class="n">02</span>★ 이 설계의 한 줄</a></li>
+<li><a href="#s3"><span class="n">03</span>표 37개 · 10묶음</a></li>
+<li><a href="#s4"><span class="n">04</span>DB 가 막는 것 / 앱이 판단하는 것</a></li>
+<li><a href="#s5"><span class="n">05</span>★ g 과 ml 을 DB 가 막는다</a></li>
+<li><a href="#s6"><span class="n">06</span>지금에서 다음으로</a></li>
+<li><a href="#s7"><span class="n">07</span>검증 — 검사 6종</a></li>
+</ol></nav>
+
+<!-- ================= 한 장 ================= -->
+<section id="s1">
+  <div class="zone-head"><h2>한 장으로 — 두 세계</h2><span class="tag t-plain">지금 · 다음</span></div>
+  <p>
+    지금 도는 앱은 <b>데이터베이스가 없다.</b> 읽는 것은 파일 하나(<code>data/seed.json</code>),
+    쓰는 것은 <b>그 태블릿의 브라우저 저장소</b>다. 이 문서는 <b>그 다음</b>의 설계이고,
+    <b>고칠 코드가 한 층이 되도록</b> 처음부터 나눠 뒀다.
+  </p>
+  <div class="dia">
+<svg viewBox="0 0 880 340" role="img" aria-labelledby="l1t l1d">
+<title id="l1t">지금 구조와 옮긴 뒤의 구조</title>
+<desc id="l1d">화면은 repo.ts 와 각 lib 의 load save 만 부른다. 그 뒤가 지금은 읽기 전용 seed.json 과 브라우저 저장소이고, 옮기면 표 37개의 PostgreSQL 과 줄 단위 접근통제가 된다. 화면 코드는 그대로다.</desc>
+<defs><marker id="l1ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0.5,1 L9,5 L0.5,9 Z" class="ah"/></marker></defs>
+
+<rect class="bx" x="16" y="128" width="176" height="84" rx="5"/>
+<text class="t" x="104" y="160" text-anchor="middle">화면</text>
+<text class="s2" x="104" y="181" text-anchor="middle">React · 서버 컴포넌트</text>
+<text class="s2" x="104" y="199" text-anchor="middle">이 코드는 안 고친다</text>
+
+<rect class="bx" x="248" y="112" width="222" height="116" rx="5"/>
+<text class="t mono" x="359" y="142" text-anchor="middle">src/lib/repo.ts</text>
+<text class="s2" x="359" y="165" text-anchor="middle">각 lib 의 load / save</text>
+<text class="s2 em" x="359" y="187" text-anchor="middle">이 층만 고친다</text>
+<text class="s2" x="359" y="209" text-anchor="middle">그래서 두 세계를 갈아끼울 수 있다</text>
+
+<rect class="bx brwb" x="540" y="26" width="324" height="112" rx="5"/>
+<text class="zlab" x="556" y="46">지금 — 파일 + 브라우저</text>
+<text class="t mono" x="702" y="76" text-anchor="middle">data/seed.json</text>
+<text class="s2" x="702" y="97" text-anchor="middle">레시피 · 프렙 · 포지션 — 읽기 전용</text>
+<text class="s2" x="702" y="121" text-anchor="middle">localStorage — 태블릿마다 따로 쌓인다</text>
+
+<rect class="bx srvb" x="540" y="196" width="324" height="128" rx="5"/>
+<text class="zlab" x="556" y="216">다음 — PostgreSQL</text>
+<text class="t" x="702" y="246" text-anchor="middle">표 37개 · 10묶음</text>
+<text class="s2" x="702" y="267" text-anchor="middle">연결선이 (id, store_id) 두 칸</text>
+<text class="s2" x="702" y="285" text-anchor="middle">줄 단위 접근통제 · 기간 이력 · 판 번호</text>
+<text class="s2 em" x="702" y="308" text-anchor="middle">매장 단위 공유 — 교대 인계가 풀린다</text>
+
+<path class="ln" d="M192,170 H244" marker-end="url(#l1ah)"/>
+<path class="ln" d="M470,152 H506 V82 H536" marker-end="url(#l1ah)"/>
+<text class="elab" x="486" y="100">지금</text>
+<path class="ln dash" d="M470,188 H506 V260 H536" marker-end="url(#l1ah)"/>
+<text class="elab" x="486" y="248">다음</text>
+</svg>
+  </div>
+  <p class="dcap">
+    <b>이관에서 화면 코드는 안 건드린다.</b> 지금 저장소가 태블릿마다 따로 쌓이는 것이
+    이 앱의 가장 큰 약점이고 — <b>교대 인계는 아직 종이가 낫다</b> — 그것을 푸는 것이
+    이 설계의 첫 번째 목적이다.
+  </p>
+
+  <div class="cards">
+    <div class="card"><span class="big">37</span>
+      <h4 class="srv">표</h4>
+      <p>10묶음. 기준·매장 / 거래처·품목 / 메뉴·레시피 / 계획 / 원장 / 추천 근거 / 교육 / 프렙 / 근무·근태 / 매장 설정.</p></div>
+    <div class="card"><span class="big">68</span>
+      <h4 class="srv">두 칸 이상으로 이은 연결</h4>
+      <p>외래키 93개 중 68개가 <b>매장까지 함께</b> 가리킨다. 그중 <b>20개는 세 칸</b> — 대상까지 같아야 이어진다.</p></div>
+    <div class="card"><span class="big">38</span>
+      <h4>줄 단위 접근통제 정책</h4>
+      <p><b>표 37개 전부</b>에 「로그인한 사람의 매장 줄만」이 걸린다.</p></div>
+    <div class="card"><span class="big">1</span>
+      <h4>이관에서 고치는 층</h4>
+      <p><code>repo.ts</code> 와 각 <code>lib</code> 의 <code>load/save</code>. <b>화면은 0줄.</b></p></div>
+  </div>
+</section>
+
+<!-- ================= 한 줄 ================= -->
+<section id="s2">
+  <div class="zone-head"><h2>★ 이 설계의 한 줄</h2><span class="tag t-fix">심사 지적 1번</span></div>
+  <p>
+    1차 설계의 연결선은 <b>번호 하나</b>였다. 그러면 데이터베이스는
+    <b>「그 번호가 있는가」만 보고 「어느 매장 것인가」는 안 본다.</b>
+    매장이 여러 곳이 되는 순간, 옆 매장의 단가가 우리 원가에 섞여도 DB 는 아무 말을 안 한다.
+  </p>
+  <div class="dia">
+<svg viewBox="0 0 880 306" role="img" aria-labelledby="l2t l2d">
+<title id="l2t">번호 하나로 잇는 것과 두 칸으로 잇는 것</title>
+<desc id="l2d">번호 하나로 이으면 매장 A 의 레시피 줄이 매장 B 의 품목을 가리켜도 데이터베이스가 받아준다. 품목 번호와 매장 번호 두 칸을 함께 외래키로 걸면 두 칸이 모두 같아야 이어지므로 데이터베이스가 저장을 거절한다.</desc>
+<defs><marker id="l2ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0.5,1 L9,5 L0.5,9 Z" class="ah"/></marker></defs>
+
+<rect class="zone" x="14" y="12" width="412" height="282" rx="7"/>
+<text class="zlab" x="30" y="34">1차 — 번호 하나로</text>
+<rect class="bx" x="54" y="52" width="274" height="58" rx="5"/>
+<text class="t" x="191" y="76" text-anchor="middle">매장 A 의 레시피 줄</text>
+<text class="s2 mono" x="191" y="97" text-anchor="middle">item_id = 41</text>
+<path class="ln" d="M191,110 V174" marker-end="url(#l2ah)"/>
+<text class="elab" x="202" y="146">번호만 맞으면 이어진다</text>
+<rect class="bx brwb" x="54" y="178" width="274" height="58" rx="5"/>
+<text class="t" x="191" y="202" text-anchor="middle">품목 41</text>
+<text class="s2 mono" x="191" y="223" text-anchor="middle">store_id = B  ← 옆 매장 것</text>
+<text class="elab hot verdict" x="191" y="262" text-anchor="middle">DB 가 받아준다</text>
+<text class="s2" x="191" y="281" text-anchor="middle">옆 매장 단가가 우리 원가에 들어간다</text>
+
+<rect class="zone" x="454" y="12" width="412" height="282" rx="7"/>
+<text class="zlab" x="470" y="34">2차 — (id, store_id) 두 칸으로</text>
+<rect class="bx" x="494" y="52" width="274" height="58" rx="5"/>
+<text class="t" x="631" y="76" text-anchor="middle">매장 A 의 레시피 줄</text>
+<text class="s2 mono" x="631" y="97" text-anchor="middle">(item_id, store_id) = (41, A)</text>
+<path class="ln dash" d="M631,110 V174"/>
+<path class="xm" d="M619,130 L643,154 M643,130 L619,154"/>
+<text class="elab" x="656" y="146">두 칸이 같아야 이어진다</text>
+<rect class="bx brwb" x="494" y="178" width="274" height="58" rx="5"/>
+<text class="t" x="631" y="202" text-anchor="middle">품목 41</text>
+<text class="s2 mono" x="631" y="223" text-anchor="middle">(41, B)  ← 두 번째 칸이 다르다</text>
+<text class="elab good verdict" x="631" y="262" text-anchor="middle">DB 가 거절한다</text>
+<text class="s2" x="631" y="281" text-anchor="middle">프로그램이 안 틀려도 된다</text>
+</svg>
+  </div>
+  <p class="dcap">
+    <b>차이는 「검사를 어디서 하나」다.</b> 왼쪽은 앱이 매번 매장을 확인해야 하고,
+    확인을 빼먹은 한 곳이 조용히 틀린다. 오른쪽은 <b>빼먹을 자리가 없다.</b>
+  </p>
+
+  <div class="note srvb">
+    <h4>2차 · 3차 피드백에서 더 고친 것</h4>
+    <p>
+      「같은 매장은 보지만 <b>같은 대상은 안 보던</b>」 관계가 있었다 —
+      매장만 맞추고 품목·메뉴가 어긋나도 되는 이음이다. <b>세 칸 외래키 20개</b>로 바꿨다.
+    </p>
+    <p>
+      3차에서는 <b>설명에만 있던 규칙 세 가지를 데이터베이스가 알게</b> 했다.
+      문서에 적혀 있고 코드가 모르는 규칙은 <b>규칙이 아니다.</b>
+    </p>
+  </div>
+</section>
+
+<!-- ================= 표 ================= -->
+<section id="s3">
+  <div class="zone-head"><h2>표 37개 · 10묶음</h2><span class="tag t-plain">전수</span></div>
+  <p>
+    앞의 여섯 묶음은 <b>매장 운영의 원장</b>이고, 뒤의 네 묶음은 <b>지금 앱이 쓰는 것</b>이다.
+    둘은 <code>stores</code> 를 공유한다.
+  </p>
+  <div class="grp">
+    <div class="g"><h4>기준 · 매장 <span>4</span></h4>
+      <p>units · stores · users · suppliers</p></div>
+    <div class="g"><h4>거래처 · 품목 <span>2</span></h4>
+      <p>items · item_versions</p></div>
+    <div class="g"><h4>메뉴 · 레시피 <span>6</span></h4>
+      <p>menus · menu_prices · menu_recipe_versions · menu_recipe_lines · make_recipe_versions · make_recipe_lines</p></div>
+    <div class="g"><h4>계획 <span>2</span></h4>
+      <p>order_plans · bake_plans</p></div>
+    <div class="g"><h4>원장 <span>6</span></h4>
+      <p>daily_sales · sales_lines · received_lines · baked_lines · waste_lines · stock_counts</p></div>
+    <div class="g"><h4>추천 근거 <span>2</span></h4>
+      <p>recommendation_runs · recommendation_inputs</p></div>
+    <div class="g"><h4>교육 · 체크리스트 <span>3</span></h4>
+      <p>positions · sections · steps</p></div>
+    <div class="g"><h4>프렙 <span>3</span></h4>
+      <p>prep_lists · prep_tasks · prep_cycle_state</p></div>
+    <div class="g"><h4>근무 · 근태 <span>6</span></h4>
+      <p>shifts · shift_focus · staff · shift_assignments · punches · contracts</p></div>
+    <div class="g"><h4>매장 설정 <span>3</span></h4>
+      <p>store_settings · cost_excluded_items · daily_checks</p></div>
+  </div>
+  <div class="note">
+    <h4>「판 번호」와 「기간 이력」이 왜 표를 늘리나</h4>
+    <p>
+      <code>item_versions</code> · <code>menu_recipe_versions</code> 처럼 <b>판이 따로 있는 표</b>가
+      여럿이다. 심사 지적 2번 — <b>원가 이력이 매입가에만 있으면</b> 지난달 원가를 다시 계산할 수 없다.
+      레시피가 바뀐 것인지 규격이 바뀐 것인지 구분이 안 되기 때문이다.
+      그래서 <b>규격 전체를 기간 이력으로</b> 두고 레시피에는 <b>판 번호</b>를 붙였다.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 제약 ================= -->
+<section id="s4">
+  <div class="zone-head"><h2>DB 가 막는 것 / 앱이 판단하는 것</h2><span class="tag t-fix">경계</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>수단</th><th>건수</th><th>무엇을 막나</th><th>왜 DB 로 내렸나</th></tr></thead>
+      <tbody>
+        <tr><td>외래키<br><span class="sub">복합 · 2칸 이상 68 · 3칸 20</span></td><td class="ok">93</td>
+            <td>옆 매장 것을 가리키는 줄 · 대상이 어긋난 이음</td>
+            <td><b>빼먹을 자리를 없앤다.</b> 앱의 검사 한 줄은 사람이 지우면 사라진다</td></tr>
+        <tr><td>유니크</td><td class="ok">45</td>
+            <td>같은 날 같은 항목이 두 줄 · 같은 매장에 같은 이름</td>
+            <td>중복은 <b>합계를 조용히 두 배로</b> 만든다. 화면에서는 안 보인다</td></tr>
+        <tr><td>겹침 금지<br><span class="sub">기간이 겹치는 두 줄</span></td><td class="ok">2</td>
+            <td>같은 규격의 유효기간이 <b>겹치는</b> 것</td>
+            <td>겹치면 <b>그 날짜의 단가가 두 개</b>가 된다. 원가가 조회 순서에 따라 달라진다</td></tr>
+        <tr><td>줄 단위 접근통제<br><span class="sub">정책</span></td><td class="ok">38</td>
+            <td>남의 매장 줄이 보이는 것</td>
+            <td><b>표 37개 전부</b>에 걸린다 — 화면에서 가리는 것과 <b>DB 가 안 주는 것</b>은 다르다</td></tr>
+        <tr><td>인덱스</td><td>95</td>
+            <td>느려지는 조회 (날짜 범위 · 매장별 최신 판)</td>
+            <td>성능은 규칙이 아니다. <b>접근통제가 매 줄에 걸리므로</b> 매장 칸이 앞에 오는 인덱스가 필요하다</td></tr>
+        <tr><td>뷰</td><td>2</td>
+            <td>손으로 이어 붙이면 매번 달라지는 조회</td>
+            <td>계산으로 나오는 값은 <b>저장하지 않는다</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note hot">
+    <h4>DB 로 내리지 <b>않은</b> 것 — 그리고 그 이유</h4>
+    <p>
+      <b>영업일 경계(새벽 4시) · 자정을 넘는 마감조 · 리드타임 계산 · 인건비 추정</b>은
+      앱(<code>src/lib/</code>)에 남겼다. 매장마다 다르고 <b>바뀌면 과거 기록의 해석까지 바뀌는</b>
+      규칙이라서, DB 제약으로 굳히면 <b>과거 줄이 갑자기 위법이 된다.</b>
+    </p>
+    <p>
+      대신 그 계산들은 전부 <b>순수 함수</b>라 테스트로 덮여 있다.
+      <b>「DB 가 막는 것」과 「테스트가 막는 것」의 경계가 이 선이다.</b>
+    </p>
+  </div>
+</section>
+
+<!-- ================= 단위 ================= -->
+<section id="s5">
+  <div class="zone-head"><h2>★ g 과 ml 을 DB 가 막는다</h2><span class="tag t-fix">자체 발견</span></div>
+  <p>
+    밀가루는 1g 이 0.55ml 이고 우유는 1g 이 1.03ml 다. <b>밀도를 모르면 g 과 ml 은 바꿀 수 없다.</b>
+    그런데 바꿔버리면 <b>원가가 조용히 틀리고 사람은 못 알아챈다</b> — 숫자가 그럴듯하게 나오기 때문이다.
+  </p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>층</th><th>무엇을 하나</th><th>없으면</th></tr></thead>
+      <tbody>
+        <tr><td><code>units.family</code><br><span class="sub">weight · volume · count</span></td>
+            <td>단위마다 <b>계열</b>을 못 박는다</td><td>g 과 ml 이 같은 칸에 들어온다</td></tr>
+        <tr><td>참조에 계열을 끼워 넣음</td>
+            <td>레시피 줄이 품목을 가리킬 때 <b>계열까지 함께</b> 가리킨다</td>
+            <td>DB 가 «있는 단위인가»만 보고 «바꿀 수 있는 단위인가»는 안 본다</td></tr>
+        <tr><td>제약 3곳 추가<br><span class="sub">2차 피드백</span></td>
+            <td>규격 · 산출량 · <b>제조 수량</b>의 계열 일치</td>
+            <td>같은 규칙이 <b>세 자리에서만 빠져</b> 있었다 — 전수로 훑어서 찾았다</td></tr>
+        <tr><td><code>src/lib/units.ts</code></td>
+            <td>계열이 다르면 <b>계산하지 않고</b> 화면에 «단위가 안 맞습니다»</td>
+            <td>0 으로 세거나 그냥 더한다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    <b>같은 규칙을 두 층에 넣은 것은 중복이 아니다.</b> DB 는 <b>저장을 거절</b>하고,
+    앱은 <b>사람에게 말을 한다.</b> 둘 중 하나만 있으면 데이터는 맞는데 화면이 침묵하거나,
+    화면은 친절한데 데이터가 틀린다.
+  </p>
+</section>
+
+<!-- ================= 이관 ================= -->
+<section id="s6">
+  <div class="zone-head"><h2>지금에서 다음으로</h2><span class="tag t-plain">이관</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>지금</th><th>옮기면</th><th>그래서 풀리는 것</th></tr></thead>
+      <tbody>
+        <tr><td>태블릿마다 따로 쌓이는 브라우저 저장소</td>
+            <td>매장 단위 공유</td>
+            <td><b>교대 인계</b> — 지금 종이가 우리보다 나은 유일한 지점</td></tr>
+        <tr><td><code>data/seed.json</code> 읽기 전용</td><td>표 37개 + 편집 화면</td>
+            <td>레시피 수치를 사장님이 <b>직접</b> 고친다 (지금은 개발자만)</td></tr>
+        <tr><td>매장 번호 = 서버 게이트</td><td>로그인 + 줄 단위 접근통제</td>
+            <td><b>실매장 레시피를 넣어도 안전하다</b> — 지금 것은 가림막이다</td></tr>
+        <tr><td><code>/api/log</code> → 파일 append</td><td>표 insert</td>
+            <td>배포본에서 <b>지표가 실제로 쌓인다</b> (지금 배포하면 0건)</td></tr>
+        <tr><td>원가 이력 없음</td><td>기간 이력 + 판 번호</td>
+            <td>지난달 원가를 <b>지난달 규격으로</b> 다시 계산할 수 있다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    칸 단위 대응표는 <code>docs/이관_매핑.md</code> 에 있다.
+    ★ 그 문서의 결론 하나를 여기 옮겨 둔다 — <b>v2 원장은 매장수첩이 지금 쓰는 것의 절반만 받는다.</b>
+    교육·체크리스트·프렙에는 대응하는 원장 표가 없어서 <b>네 묶음을 따로 세웠다</b>(앞 절의 뒤쪽 네 개).
+  </p>
+</section>
+
+<!-- ================= 검증 ================= -->
+<section id="s7">
+  <div class="zone-head"><h2>검증 — 검사 6종</h2><span class="tag t-fix">그림이 아니라 실행</span></div>
+  <p>
+    <b>ERD 는 그림이라 틀려도 그려진다.</b> 그래서 설계를 <b>실제 PostgreSQL 18 에 올려서</b>
+    막히는지 본다. 데이터베이스를 따로 설치하지 않는다 — <b>PGlite</b>(파일 없이 도는 PostgreSQL)라
+    <code>npm</code> 만 있으면 누구나 재현한다.
+  </p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>검사</th><th>무엇을 보나</th><th>이 검사가 잡는 실수</th></tr></thead>
+      <tbody>
+        <tr><td><code>counts:db</code></td><td>스키마에서 <b>숫자를 직접 센다</b> (표 · 외래키 · 정책 …)</td>
+            <td>손으로 센 숫자. <b>손으로 세는 한 반드시 낡는다</b></td></tr>
+        <tr><td><code>verify:db</code></td><td>스키마를 <b>실제로 올리고</b>, 막아야 하는 INSERT 가 정말 막히는지</td>
+            <td>제약을 <b>적어만 두고</b> 동작은 확인 안 한 것</td></tr>
+        <tr><td><code>audit:db</code></td><td>심사 지적 <b>한 줄당 제약 1:1</b></td>
+            <td>지적을 «반영했다»고 적고 <b>어디에 반영했는지</b>는 없는 것</td></tr>
+        <tr><td><code>sweep:db</code></td><td>규칙마다 <b>적용돼야 할 자리를 전수로</b></td>
+            <td>★ <b>「그 자리만 고치는」 실수.</b> 지적받은 한 곳만 고치고 같은 모양의 나머지를 놔둔 것</td></tr>
+        <tr><td><code>dbml:db</code></td><td>그림(DBML) ↔ SQL 대조</td>
+            <td>SQL 에만 넣고 <b>그림에 안 넣은</b> 것 — 심사위원이 보는 것은 그림이다</td></tr>
+        <tr><td><code>docs:db</code></td><td><b>문서에 적힌 숫자</b>가 지금 값과 같은가 · 모순되는 문장이 남았는가</td>
+            <td>★ 3차 심사의 첫 지적. <b>스키마가 아니라 문서가 틀렸다</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <h4>뒤의 두 개가 3차 심사에서 생겼다</h4>
+    <p>
+      3차 지적의 첫 줄은 스키마가 아니라 <b>문서</b>를 가리켰다 — 상단과 하단이 서로 다른 숫자를
+      말하고 있었다. 고쳐도 또 낡는다. <b>숫자는 커밋마다 바뀌는데 문서는 안 바뀌기 때문이다.</b>
+      그래서 <b>기계가 센다</b>(<code>counts:db</code>) 그리고 <b>기계가 대조한다</b>(<code>docs:db</code>).
+      이 문서의 머리글 숫자도 그 대조 대상이다.
+    </p>
+    <p>
+      <code>sweep:db</code> 가 여섯 중 제일 중요하다. 1차·2차에서 실제로 반복된 실수가
+      <b>「지적받은 자리만 고치기」</b>였다. 관계 몇 곳 중 지적된 곳만 바꾸면
+      검사는 통과하는데 <b>설계는 여전히 틀려 있다.</b>
+    </p>
+  </div>
+  <div class="note hot">
+    <h4>재현하려면 한 줄이 더 필요하다 — 숨기지 않는다</h4>
+    <p>
+      이 검사들은 <code>@electric-sql/pglite</code> 를 쓰는데 <b><code>package.json</code> 에
+      아직 올라가 있지 않다.</b> 새로 내려받은 저장소에서 <code>npm run check</code> 를 돌리면
+      DB 검사 앞에서 멈춘다. <b>설계의 결함이 아니라 선언의 누락이고 한 줄로 고쳐진다</b> —
+      <code>npm i -D @electric-sql/pglite</code>.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <b>매장수첩 — DB 아키텍처 설계</b> · 2026-09-11 ·
+    PostgreSQL 18 · 표 37개 · 10묶음 ·
+    원본 <code>db/schema_v2.dbml</code> · <code>db/schema_v2.sql</code>
+  </p>
+  <p>
+    이 문서의 숫자는 <b>스키마 파일에서 기계가 센 값</b>이고, 어긋나면
+    <code>npm run check</code> 가 실패한다(<code>db/docs.js</code>).
+    칸별 설명은 <code>docs/deliverables/03_ERD.md</code>,
+    이관 대응표는 <code>docs/이관_매핑.md</code> 에 있다.
+    <b>표·칸 이름은 1차 DDL 원문 없이 재구성했으므로 1차와의 맞대보기가 남아 있다.</b>
+  </p>
+</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  (function () {
+    function 앵커로() {
+      if (location.hash) {
+        var el = document.querySelector(location.hash);
+        if (el) el.scrollIntoView();
+      }
+    }
+    if (!window.mermaid) {
+      // 인터넷이 없으면 그림 대신 안내를 띄운다 — 조용히 비어 있는 것보다 낫다
+      document.querySelectorAll("pre.mermaid").forEach(function (el) {
+        var p = document.createElement("p");
+        p.textContent = "※ 이 자리에 그림이 들어갑니다. 인터넷에 연결한 뒤 새로고침하세요.";
+        p.style.cssText = "font-size:13px;color:#8a959e;margin:0 0 8px";
+        el.parentNode.insertBefore(p, el);
+      });
+      앵커로();
+      return;
+    }
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      flowchart: { htmlLabels: true, useMaxWidth: true },
+      er: { useMaxWidth: true },
+      sequence: { useMaxWidth: true },
+    });
+    // 그림이 그려지면 높이가 바뀌므로 앵커로 다시 간다
+    window.addEventListener("load", function () { setTimeout(앵커로, 400); });
+  })();
+</script>
+</body>
+</html>

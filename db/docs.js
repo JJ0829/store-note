@@ -106,6 +106,31 @@ const 주장 = [
     /<code>docs:db<[^>]*>[^]*?<td class="ok">(\d+)</, [내검사]],
   ["docs/제출물/storenote_architecture_20260911.html", /검사 (\d+)종/, [검사기수]],
 
+  /* DB 아키텍처 설계 — 이 문서는 숫자를 「머리글 한 줄 + 제약 표」 두 곳에만 적는다.
+     적는 자리를 줄이는 것도 낡지 않게 하는 방법이다. 그 두 곳을 전부 등재한다. */
+  ["docs/제출물/storenote_db_architecture_20260911.html",
+    /<b>표<\/b> (\d+) · <b>외래키<\/b> (\d+) · <b>2칸 이상<\/b> (\d+) · <b>3칸<\/b> (\d+) · <b>정책<\/b> (\d+)/,
+    [값.표, 값.외래키, 값.여러칸, 값.세칸, 값.정책]],
+  ["docs/제출물/storenote_db_architecture_20260911.html",
+    /외래키 (\d+)개 중 (\d+)개가/, [값.외래키, 값.여러칸]],
+  ["docs/제출물/storenote_db_architecture_20260911.html",
+    /<b>(\d+)개는 세 칸<\/b>/, [값.세칸]],
+  ["docs/제출물/storenote_db_architecture_20260911.html",
+    /<td>유니크<\/td><td class="ok">(\d+)</, [값.유니크]],
+  ["docs/제출물/storenote_db_architecture_20260911.html",
+    /기간이 겹치는 두 줄<\/span><\/td><td class="ok">(\d+)</, [값.겹침금지]],
+  ["docs/제출물/storenote_db_architecture_20260911.html",
+    /<span class="sub">정책<\/span><\/td><td class="ok">(\d+)</, [값.정책]],
+  ["docs/제출물/storenote_db_architecture_20260911.html",
+    /<td>인덱스<\/td><td>(\d+)</, [값.인덱스]],
+  ["docs/제출물/storenote_db_architecture_20260911.html",
+    /<td>뷰<\/td><td>(\d+)</, [값.뷰]],
+  ["docs/제출물/storenote_db_architecture_20260911.html", /표 (\d+)개 전부<\/b>/, [값.표]],
+  ["docs/제출물/storenote_db_architecture_20260911.html", /<b>검사<\/b> (\d+)종/, [검사기수]],
+
+  /* WBS — 숫자 대부분이 날짜와 커밋이라 스키마와 무관하다. 검사기 수만 겹친다 */
+  ["docs/제출물/storenote_wbs_20260911.html", /<b>검사<\/b> (\d+)종/, [검사기수]],
+
   ["docs/제출물/index.html", /<b>DB<\/b> (\d+)/, [합계]],
 ];
 

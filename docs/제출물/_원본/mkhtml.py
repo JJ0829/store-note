@@ -29,9 +29,11 @@ for o in OUTS:
 
 파일 = [
     ("arch.html",       f"storenote_architecture_{DAY}.html"),
+    ("db.html",         f"storenote_db_architecture_{DAY}.html"),
     ("erd-v2.html",     f"storenote_erd_v3_{DAY}.html"),
     ("schema-fix.html", f"storenote_schema_v2_{DAY}.html"),
     ("erd.html",        f"storenote_current_data_{DAY}.html"),
+    ("wbs.html",        f"storenote_wbs_{DAY}.html"),
 ]
 
 HEAD = """<!doctype html>
@@ -125,7 +127,10 @@ for src, dst in 파일:
     p = SRC + src
     if not os.path.exists(p):
         print(f"  ✘ 원본 없음: {src}"); continue
-    s = open(p, encoding="utf-8", newline="").read()
+    # ★ 줄바꿈을 맞춘다 (2026-09-11). 원본의 \r\n 을 그대로 물려받으면,
+    #   체크아웃 설정이 다른 컴퓨터에서 돌릴 때마다 **내용이 같은데 파일이 바뀐 것으로** 뜬다.
+    #   두 세션이 번갈아 돌리면 그 차이가 영원히 왕복한다.
+    s = open(p, encoding="utf-8", newline="").read().replace(chr(13) + NL, NL)
 
     m = re.search(r"<title>(.*?)</title>", s)
     title = m.group(1) if m else dst
@@ -184,7 +189,7 @@ for src, dst in 파일:
 body{margin:0}img{max-width:100%;height:auto}[hidden]{display:none!important}
 @media print{body{background:#fff!important;color:#000!important}a.doc{break-inside:avoid}}</style>
 """
-표지 = open(SRC + "index_src.html", encoding="utf-8", newline="").read()
+표지 = open(SRC + "index_src.html", encoding="utf-8", newline="").read().replace(chr(13) + NL, NL)
 표지 = 표지머리 + 표지.lstrip()
 표지 = 표지.replace(NL + '<div class="wrap">',
                     NL + "</head>" + NL + "<body>" + NL + '<div class="wrap">', 1)
