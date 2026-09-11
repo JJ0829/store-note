@@ -1,472 +1,483 @@
 {
-  "generatedFor": "2026-09-03",
-  "total": 45,
-  "riskCounts": {
-    "안전(허용형)": 41,
-    "주의(약한 카피레프트)": 1,
-    "주의(저작자 표시)": 1,
-    "주의(파일 단위 카피레프트)": 2
+ "generatedFor": "2026-09-11",
+ "total": 46,
+ "riskCounts": {
+  "안전(허용형)": 42,
+  "주의(약한 카피레프트)": 1,
+  "주의(저작자 표시)": 1,
+  "주의(파일 단위 카피레프트)": 2
+ },
+ "licenseCounts": {
+  "MIT": 32,
+  "Apache-2.0": 5,
+  "Apache-2.0 AND LGPL-3.0-or-later": 1,
+  "CC-BY-4.0": 1,
+  "ISC": 3,
+  "MPL-2.0": 2,
+  "BSD-3-Clause": 1,
+  "0BSD": 1
+ },
+ "packages": [
+  {
+   "name": "@alloc/quick-lru",
+   "version": "5.2.0",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "sindresorhus/quick-lru",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
   },
-  "licenseCounts": {
-    "MIT": 32,
-    "Apache-2.0 AND LGPL-3.0-or-later": 1,
-    "Apache-2.0": 4,
-    "CC-BY-4.0": 1,
-    "ISC": 3,
-    "MPL-2.0": 2,
-    "BSD-3-Clause": 1,
-    "0BSD": 1
+  {
+   "name": "@electric-sql/pglite",
+   "version": "0.5.8",
+   "license": "Apache-2.0",
+   "licenseFile": "LICENSE",
+   "repo": "electric-sql/pglite",
+   "homepage": "https://pglite.dev",
+   "direct": true,
+   "risk": "안전(허용형)"
   },
-  "packages": [
-    {
-      "name": "@alloc/quick-lru",
-      "version": "5.2.0",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "sindresorhus/quick-lru",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@img/colour",
-      "version": "1.1.0",
-      "license": "MIT",
-      "licenseFile": "LICENSE.md",
-      "repo": "git+https://github.com/lovell/colour.git",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@img/sharp-win32-x64",
-      "version": "0.35.4",
-      "license": "Apache-2.0 AND LGPL-3.0-or-later",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/lovell/sharp.git",
-      "homepage": "https://sharp.pixelplumbing.com",
-      "direct": false,
-      "risk": "주의(약한 카피레프트)"
-    },
-    {
-      "name": "@jridgewell/gen-mapping",
-      "version": "0.3.13",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/jridgewell/sourcemaps.git",
-      "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/gen-mapping",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@jridgewell/remapping",
-      "version": "2.3.5",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/jridgewell/sourcemaps.git",
-      "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/remapping",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@jridgewell/resolve-uri",
-      "version": "3.1.2",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/jridgewell/resolve-uri",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@jridgewell/sourcemap-codec",
-      "version": "1.6.0",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/jridgewell/sourcemaps.git",
-      "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@jridgewell/trace-mapping",
-      "version": "0.3.31",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/jridgewell/sourcemaps.git",
-      "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@next/env",
-      "version": "15.5.24",
-      "license": "MIT",
-      "licenseFile": null,
-      "repo": "https://github.com/vercel/next.js",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@next/swc-win32-x64-msvc",
-      "version": "15.5.24",
-      "license": "MIT",
-      "licenseFile": null,
-      "repo": "https://github.com/vercel/next.js",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@swc/helpers",
-      "version": "0.5.15",
-      "license": "Apache-2.0",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/swc-project/swc.git",
-      "homepage": "https://swc.rs",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@tailwindcss/node",
-      "version": "4.3.3",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/tailwindlabs/tailwindcss.git",
-      "homepage": "https://tailwindcss.com",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@tailwindcss/oxide",
-      "version": "4.3.3",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/tailwindlabs/tailwindcss.git",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@tailwindcss/oxide-win32-x64-msvc",
-      "version": "4.3.3",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/tailwindlabs/tailwindcss.git",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@tailwindcss/postcss",
-      "version": "4.3.3",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/tailwindlabs/tailwindcss.git",
-      "homepage": "https://tailwindcss.com",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@types/node",
-      "version": "22.20.1",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
-      "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@types/react",
-      "version": "19.2.18",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
-      "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "@types/react-dom",
-      "version": "19.2.5",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
-      "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "caniuse-lite",
-      "version": "1.0.30001810",
-      "license": "CC-BY-4.0",
-      "licenseFile": "LICENSE",
-      "repo": "browserslist/caniuse-lite",
-      "homepage": "",
-      "direct": false,
-      "risk": "주의(저작자 표시)"
-    },
-    {
-      "name": "client-only",
-      "version": "0.0.1",
-      "license": "MIT",
-      "licenseFile": null,
-      "repo": "",
-      "homepage": "https://reactjs.org/",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "csstype",
-      "version": "3.2.3",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/frenic/csstype",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "detect-libc",
-      "version": "2.1.2",
-      "license": "Apache-2.0",
-      "licenseFile": "LICENSE",
-      "repo": "git://github.com/lovell/detect-libc.git",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "enhanced-resolve",
-      "version": "5.24.5",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/webpack/enhanced-resolve.git",
-      "homepage": "https://github.com/webpack/enhanced-resolve#readme",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "graceful-fs",
-      "version": "4.2.11",
-      "license": "ISC",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/isaacs/node-graceful-fs",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "jiti",
-      "version": "2.7.0",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "unjs/jiti",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "lightningcss",
-      "version": "1.32.0",
-      "license": "MPL-2.0",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/parcel-bundler/lightningcss.git",
-      "homepage": "",
-      "direct": false,
-      "risk": "주의(파일 단위 카피레프트)"
-    },
-    {
-      "name": "lightningcss-win32-x64-msvc",
-      "version": "1.32.0",
-      "license": "MPL-2.0",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/parcel-bundler/lightningcss.git",
-      "homepage": "",
-      "direct": false,
-      "risk": "주의(파일 단위 카피레프트)"
-    },
-    {
-      "name": "magic-string",
-      "version": "0.30.21",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/Rich-Harris/magic-string.git",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "nanoid",
-      "version": "3.3.18",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "ai/nanoid",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "next",
-      "version": "15.5.24",
-      "license": "MIT",
-      "licenseFile": "LICENSE.md",
-      "repo": "vercel/next.js",
-      "homepage": "https://nextjs.org",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "picocolors",
-      "version": "1.1.1",
-      "license": "ISC",
-      "licenseFile": "LICENSE",
-      "repo": "alexeyraspopov/picocolors",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "postcss",
-      "version": "8.4.31",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "postcss/postcss",
-      "homepage": "https://postcss.org/",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "postcss",
-      "version": "8.5.26",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "postcss/postcss",
-      "homepage": "https://postcss.org/",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "react",
-      "version": "19.2.8",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/react/react.git",
-      "homepage": "https://react.dev/",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "react-dom",
-      "version": "19.2.8",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/react/react.git",
-      "homepage": "https://react.dev/",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "scheduler",
-      "version": "0.27.0",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/facebook/react.git",
-      "homepage": "https://react.dev/",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "semver",
-      "version": "7.8.5",
-      "license": "ISC",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/npm/node-semver.git",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "sharp",
-      "version": "0.35.4",
-      "license": "Apache-2.0",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/lovell/sharp.git",
-      "homepage": "https://sharp.pixelplumbing.com",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "source-map-js",
-      "version": "1.2.1",
-      "license": "BSD-3-Clause",
-      "licenseFile": "LICENSE",
-      "repo": "7rulnik/source-map-js",
-      "homepage": "https://github.com/7rulnik/source-map-js",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "styled-jsx",
-      "version": "5.1.6",
-      "license": "MIT",
-      "licenseFile": "LICENSE.md",
-      "repo": "vercel/styled-jsx",
-      "homepage": "",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "tailwindcss",
-      "version": "4.3.3",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "https://github.com/tailwindlabs/tailwindcss.git",
-      "homepage": "https://tailwindcss.com",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "tapable",
-      "version": "2.3.3",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "http://github.com/webpack/tapable.git",
-      "homepage": "https://github.com/webpack/tapable",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "tslib",
-      "version": "2.8.1",
-      "license": "0BSD",
-      "licenseFile": "LICENSE.txt",
-      "repo": "https://github.com/Microsoft/tslib.git",
-      "homepage": "https://www.typescriptlang.org/",
-      "direct": false,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "typescript",
-      "version": "5.9.3",
-      "license": "Apache-2.0",
-      "licenseFile": "LICENSE.txt",
-      "repo": "https://github.com/microsoft/TypeScript.git",
-      "homepage": "https://www.typescriptlang.org/",
-      "direct": true,
-      "risk": "안전(허용형)"
-    },
-    {
-      "name": "undici-types",
-      "version": "6.21.0",
-      "license": "MIT",
-      "licenseFile": "LICENSE",
-      "repo": "git+https://github.com/nodejs/undici.git",
-      "homepage": "https://undici.nodejs.org",
-      "direct": false,
-      "risk": "안전(허용형)"
-    }
-  ]
+  {
+   "name": "@img/colour",
+   "version": "1.1.0",
+   "license": "MIT",
+   "licenseFile": "LICENSE.md",
+   "repo": "git+https://github.com/lovell/colour.git",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@img/sharp-win32-x64",
+   "version": "0.35.4",
+   "license": "Apache-2.0 AND LGPL-3.0-or-later",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/lovell/sharp.git",
+   "homepage": "https://sharp.pixelplumbing.com",
+   "direct": false,
+   "risk": "주의(약한 카피레프트)"
+  },
+  {
+   "name": "@jridgewell/gen-mapping",
+   "version": "0.3.13",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/jridgewell/sourcemaps.git",
+   "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/gen-mapping",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@jridgewell/remapping",
+   "version": "2.3.5",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/jridgewell/sourcemaps.git",
+   "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/remapping",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@jridgewell/resolve-uri",
+   "version": "3.1.2",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/jridgewell/resolve-uri",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@jridgewell/sourcemap-codec",
+   "version": "1.6.0",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/jridgewell/sourcemaps.git",
+   "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@jridgewell/trace-mapping",
+   "version": "0.3.31",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/jridgewell/sourcemaps.git",
+   "homepage": "https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@next/env",
+   "version": "15.5.24",
+   "license": "MIT",
+   "licenseFile": null,
+   "repo": "https://github.com/vercel/next.js",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@next/swc-win32-x64-msvc",
+   "version": "15.5.24",
+   "license": "MIT",
+   "licenseFile": null,
+   "repo": "https://github.com/vercel/next.js",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@swc/helpers",
+   "version": "0.5.15",
+   "license": "Apache-2.0",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/swc-project/swc.git",
+   "homepage": "https://swc.rs",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@tailwindcss/node",
+   "version": "4.3.3",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/tailwindlabs/tailwindcss.git",
+   "homepage": "https://tailwindcss.com",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@tailwindcss/oxide",
+   "version": "4.3.3",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/tailwindlabs/tailwindcss.git",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@tailwindcss/oxide-win32-x64-msvc",
+   "version": "4.3.3",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/tailwindlabs/tailwindcss.git",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@tailwindcss/postcss",
+   "version": "4.3.3",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/tailwindlabs/tailwindcss.git",
+   "homepage": "https://tailwindcss.com",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@types/node",
+   "version": "22.20.1",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+   "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@types/react",
+   "version": "19.2.18",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+   "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "@types/react-dom",
+   "version": "19.2.5",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+   "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "caniuse-lite",
+   "version": "1.0.30001810",
+   "license": "CC-BY-4.0",
+   "licenseFile": "LICENSE",
+   "repo": "browserslist/caniuse-lite",
+   "homepage": "",
+   "direct": false,
+   "risk": "주의(저작자 표시)"
+  },
+  {
+   "name": "client-only",
+   "version": "0.0.1",
+   "license": "MIT",
+   "licenseFile": null,
+   "repo": "",
+   "homepage": "https://reactjs.org/",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "csstype",
+   "version": "3.2.3",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/frenic/csstype",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "detect-libc",
+   "version": "2.1.2",
+   "license": "Apache-2.0",
+   "licenseFile": "LICENSE",
+   "repo": "git://github.com/lovell/detect-libc.git",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "enhanced-resolve",
+   "version": "5.24.5",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/webpack/enhanced-resolve.git",
+   "homepage": "https://github.com/webpack/enhanced-resolve#readme",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "graceful-fs",
+   "version": "4.2.11",
+   "license": "ISC",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/isaacs/node-graceful-fs",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "jiti",
+   "version": "2.7.0",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "unjs/jiti",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "lightningcss",
+   "version": "1.32.0",
+   "license": "MPL-2.0",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/parcel-bundler/lightningcss.git",
+   "homepage": "",
+   "direct": false,
+   "risk": "주의(파일 단위 카피레프트)"
+  },
+  {
+   "name": "lightningcss-win32-x64-msvc",
+   "version": "1.32.0",
+   "license": "MPL-2.0",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/parcel-bundler/lightningcss.git",
+   "homepage": "",
+   "direct": false,
+   "risk": "주의(파일 단위 카피레프트)"
+  },
+  {
+   "name": "magic-string",
+   "version": "0.30.21",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/Rich-Harris/magic-string.git",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "nanoid",
+   "version": "3.3.18",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "ai/nanoid",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "next",
+   "version": "15.5.24",
+   "license": "MIT",
+   "licenseFile": "LICENSE.md",
+   "repo": "vercel/next.js",
+   "homepage": "https://nextjs.org",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "picocolors",
+   "version": "1.1.1",
+   "license": "ISC",
+   "licenseFile": "LICENSE",
+   "repo": "alexeyraspopov/picocolors",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "postcss",
+   "version": "8.4.31",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "postcss/postcss",
+   "homepage": "https://postcss.org/",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "postcss",
+   "version": "8.5.26",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "postcss/postcss",
+   "homepage": "https://postcss.org/",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "react",
+   "version": "19.2.8",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/react/react.git",
+   "homepage": "https://react.dev/",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "react-dom",
+   "version": "19.2.8",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/react/react.git",
+   "homepage": "https://react.dev/",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "scheduler",
+   "version": "0.27.0",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/facebook/react.git",
+   "homepage": "https://react.dev/",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "semver",
+   "version": "7.8.5",
+   "license": "ISC",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/npm/node-semver.git",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "sharp",
+   "version": "0.35.4",
+   "license": "Apache-2.0",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/lovell/sharp.git",
+   "homepage": "https://sharp.pixelplumbing.com",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "source-map-js",
+   "version": "1.2.1",
+   "license": "BSD-3-Clause",
+   "licenseFile": "LICENSE",
+   "repo": "7rulnik/source-map-js",
+   "homepage": "https://github.com/7rulnik/source-map-js",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "styled-jsx",
+   "version": "5.1.6",
+   "license": "MIT",
+   "licenseFile": "LICENSE.md",
+   "repo": "vercel/styled-jsx",
+   "homepage": "",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "tailwindcss",
+   "version": "4.3.3",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "https://github.com/tailwindlabs/tailwindcss.git",
+   "homepage": "https://tailwindcss.com",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "tapable",
+   "version": "2.3.3",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "http://github.com/webpack/tapable.git",
+   "homepage": "https://github.com/webpack/tapable",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "tslib",
+   "version": "2.8.1",
+   "license": "0BSD",
+   "licenseFile": "LICENSE.txt",
+   "repo": "https://github.com/Microsoft/tslib.git",
+   "homepage": "https://www.typescriptlang.org/",
+   "direct": false,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "typescript",
+   "version": "5.9.3",
+   "license": "Apache-2.0",
+   "licenseFile": "LICENSE.txt",
+   "repo": "https://github.com/microsoft/TypeScript.git",
+   "homepage": "https://www.typescriptlang.org/",
+   "direct": true,
+   "risk": "안전(허용형)"
+  },
+  {
+   "name": "undici-types",
+   "version": "6.21.0",
+   "license": "MIT",
+   "licenseFile": "LICENSE",
+   "repo": "git+https://github.com/nodejs/undici.git",
+   "homepage": "https://undici.nodejs.org",
+   "direct": false,
+   "risk": "안전(허용형)"
+  }
+ ],
+ "note": "2026-09-03 전수 조사에 2026-09-11 의 변경 1건만 더했다 — @electric-sql/pglite (Apache-2.0, 전이 의존성 0개, devDependency). 나머지 45개는 9/3 원본 그대로다."
 }
