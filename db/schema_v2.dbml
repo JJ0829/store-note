@@ -15,7 +15,7 @@
 //    B. g 과 ml 이 섞이던 문제 → units 의 계열을 참조에 끼워 넣어 DB 가 막는다
 // ===========================================================================
 
-Project 매장수첩 {
+Project "매장수첩" {
   database_type: 'PostgreSQL'
   Note: '''
   # 매장수첩 v2 — 개인 카페·베이커리 매장 운영 도구
@@ -35,10 +35,24 @@ Project 매장수첩 {
 }
 
 // ── 열거형 ────────────────────────────────────────────────────────────────
-Enum unit_family { weight volume count }
-Enum item_kind   { purchased made }
-Enum user_role   { owner manager staff }
-Enum reco_kind   { order bake }
+Enum unit_family {
+  weight
+  volume
+  count
+}
+Enum item_kind {
+  purchased
+  made
+}
+Enum user_role {
+  owner
+  manager
+  staff
+}
+Enum reco_kind {
+  order
+  bake
+}
 
 
 // ===========================================================================
@@ -556,19 +570,19 @@ Ref: recommendation_inputs.(item_version_id, store_id) > item_versions.(id, stor
 //  그룹 — dbdiagram 에서 색으로 묶여 보인다
 // ===========================================================================
 
-TableGroup 기준_매장 [note: '모든 것의 뿌리'] {
+TableGroup "기준 · 매장" {
   units
   stores
   users
 }
 
-TableGroup 거래처_품목 [note: '★ A·B — 재료 원본 명단과 단위 계열'] {
+TableGroup "거래처 · 품목" {
   suppliers
   items
   item_versions
 }
 
-TableGroup 메뉴_레시피 [note: '★ 지적 2 — 판 번호로 과거를 고정한다'] {
+TableGroup "메뉴 · 레시피" {
   menus
   menu_prices
   menu_recipe_versions
@@ -577,12 +591,12 @@ TableGroup 메뉴_레시피 [note: '★ 지적 2 — 판 번호로 과거를 고
   make_recipe_lines
 }
 
-TableGroup 계획 [note: '★ 지적 3 — 계획일과 예정일을 나눈다'] {
+TableGroup "계획" {
   order_plans
   bake_plans
 }
 
-TableGroup 원장 [note: '실제로 일어난 일'] {
+TableGroup "원장" {
   daily_sales
   sales_lines
   received_lines
@@ -591,7 +605,7 @@ TableGroup 원장 [note: '실제로 일어난 일'] {
   stock_counts
 }
 
-TableGroup 추천근거 [note: '★ 지적 5 — 왜 그때 그 수량이었나'] {
+TableGroup "추천 근거" {
   recommendation_runs
   recommendation_inputs
 }
