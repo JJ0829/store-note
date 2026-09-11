@@ -1086,6 +1086,11 @@ create table staff (
   created_at timestamptz not null default now(),
 
   constraint uq_staff_id_store unique (id, store_id),
+  -- ★ user_id 하나만으로도 유일하지만, **묶음 자체를 유일키로 선언**해 둔다.
+  --   (user_id, store_id) 로 users 를 1:1 로 가리키려면 그 묶음이 유일해야 한다 —
+  --   "user_id 가 unique 니까 묶음도 당연히 유일하다" 는 논리는 맞지만,
+  --   외래키도 다이어그램 도구도 **선언된 묶음**을 요구한다.
+  constraint uq_staff_user_store unique (user_id, store_id),
   -- ★ 전수 훑기가 찾은 것 — 같은 매장 계정만 연결된다
   constraint fk_staff_user_same_store
     foreign key (user_id, store_id) references users (id, store_id)

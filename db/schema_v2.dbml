@@ -96,6 +96,8 @@ Table users {
   role       user_role [not null, default: 'staff']
   created_at timestamptz [not null, default: `now()`]
 
+  Indexes { (id, store_id) [unique, name: 'uq_users_id_store'] }
+
   Note: '★ 지적 4 — 줄 단위 접근 통제의 기준점. 로그인한 사람의 store_id 로 모든 표를 거른다.'
 }
 
@@ -362,6 +364,7 @@ Table bake_plans {
   Indexes {
     (id, store_id) [unique]
     (id, store_id, item_id) [unique, name: 'uq_bake_plans_id_store_item']
+    (id, store_id, make_recipe_version_id) [unique, name: 'uq_bake_plans_id_store_recipe']
   }
 }
 
@@ -793,6 +796,7 @@ Table prep_tasks {
   Indexes {
     (id, store_id) [unique]
     (id, store_id, is_option) [unique, name: 'uq_prep_tasks_id_store_opt']
+    (id, store_id, list_id) [unique, name: 'uq_prep_tasks_id_store_list']
   }
   Note: '''
   **이 제품이 종이를 이긴다고 주장하는 곳.**
@@ -860,7 +864,10 @@ Table staff {
   is_active boolean [not null, default: true]
   created_at timestamptz
 
-  Indexes { (id, store_id) [unique] }
+  Indexes {
+    (id, store_id) [unique]
+    (user_id, store_id) [unique, name: 'uq_staff_user_store']
+  }
   Note: '★ users 는 로그인 계정이라 직원과 다르다. 알바는 대부분 로그인하지 않는다.'
 }
 

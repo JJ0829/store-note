@@ -155,7 +155,7 @@ const 요구 = [
     : no("이행 상태 뷰", `있는 뷰: ${뷰.join(", ")}`);
 
   // ── E. 그림의 관계 "방향" 이 맞는가 (dbdiagram 경고) ────────────────
-  console.log("\n[E] 관계 방향 — 자식 쪽 유일성과 기호가 맞는가");
+  console.log("\n[E] 관계 방향 — 양쪽 유일키 선언과 기호가 맞는가");
   /* dbdiagram 은 두 방향 다 경고한다. ★ 처음엔 한쪽만 봐서 2건을 놓쳤다.
        A.(칸들) >  B  : A 쪽이 **유일하면** 틀렸다 (그건 1:1 이다)
        A.(칸들) -  B  : A 쪽이 **유일하지 않으면** 틀렸다 (1:1 이려면 유일해야 한다)
@@ -168,23 +168,49 @@ const 요구 = [
       sets.push(ix[1].split(",").map((x) => x.trim()));
     uniqSets.set(m[1], sets);
   }
-  /* ★ 유일성은 **부분집합**으로 본다.
-     user_id 하나가 unique 면 (user_id, store_id) 도 당연히 unique 다.
-     칸 묶음이 정확히 같을 때만 유일로 보면, 칸을 하나 더 붙인 순간
-     "유일하지 않다" 로 뒤집힌다 — 실제로 그렇게 당했다. */
-  const 유일한가 = (t, colArr) => {
-    const set = new Set(colArr);
-    return (uniqSets.get(t) ?? []).some((u) => u.every((c) => set.has(c)));
+  /* ★ 자식 쪽과 부모 쪽은 판정 기준이 **다르다**. 같게 봤다가 부모 쪽을 놓쳤다.
+
+       자식 쪽 — **부분집합**이면 유일하다.
+         user_id 하나가 unique 면 (user_id, store_id) 도 당연히 유일하다.
+         "1:1 인가" 를 묻는 것이므로 이게 맞다.
+
+       부모 쪽 — **정확히 그 칸 묶음**이 유일해야 한다.
+         Postgres 가 그렇게 요구한다. FOREIGN KEY (a,b) REFERENCES t(c,d) 는
+         t 에 (c,d) 정확히 그 묶음의 유일키가 있어야 만들어진다.
+         dbdiagram 도 같은 기준으로 경고한다.
+         여기에 부분집합을 쓰면 users.id 가 pk 라는 이유로
+         (id, store_id) 가 없어도 통과해 버린다 — 실제로 그렇게 놓쳤다. */
+  /* ★★ 기준은 하나다 — **그 칸 묶음이 유일키로 선언돼 있는가.**
+     "user_id 가 이미 unique 니까 (user_id, store_id) 도 유일하다" 는
+     논리적으로는 맞지만 **여기서는 안 통한다.**
+     외래키도, dbdiagram 도 **선언된 묶음**을 요구한다.
+     이 차이를 몰라서 경고를 세 번 되살렸다. 자식·부모 똑같이 본다. */
+  const 유일선언 = (t, colArr) => {
+    const key = [...colArr].sort().join(",");
+    return (uniqSets.get(t) ?? []).some((u) => [...u].sort().join(",") === key);
   };
+  const 자식유일한가 = 유일선언;
+  const 부모유일한가 = 유일선언;
   const 방향 = [];
-  for (const m of DBML.matchAll(/^Ref:\s*([a-z_]+)\.(\([^)]*\)|[a-z_]+)\s*(>|-|<)\s*([a-z_]+)\./gm)) {
-    const [, child, raw, op, parent] = m;
-    const colArr = (raw.startsWith("(") ? raw.slice(1, -1) : raw).split(",").map((x) => x.trim());
-    const cols = [...colArr].sort().join(",");
-    const 유일 = 유일한가(child, colArr);
-    if (op === ">" && 유일)
+  /* ★ dbdiagram 은 **양쪽 다** 본다. 한쪽만 보면 고친 뒤 반대쪽이 살아난다.
+       부모 쪽 : '>' 든 '-' 든 **항상 유일해야 한다** (기댈 키가 있어야 하니까)
+       자식 쪽 : '-' 면 유일해야 하고, '>' 면 유일하면 안 된다
+     처음엔 자식만 봤다가 부모 쪽 경고를 세 번 다시 받았다. */
+  const REF = /^Ref:\s*([a-z_]+)\.(\([^)]*\)|[a-z_]+)\s*(>|-|<)\s*([a-z_]+)\.(\([^)]*\)|[a-z_]+)/gm;
+  const 풀기 = (raw) =>
+    (raw.startsWith("(") ? raw.slice(1, -1) : raw).split(",").map((x) => x.trim());
+  for (const m of DBML.matchAll(REF)) {
+    const [, child, rawC, op, parent, rawP] = m;
+    const cc = 풀기(rawC), pc = 풀기(rawP);
+    const cols = [...cc].sort().join(",");
+
+    if (!부모유일한가(parent, pc))
+      방향.push(`${child}.(${cols}) ${op} ${parent}.(${pc.join(",")})  — **부모** 쪽에 유일키가 없다`);
+
+    const 자식유일 = 자식유일한가(child, cc);
+    if (op === ">" && 자식유일)
       방향.push(`${child}.(${cols}) > ${parent}  — 자식이 유일하다. '-' 로 바꿀 것`);
-    if (op === "-" && !유일)
+    if (op === "-" && !자식유일)
       방향.push(`${child}.(${cols}) - ${parent}  — 자식이 유일하지 않다. unique 를 붙이거나 '>' 로 바꿀 것`);
   }
   방향.length === 0
