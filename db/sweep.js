@@ -221,6 +221,43 @@ const 공통칸 = new Set([
       : no("그림에 없는 칸", bad);
   }
 
+  // ── 규칙 8. SQL 의 유일키가 그림에도 있다 ───────────────────────────
+  console.log("\n[규칙 8] SQL 의 유일키(pk·unique)가 그림에도 있다");
+  /* ★ 이것 때문에 dbdiagram 경고가 세 번이나 다시 살아났다.
+     참조는 **부모 쪽 유일키에 기댄다.** SQL 에만 유일키를 넣고 그림에 안 넣으면
+     그림에서는 "기댈 것이 없는 참조" 가 되어 경고가 난다.
+     규칙 6 은 **칸**만 봤다. 유일키는 안 봤다 — 그래서 계속 샜다. */
+  {
+    const sqlUq = await q(`
+      select t.relname tbl,
+        (select string_agg(a.attname, ',' order by k.ord)
+           from unnest(c.conkey) with ordinality k(att,ord)
+           join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.att) cols
+      from pg_constraint c
+      join pg_class t on t.oid = c.conrelid
+      where c.contype in ('u','p') and c.connamespace = 'public'::regnamespace`);
+
+    const dbmlUq = new Map();
+    for (const m of DBML.matchAll(/^Table\s+"?([a-z_]+)"?\s*\{([\s\S]*?)^\}/gm)) {
+      const set = new Set();
+      for (const c of m[2].matchAll(/^\s*([a-z_]+)\s+[^[\n]*\[[^\]]*\b(pk|unique)\b/gm)) set.add(c[1]);
+      for (const ix of m[2].matchAll(/\(([^)]*)\)\s*\[[^\]]*\b(pk|unique)\b/g))
+        set.add(ix[1].split(",").map((x) => x.trim()).sort().join(","));
+      dbmlUq.set(m[1], set);
+    }
+
+    const bad = [];
+    for (const r of sqlUq) {
+      const key = r.cols.split(",").sort().join(",");
+      const d = dbmlUq.get(r.tbl);
+      if (!d) { bad.push(`${r.tbl} : 표가 그림에 없다`); continue; }
+      if (!d.has(key) && !d.has(r.cols)) bad.push(`${r.tbl} (${r.cols}) 가 그림에 없다`);
+    }
+    bad.length === 0
+      ? ok("빠진 곳 없음", `SQL 유일키 ${sqlUq.length}개 전부 그림에 있다`)
+      : no("그림에 없는 유일키", bad);
+  }
+
   // ── 예외 목록이 낡지 않았는가 ────────────────────────────────────
   console.log("\n[규칙 7] 예외로 빼둔 것이 아직도 예외인가");
   {
