@@ -219,5 +219,7 @@ const 요구 = [
   console.log("\n" + "=".repeat(74));
   console.log(`  통과 ${pass} · 실패 ${fail}`);
   console.log("=".repeat(74) + "\n");
+  // ★ 문서가 인용할 수 있게 통과 건수를 남긴다 (db/docs.js 가 대조한다)
+  require("./counts").합치기({ "대조": pass });
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error("오류:", e.message); process.exit(1); });

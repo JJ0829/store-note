@@ -143,6 +143,7 @@ Table items {
     (id, store_id) [unique, name: 'uq_items_id_store']
     (store_id, name) [unique, name: 'uq_items_name']
     (id, store_id, base_family) [unique, name: 'uq_items_id_store_family']
+    (id, store_id, kind) [unique, name: 'uq_items_id_store_kind']
   }
   Note: '''
   **★ A. 재료 원본 명단. 1차의 "이름으로 잇기" 를 여기서 끝낸다.**
@@ -607,6 +608,16 @@ Ref: baked_lines.(bake_plan_id, store_id, make_recipe_version_id) > bake_plans.(
 // ★ 지적 5 — 계획이 추천을 가리킨다
 Ref: recommendation_runs.store_id                      > stores.id
 Ref: order_plans.(run_id, store_id)                    > recommendation_runs.(id, store_id)
+
+// ── ★ 3차 피드백 — 기록을 남긴 사람도 같은 매장이어야 한다 ────────────
+//    전에는 이 칸들에 참조가 하나도 없었다. 아무 번호나 적혔고,
+//    "B매장 직원이 A매장 재고를 셌다" 가 그대로 저장됐다.
+//    기록을 만든 **계정**은 users, 실제로 손을 댄 **직원**은 staff 다.
+Ref: item_versions.(created_by, store_id)      > users.(id, store_id)
+Ref: order_plans.(created_by, store_id)        > users.(id, store_id)
+Ref: bake_plans.(created_by, store_id)         > users.(id, store_id)
+Ref: recommendation_runs.(ran_by, store_id)    > users.(id, store_id)
+Ref: stock_counts.(counted_by, store_id)       > staff.(id, store_id)
 Ref: bake_plans.(run_id, store_id)                     > recommendation_runs.(id, store_id)
 Ref: recommendation_inputs.(run_id, store_id)          > recommendation_runs.(id, store_id)
 Ref: recommendation_inputs.(item_id, store_id)         > items.(id, store_id)
@@ -663,7 +674,10 @@ TableGroup "추천 근거" {
 //  ⚠️ DBML 로 표현할 수 없어 여기 적어 두는 것
 //
 //  1. 줄 단위 접근 통제 (지적 4)
-//     22개 표 전부에 "로그인한 사람의 매장 줄만" 정책을 건다.
+//     37개 표 전부에 "로그인한 사람의 매장 줄만" 정책을 건다.
+//     ★ 직원 이름·전화·근무시간·급여가 들어 있는 표(staff · shift_assignments ·
+//       punches · contracts · daily_checks)가 특히 그렇다 — 여기가 빠지면
+//       다른 매장의 민감정보가 그대로 보인다. db/sweep.js 규칙 5 가 매번 전수로 확인한다.
 //     읽기 조건과 쓰기 조건을 **둘 다** 걸어야 한다 —
 //     읽기 조건만 걸면 새로 넣는 것은 그대로 통과한다.
 //     그리고 표 주인에게도 적용되도록 강제 옵션을 같이 켠다.
@@ -783,13 +797,14 @@ Table prep_tasks {
   video_url  text
 
   menu_id          uuid [note: '이 프렙이 따라가는 메뉴 레시피']
-  make_recipe_item uuid [note: '만드는 부재료 (items.kind = made)']
+  make_recipe_item uuid [note: '만드는 부재료. 아래 참조가 items.kind = made 를 강제한다']
 
   option_of uuid    [note: '★ 딸린 옵션이면 부모 항목. 옵션의 옵션은 없다']
   optional  boolean [not null, default: false, note: '★ 진행률 분모에 들어가나 (배치가 아니라 셈)']
 
-  is_option             boolean [note: '계산되는 칸 — option_of 가 있으면 true']
-  option_parent_is_root boolean [note: '항상 false — 부모가 옵션이 아님을 외래키로 강제하는 장치']
+  is_option             boolean [note: '계산되는 칸(generated) — option_of 가 있으면 true. 사람이 못 넣는다']
+  option_parent_is_root boolean [note: '계산되는 칸(generated) — 항상 false. 부모가 옵션이 아님을 외래키로 강제하는 장치']
+  made_kind             text    [note: '계산되는 칸(generated) — 항상 made. 아래 참조가 items.kind 와 맞춰서 만드는 부재료만 붙게 한다']
   sort_order int
   created_at timestamptz
 
@@ -808,6 +823,11 @@ Table prep_tasks {
   · `kind = routine` 은 리드타임이 **없다**. 있으면 화면이 없는 약속을 만든다 (CHECK 로 막음)
   · 되돌릴 수 없는 것은 **이유를 반드시 적어야 한다** (CHECK 로 막음)
   · `optionOf` 는 **배치**(어느 카드 안에), `optional` 은 **셈**(진행률 분모에). 다른 것이다
+
+  ★ **`is_option` · `option_parent_is_root` · `made_kind` 는 사람이 넣는 칸이 아니다.**
+  DB 가 계산한다(`GENERATED ALWAYS AS … STORED`). 손으로 넣으면 거부된다.
+  **DBML 에는 그 문법이 없어서** 그림에서는 평범한 칸으로 보인다 — 정본은 `schema_v2.sql` 이다.
+  이 세 칸은 값을 쓰라고 있는 게 아니라 **외래키가 기댈 상수**를 만들려고 있다.
   '''
 }
 
@@ -941,14 +961,26 @@ Table cost_excluded_items {
 }
 
 Table daily_checks {
+  id            uuid [pk, note: '★ 3차 피드백 — 한 줄을 가리킬 수 있어야 나중에 그 체크만 지운다']
   store_id      uuid [not null]
   business_date date [not null, note: '★ 새벽 4시 경계']
   step_id       uuid [note: '체크리스트']
   prep_task_id  uuid [note: '프렙']
   checked_at    timestamptz
-  checked_by    uuid
+  checked_by    uuid [note: '체크한 직원. 같은 매장 직원만 적힌다']
 
+  Indexes {
+    (store_id, business_date, step_id) [unique, name: 'uq_daily_checks_step']
+    (store_id, business_date, prep_task_id) [unique, name: 'uq_daily_checks_prep']
+  }
   Note: '''
+  **★ 3차 피드백 — 셋을 한꺼번에 막는다.**
+
+  · `step_id` 와 `prep_task_id` 는 **둘 다 비거나 둘 다 차면 거부**된다 (`ck_daily_checks_one`).
+    한 줄은 체크리스트 한 칸 **또는** 프렙 한 칸이고, 둘 다는 말이 안 된다
+  · 같은 날 같은 칸을 두 번 체크하면 거부된다 (위 두 인덱스. SQL 에서는 한쪽이 빈 줄만 세는 부분 인덱스다)
+  · 체크 취소는 **줄을 지운다.** "체크했다 풀었다" 이력은 지금 화면에 없는 기능이라 만들지 않았다
+
   지금 앱은 이것을 영업일이 바뀌면 버린다(브라우저에만 있어서).
   서버로 오면 남길 수 있고, 남겨야 한다 — **"기록" 이 이 제품의 세 가치 중 하나**다.
 
@@ -981,7 +1013,8 @@ Ref: steps.(section_id, store_id)                > sections.(id, store_id)
 
 Ref: prep_tasks.(list_id, store_id)          > prep_lists.(id, store_id)
 Ref: prep_tasks.(menu_id, store_id)          > menus.(id, store_id)
-Ref: prep_tasks.(make_recipe_item, store_id) > items.(id, store_id)
+// ★ 3차 피드백 — 전에는 아무 품목이나 붙었다. 이제 kind = made 만 붙는다
+Ref: prep_tasks.(make_recipe_item, store_id, made_kind) > items.(id, store_id, kind)
 // ★ 옵션의 옵션 금지 — 부모의 is_option 이 false 여야만 통과한다
 Ref: prep_tasks.(option_of, store_id, option_parent_is_root) > prep_tasks.(id, store_id, is_option)
 // ★ 전수 훑기 — 옵션은 부모와 같은 목록 안에 있어야 한다
@@ -1002,6 +1035,7 @@ Ref: contracts.(staff_id, store_id) > staff.(id, store_id)
 Ref: cost_excluded_items.(item_id, store_id) - items.(id, store_id)
 Ref: daily_checks.(step_id, store_id)        > steps.(id, store_id)
 Ref: daily_checks.(prep_task_id, store_id)   > prep_tasks.(id, store_id)
+Ref: daily_checks.(checked_by, store_id)     > staff.(id, store_id)
 
 TableGroup "교육 · 체크리스트" {
   positions

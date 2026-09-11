@@ -404,6 +404,95 @@ async function mustAccept(db, name, sql) {
              'c5000000-0000-0000-0000-000000000001', true);`,
     "fk_prep_option_same_list");
 
+  // ── 6-C. 3차 피드백 ─────────────────────────────────────────────────
+  log("\n[6-C] 3차 피드백 — 지적한 시나리오를 그대로 넣어 본다");
+
+  await mustReject(db, "★ 자기 자신을 옵션의 부모로 지정한다",
+    `insert into prep_tasks (id, store_id, list_id, title, kind, trigger_type, trigger_at,
+                             recoverable, consequence, option_of, optional)
+     values ('c5000000-0000-0000-0000-0000000000aa','11111111-1111-1111-1111-111111111111',
+             'c2000000-0000-0000-0000-000000000001','자기참조','routine','daily','14:00',
+             true, '', 'c5000000-0000-0000-0000-0000000000aa', true);`,
+    "fk_prep_option_one_level");
+
+  await mustReject(db, "★ 사 오는 품목(purchased)을 '만드는 것' 자리에 붙인다",
+    `insert into prep_tasks (store_id, list_id, title, kind, trigger_type, trigger_at,
+                             recoverable, consequence, make_recipe_item)
+     values ('11111111-1111-1111-1111-111111111111','c2000000-0000-0000-0000-000000000001',
+             '우유 만들기?','routine','daily','14:00', true, '',
+             'a1000000-0000-0000-0000-000000000001');`,
+    "fk_prep_make_item_is_made");
+
+  await mustAccept(db, "만드는 부재료(made)는 통과한다",
+    `insert into prep_tasks (store_id, list_id, title, kind, trigger_type, trigger_at,
+                             recoverable, consequence, make_recipe_item)
+     values ('11111111-1111-1111-1111-111111111111','c2000000-0000-0000-0000-000000000001',
+             '식빵 반죽','routine','daily','14:00', true, '',
+             'a1000000-0000-0000-0000-000000000003');`);
+
+  await mustReject(db, "체크리스트와 프렙을 **둘 다** 비워 둔다",
+    `insert into daily_checks (store_id, business_date) values
+       ('11111111-1111-1111-1111-111111111111','2026-03-05');`,
+    "ck_daily_checks_one");
+
+  /* ★ 처음엔 `select ... from steps limit 1` 로 넣었는데 steps 가 비어 있어서
+     0행이 들어가고 "통과" 로 읽혔다. **0행은 통과가 아니다.**
+     그래서 섹션·단계를 실제로 만들고 그 번호를 직접 쓴다. */
+  await db.exec(`
+    insert into sections (id, store_id, position_id, title) values
+      ('c6000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111',
+       'c1000000-0000-0000-0000-000000000001','오픈 준비');
+    insert into steps (id, store_id, section_id, title) values
+      ('c7000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111',
+       'c6000000-0000-0000-0000-000000000001','제빙기 확인');
+  `);
+  await mustReject(db, "체크리스트와 프렙을 **둘 다** 채운다",
+    `insert into daily_checks (store_id, business_date, step_id, prep_task_id)
+     values ('11111111-1111-1111-1111-111111111111','2026-03-05',
+             'c7000000-0000-0000-0000-000000000001','c5000000-0000-0000-0000-000000000001');`,
+    "ck_daily_checks_one");
+
+  await mustAccept(db, "체크리스트 한 쪽만 채우면 통과한다",
+    `insert into daily_checks (store_id, business_date, step_id)
+     values ('11111111-1111-1111-1111-111111111111','2026-03-05',
+             'c7000000-0000-0000-0000-000000000001');`);
+
+  await mustReject(db, "같은 날 같은 단계를 두 번 체크한다",
+    `insert into daily_checks (store_id, business_date, step_id)
+     values ('11111111-1111-1111-1111-111111111111','2026-03-05',
+             'c7000000-0000-0000-0000-000000000001');`,
+    "uq_daily_checks_step");
+
+  // B매장 직원·계정을 만들어 둔다
+  await db.exec(`
+    insert into staff (id, store_id, name) values
+      ('c4000000-0000-0000-0000-0000000000b2','22222222-2222-2222-2222-222222222222','B실사자');
+  `);
+  await mustReject(db, "★ B매장 직원이 A매장 체크를 한 것으로 적는다",
+    `insert into daily_checks (store_id, business_date, prep_task_id, checked_by)
+     values ('11111111-1111-1111-1111-111111111111','2026-03-06',
+             'c5000000-0000-0000-0000-000000000001','c4000000-0000-0000-0000-0000000000b2');`,
+    "fk_check_staff_same_store");
+
+  await mustReject(db, "★ B매장 직원이 A매장 재고를 센 것으로 적는다",
+    `insert into stock_counts (store_id, item_id, counted_on, qty, unit, unit_family, counted_by)
+     values ('11111111-1111-1111-1111-111111111111','a1000000-0000-0000-0000-000000000001',
+             '2026-03-06', 100,'ml','volume','c4000000-0000-0000-0000-0000000000b2');`,
+    "fk_sc_counter_same_store");
+
+  await mustReject(db, "★ B매장 계정이 A매장 발주 계획을 만든 것으로 적는다",
+    `insert into order_plans (store_id, item_id, planned_on, qty, unit, unit_family, created_by)
+     values ('11111111-1111-1111-1111-111111111111','a1000000-0000-0000-0000-000000000001',
+             '2026-03-06', 10,'ml','volume','bbbbbbbb-0000-0000-0000-000000000001');`,
+    "fk_op_creator_same_store");
+
+  await mustReject(db, "★ B매장 계정이 A매장 추천을 돌린 것으로 적는다",
+    `insert into recommendation_runs (store_id, kind, algo_version, params,
+                                      horizon_from, horizon_to, ran_by)
+     values ('11111111-1111-1111-1111-111111111111','order','order-v1','{}',
+             '2026-02-15','2026-03-01','bbbbbbbb-0000-0000-0000-000000000001');`,
+    "fk_reco_runner_same_store");
+
   // ── 7. RLS ──────────────────────────────────────────────────────────
   log("\n[7] 지적 4 — 다른 매장 데이터의 조회와 등록이 모두 차단되는가");
   await db.exec(`
@@ -471,6 +560,8 @@ async function mustAccept(db, name, sql) {
   log("\n" + "=".repeat(74));
   log(`  통과 ${pass} · 실패 ${fail}`);
   log("=".repeat(74) + "\n");
+  // ★ 문서가 인용할 수 있게 통과 건수를 남긴다 (db/docs.js 가 대조한다)
+  require("./counts").합치기({ "동작": pass });
   process.exit(fail ? 1 : 0);
 })().catch((e) => {
   console.error("\n예상 못 한 오류:", e.message);

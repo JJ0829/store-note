@@ -1,0 +1,160 @@
+<title>매장수첩 제출 자료</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#f4f6f7; --surface:#ffffff; --surface-2:#eef1f3; --code-bg:#f0f3f5;
+  --ink:#14181b; --ink-2:#55626c; --ink-3:#8a959e;
+  --line:#dde2e6; --line-2:#c6ced5;
+  --acc:#2d5f86; --acc-bg:#eaf1f7; --acc-line:#b9d0e2;
+  --fix:#1f6b56; --fix-bg:#e9f4f0; --fix-line:#b2d8cb;
+  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  --sans:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#14181b; --surface:#1c2126; --surface-2:#232a30; --code-bg:#191f24;
+    --ink:#e6eaed; --ink-2:#9aa6b0; --ink-3:#6f7c86;
+    --line:#2c343b; --line-2:#3d474f;
+    --acc:#7db2dc; --acc-bg:#1a2733; --acc-line:#2f4b63;
+    --fix:#67c0a2; --fix-bg:#162a25; --fix-line:#2e5145;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#14181b; --surface:#1c2126; --surface-2:#232a30; --code-bg:#191f24;
+  --ink:#e6eaed; --ink-2:#9aa6b0; --ink-3:#6f7c86;
+  --line:#2c343b; --line-2:#3d474f;
+  --acc:#7db2dc; --acc-bg:#1a2733; --acc-line:#2f4b63;
+  --fix:#67c0a2; --fix-bg:#162a25; --fix-line:#2e5145;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:52px 24px 96px}
+
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+h1{font-size:clamp(30px,5vw,42px);line-height:1.14;letter-spacing:-.022em;
+  font-weight:700;margin:0 0 14px;text-wrap:balance}
+.lead{font-size:16.5px;color:var(--ink-2);max-width:60ch;margin:0 0 20px}
+.lead b{color:var(--ink);font-weight:600}
+.meta{display:flex;flex-wrap:wrap;gap:8px 24px;font-family:var(--mono);
+  font-size:12px;color:var(--ink-3);padding-bottom:26px;
+  border-bottom:2px solid var(--ink);margin-bottom:34px}
+.meta b{color:var(--ink-2);font-weight:500}
+
+a.doc{display:block;text-decoration:none;color:inherit;
+  background:var(--surface);border:1px solid var(--line);border-radius:6px;
+  padding:18px 20px;margin-bottom:14px;transition:border-color .12s, transform .12s}
+a.doc:hover,a.doc:focus{border-color:var(--acc);transform:translateY(-1px)}
+a.doc:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.dh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.dn{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.dt{font-size:18px;font-weight:600;letter-spacing:-.015em}
+.dd{font-size:13.5px;color:var(--ink-2);margin:0 0 10px;max-width:66ch}
+.dd b{color:var(--ink);font-weight:600}
+.jump{display:flex;flex-wrap:wrap;gap:6px}
+.jump span{font-family:var(--mono);font-size:11px;color:var(--ink-2);
+  background:var(--surface-2);border:1px solid var(--line);
+  border-radius:3px;padding:2px 8px}
+
+.note{background:var(--fix-bg);border:1px solid var(--fix-line);border-radius:6px;
+  padding:16px 18px;margin:30px 0 0}
+.note h2{font-size:14px;margin:0 0 8px;color:var(--fix);font-weight:600}
+.note p{margin:0 0 8px;font-size:13.5px;color:var(--ink-2);max-width:70ch}
+.note p:last-child{margin-bottom:0}
+.note code{font-family:var(--mono);font-size:12px;color:var(--ink);
+  background:var(--surface);padding:1px 5px;border-radius:3px}
+
+footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-3)}
+footer p{margin:0 0 7px;max-width:72ch}
+footer code{font-family:var(--mono);font-size:11.5px}
+</style>
+
+<div class="wrap">
+
+<p class="eyebrow">2026 바이브코딩 창업교육 · 제출 자료</p>
+<h1>매장수첩 — 설계 문서</h1>
+<p class="lead">
+  개인 카페·베이커리의 매장 운영 도구. 아래 네 문서는 <b>지금 도는 코드에서 직접 뽑은 것</b>이고,
+  데이터 설계는 <b>실제 PostgreSQL 에 올려서 확인</b>했습니다.
+</p>
+<div class="meta">
+  <span><b>화면</b> 18 + API 4</span>
+  <span><b>테스트</b> 543 <i>(9/11 기준)</i> + <b>DB</b> 95</span>
+  <span><b>2026-09-11</b></span>
+</div>
+
+<a class="doc" href="storenote_architecture_20260911.html">
+  <div class="dh"><span class="dn">01</span><span class="dt">아키텍처</span></div>
+  <p class="dd">
+    프로젝트 구조와 설계 판단. <b>보안 경계가 데이터 위치와 일치</b>하는 이유 —
+    화면 18개 중 11개는 빌드할 때 구워져 나가고, 서버가 비밀을 들고 있는 7개만 요청마다 서버를 거칩니다.
+  </p>
+  <div class="jump">
+    <span>#s2 잠금이 두 종류인 이유</span><span>#s3 화면 22개</span><span>#s5 요청 흐름</span>
+  </div>
+</a>
+
+<a class="doc" href="storenote_erd_v3_20260911.html">
+  <div class="dh"><span class="dn">02</span><span class="dt">데이터 설계 (ERD) — 3차</span></div>
+  <p class="dd">
+    표 37개. 심사 <b>1차 5건 · 2차 2건 · 3차 3건</b>을 전부 반영하고 자체 발견 4건을 더했습니다.
+    <b>실제 PostgreSQL 18 에서 동작 55건 · 대조 27건 · 훑기 11건 · 그림 2건</b>을 통과합니다.
+  </p>
+  <div class="jump">
+    <span>#s2 무엇이 바뀌었나</span><span>#s3 그림 읽는 법</span><span>#s10 검증 결과</span>
+  </div>
+</a>
+
+<a class="doc" href="storenote_schema_v2_20260911.html">
+  <div class="dh"><span class="dn">03</span><span class="dt">스키마 설명서</span></div>
+  <p class="dd">
+    같은 설계를 <b>용어 풀이와 함께</b> 풀어 쓴 것. 「외래키」 「RLS」 같은 낱말부터 설명합니다.
+    각 지적을 <b>어떤 명령문으로 막았는지</b>까지 적혀 있습니다.
+  </p>
+  <div class="jump"><span>#s1 말 풀이</span><span>#s2 무엇이 바뀌었나</span></div>
+</a>
+
+<a class="doc" href="storenote_current_data_20260911.html">
+  <div class="dh"><span class="dn">04</span><span class="dt">현재 앱의 데이터 구조</span></div>
+  <p class="dd">
+    <b>지금 실제로 도는 것</b>의 구조. 02·03 이 다음 단계(Supabase) 설계라면,
+    이것은 오늘 태블릿에서 돌아가는 구조입니다 — 파일 하나와 브라우저 저장소.
+  </p>
+  <div class="jump"><span>#s2 두 세계</span><span>#s4 경계를 건너는 참조</span></div>
+</a>
+
+<div class="note">
+  <h2>읽는 법</h2>
+  <p>
+    각 문서 맨 위에 <b>목차</b>가 있고, 절마다 주소가 붙어 있습니다 —
+    <code>…architecture_20260911.html#s2</code> 처럼 특정 절을 바로 가리킬 수 있습니다.
+  </p>
+  <p>
+    그림은 <b>인터넷 연결이 있어야</b> 그려집니다. 안 보이면 새로고침해 주세요.
+    종이로 뽑으실 때는 <code>Ctrl+P</code> → 대상을 <b>PDF로 저장</b> 하시면
+    절이 페이지 중간에서 잘리지 않게 맞춰 뒀습니다.
+  </p>
+</div>
+
+<footer>
+  <p>
+    <b>매장수첩</b> · 개인 카페·베이커리 운영 도구 ·
+    Next.js 15 · React 19 · TypeScript · 런타임 의존성 3개 ·
+    저장소 <code>github.com/JJ0829/store-note</code> (비공개 — 레시피가 영업비밀입니다)
+  </p>
+  <p>
+    문서의 숫자는 저장소에서 직접 센 값입니다 — <b>사람이 세지 않습니다.</b>
+    <code>npm run check</code> 가 매번 다시 세고, <b>이 문서의 숫자가 어긋나면 검사가 실패합니다</b>
+    (<code>db/docs.js</code>). 3차 심사에서 지적받은 &ldquo;상단과 하단이 서로 다른 말을 한다&rdquo;
+    를 다시 만들지 않으려고 만든 장치입니다.
+    데이터 설계는 <code>node db/verify.js</code> 로 누구나 재현할 수 있습니다 —
+    데이터베이스를 따로 설치할 필요가 없습니다.
+  </p>
+</footer>
+
+</div>

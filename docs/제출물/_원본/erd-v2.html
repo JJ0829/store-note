@@ -1,0 +1,1195 @@
+<title>매장수첩 ERD v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#f4f6f7; --surface:#ffffff; --surface-2:#eef1f3; --code-bg:#f0f3f5;
+  --ink:#14181b; --ink-2:#55626c; --ink-3:#8a959e;
+  --line:#dde2e6; --line-2:#c6ced5;
+  --fix:#1f6b56; --fix-bg:#e9f4f0; --fix-line:#b2d8cb;
+  --hole:#a33636; --hole-bg:#fbecec; --hole-line:#e7bfbf;
+  --warn:#8a5a10; --warn-bg:#fbf2e3; --warn-line:#e6cfa4;
+  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  --sans:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#14181b; --surface:#1c2126; --surface-2:#232a30; --code-bg:#191f24;
+    --ink:#e6eaed; --ink-2:#9aa6b0; --ink-3:#6f7c86;
+    --line:#2c343b; --line-2:#3d474f;
+    --fix:#67c0a2; --fix-bg:#162a25; --fix-line:#2e5145;
+    --hole:#e58e8a; --hole-bg:#2e1e1e; --hole-line:#5c3636;
+    --warn:#d9a95c; --warn-bg:#2b2418; --warn-line:#54452a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#14181b; --surface:#1c2126; --surface-2:#232a30; --code-bg:#191f24;
+  --ink:#e6eaed; --ink-2:#9aa6b0; --ink-3:#6f7c86;
+  --line:#2c343b; --line-2:#3d474f;
+  --fix:#67c0a2; --fix-bg:#162a25; --fix-line:#2e5145;
+  --hole:#e58e8a; --hole-bg:#2e1e1e; --hole-line:#5c3636;
+  --warn:#d9a95c; --warn-bg:#2b2418; --warn-line:#54452a;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:40px 24px 96px}
+
+.masthead{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:30px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+h1{font-size:clamp(29px,5vw,42px);line-height:1.14;letter-spacing:-.022em;
+  font-weight:700;margin:0 0 14px;text-wrap:balance}
+.thesis{font-size:16.5px;color:var(--ink-2);max-width:62ch;margin:0 0 20px}
+.thesis b{color:var(--ink);font-weight:600}
+.meta{display:flex;flex-wrap:wrap;gap:8px 26px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.meta b{color:var(--ink-2);font-weight:500}
+
+h2{font-size:23px;font-weight:600;letter-spacing:-.018em;margin:0 0 6px;line-height:1.3}
+h3{font-size:16.5px;font-weight:600;margin:0 0 6px;letter-spacing:-.012em}
+section{margin-bottom:50px}
+.zone-head{display:flex;align-items:baseline;gap:13px;flex-wrap:wrap;
+  padding-bottom:10px;margin-bottom:16px;border-bottom:1px solid var(--line-2)}
+.tag{font-family:var(--mono);font-size:11.5px;padding:2px 9px;border-radius:3px}
+.t-fix{background:var(--fix-bg);color:var(--fix);border:1px solid var(--fix-line)}
+.t-hole{background:var(--hole-bg);color:var(--hole);border:1px solid var(--hole-line)}
+.t-plain{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-2)}
+p{margin:0 0 12px;max-width:78ch;color:var(--ink-2);font-size:14px}
+p b{color:var(--ink);font-weight:600}
+code{font-family:var(--mono);font-size:12.5px;color:var(--ink);
+  background:var(--code-bg);padding:1px 4px;border-radius:3px}
+
+/* 다이어그램 */
+.dia{background:#f7f9fa;border:1px solid var(--line);border-radius:6px;
+  padding:16px 12px;margin:14px 0 10px;overflow-x:auto}
+.dia pre.mermaid{margin:0;background:none;border:0;padding:0;min-width:520px;text-align:center}
+.dcap{font-size:13px;color:var(--ink-2);margin:0 0 22px;padding-left:2px;max-width:76ch}
+.dcap b{color:var(--ink)}
+
+/* 표 */
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:5px;
+  background:var(--surface);margin:14px 0 20px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{background:var(--surface-2);font-weight:600;font-size:11.5px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-2);border-bottom:1px solid var(--line-2);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td code,th code{font-family:var(--mono);font-size:11.5px;background:none;padding:0}
+.num{font-family:var(--mono);font-weight:600;color:var(--ink);white-space:nowrap}
+.ok{color:var(--fix);font-weight:600}
+.no{color:var(--hole);font-weight:600}
+
+/* 읽는 법 */
+.legend{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin:14px 0 8px}
+.lg{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:12px 14px}
+.lg .sym{font-family:var(--mono);font-size:17px;color:var(--ink);display:block;margin-bottom:3px}
+.lg h4{margin:0 0 4px;font-size:13.5px;font-weight:600}
+.lg p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.6}
+
+.note{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--fix);
+  border-radius:0 5px 5px 0;padding:13px 16px;margin:16px 0}
+.note.hot{border-left-color:var(--hole)}
+.note.warn{border-left-color:var(--warn)}
+.note h4{margin:0 0 6px;font-size:13.5px;color:var(--fix)}
+.note.hot h4{color:var(--hole)} .note.warn h4{color:var(--warn)}
+.note p{margin:0 0 7px;font-size:13px}
+.note p:last-child{margin-bottom:0}
+
+.premise{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:5px;
+  padding:16px 18px;margin:0 0 34px}
+.premise h2{font-size:15px;margin:0 0 8px;color:var(--warn);border:0;padding:0}
+.premise p{margin:0 0 8px;font-size:13.5px;max-width:78ch}
+.premise p:last-child{margin-bottom:0}
+
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-3)}
+footer p{margin:0 0 8px;max-width:78ch;font-size:12.5px;color:var(--ink-3)}
+footer code{background:none}
+.okmeta b{color:var(--fix)!important}
+.okmeta{color:var(--fix)}
+tr.r2 td{background:var(--fix-bg)}
+tr.r3 td{background:var(--acc-bg)}
+.sub{font-size:11.5px;color:var(--ink-3)}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">매장수첩 · 데이터 설계 3차</p>
+  <h1>매장 경계가 그림에 보이는 ERD</h1>
+  <p class="thesis">
+    1차는 관계를 <b>프로그램이 판단하게</b> 두었다. 2차는 <b>매장이 같은지</b>를 데이터베이스에 맡겼다.
+    3차는 거기서 한 칸을 더 넣는다 — <b>매장이 같은지에 더해 대상까지 같은지</b>,
+    그리고 <b>단위 계열이 맞는지</b>까지 연결선 하나가 함께 검사한다.
+    <b>그림의 선 하나하나가 곧 규칙이고, 그 규칙은 실제 데이터베이스에서 돌려 확인했다.</b>
+  </p>
+  <div class="meta">
+    <span><b>표</b> 37개</span>
+    <span><b>반영</b> 1차 5건 · 2차 2건 · 자체 4건</span>
+    <span class="okmeta"><b>검증</b> PostgreSQL 18 · 동작 44건 + 대조 27건 + 훑기 8건 · 실패 0</span>
+    <span><b>명령문</b> <code>db/schema_v2.sql</code></span>
+    <span><b>2026-09-11</b></span>
+  </div>
+</header>
+
+<div class="premise">
+  <h2>먼저 밝혀 둘 것</h2>
+  <p>
+    <b>1차 설계 원문을 못 찾은 채로 그렸다.</b> 저장소·대화 기록·내려받은 파일을 전부 뒤졌으나
+    없었다. 그래서 이 그림은 <b>심사 의견이 지목한 표 이름과 이 제품의 실제 업무를 근거로
+    다시 구성한 것</b>이다. <b>표·칸 이름은 1차와 대조가 필요하다.</b>
+  </p>
+  <p>
+    <b>✅ 이 설계는 실제 PostgreSQL 18 에 올려서 두 가지로 확인했다.</b>
+    <b>① 동작</b>(<code>node db/verify.js</code> · 44건) — 막아야 할 것을 실제로 넣어 보고 거부되는지 본다.
+    <b>② 대조</b>(<code>node db/audit.js</code> · 27건) — 심사 지적 한 줄마다 그것을 막는 제약이
+    실제로 있는지 1:1 로 맞추고, <b>그림(DBML)과 명령문(SQL)이 갈리지 않았는지</b> 확인한다.
+    <b>③ 훑기</b>(<code>node db/sweep.js</code> · 8건) — 규칙을 하나 정하면
+    <b>그 규칙이 적용돼야 할 자리를 전부 세어서</b> 빠진 곳을 찾는다.
+    "지적받은 자리만 고치고 나머지를 안 보는" 실수를 구조적으로 막는 장치다.
+    셋 다 <b>데이터베이스 설치 없이</b> 누구나 다시 돌릴 수 있다.
+  </p>
+  <p>
+    <b>지금 돌고 있는 앱의 구조는 이것이 아니다.</b> 현재는 파일 한 개와 태블릿 저장소로 돌아가고,
+    이 그림은 <b>그다음 단계</b>다.
+  </p>
+</div>
+
+<!-- ================= 요약 ================= -->
+<section>
+  <div class="zone-head"><h2>1차 → 3차, 무엇이 바뀌었나</h2><span class="tag t-fix">15건</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>#</th><th>1차의 구멍</th><th>어떻게 막았나</th><th>그림에서 보는 곳</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td>
+          <td>A매장 기록에 <b>B매장 거래처·품목·메뉴</b>가 붙었다</td>
+          <td>모든 연결선이 <b>「번호 + 매장번호」 두 칸</b>으로 이어진다</td>
+          <td>그림 전체 — 선 위의 <code>(id, store_id)</code></td></tr>
+        <tr><td class="num">2</td>
+          <td>매입가만 이력이라 <b>과거 원가가 소급해 틀렸다</b></td>
+          <td><code>item_versions</code>·<code>menu_prices</code>·<b>레시피 판 번호</b> 신설</td>
+          <td>그림 1 · 그림 2</td></tr>
+        <tr><td class="num">3</td>
+          <td>어떤 계획이 <b>실제로 이행됐는지</b> 못 따졌다</td>
+          <td>실제 기록이 <b>계획을 거꾸로 가리킨다</b> + 예정일 분리</td>
+          <td>그림 3의 굵은 선</td></tr>
+        <tr><td class="num">4</td>
+          <td>요청이 보낸 <b>매장 번호를 그대로 믿었다</b></td>
+          <td>모든 표에 <b>줄 단위 접근 통제</b>. 매장은 로그인 정보에서만</td>
+          <td>그림 4</td></tr>
+        <tr><td class="num">5</td>
+          <td>추천 수량만 남고 <b>근거가 사라졌다</b></td>
+          <td><code>recommendation_runs</code> · <code>recommendation_inputs</code></td>
+          <td>그림 4</td></tr>
+        <tr><td class="num">A</td>
+          <td><b>재료를 이름으로 이었다</b> — "우유"와 "흰우유"가 남남</td>
+          <td><code>items</code>가 <b>재료 원본 명단</b>이 되고 레시피는 번호로 가리킨다</td>
+          <td>그림 1 · 그림 2</td></tr>
+        <tr><td class="num">B</td>
+          <td><b>g과 ml이 섞일 수 있었다</b></td>
+          <td><code>units</code>의 <b>계열을 연결에 끼워 넣어</b> 데이터베이스가 막는다</td>
+          <td>그림 1 · 그림 2</td></tr>
+        <tr class="r2"><td class="num">C</td>
+          <td><b>같은 매장인지만 보고 같은 대상인지는 안 봤다</b><br>
+              <span class="sub">아메리카노 판매에 라떼 레시피가 붙었다</span></td>
+          <td>연결선을 <b>「번호 + 매장 + 대상」 세 칸</b>으로. <b>6곳</b></td>
+          <td>그림 2 · 3 · 4의 굵은 선</td></tr>
+        <tr class="r2"><td class="num">D</td>
+          <td><b>단위 계열 검증이 세 곳에 빠졌다</b><br>
+              <span class="sub">무게 품목에 1,000ml 규격을 등록할 수 있었다</span></td>
+          <td>규격 · 산출량 · 제조수량에도 <b>같은 계열 검사</b>를 건다</td>
+          <td>그림 1 · 2 · 3</td></tr>
+        <tr><td class="num">E</td>
+          <td><b>추천의 "계산 단계"가 안 남았다</b><br>
+              <span class="sub">입력과 결과만 남아서 "왜 24개인가"를 재현 못 한다</span></td>
+          <td>평균 · 품절일 제외 · 요일 보정 · 반올림 단위를 <b>스냅샷에 같이</b></td>
+          <td>그림 4</td></tr>
+        <tr><td class="num">F</td>
+          <td><b>품절을 기록할 곳이 없었다</b><br>
+              <span class="sub">품절일 판매량을 수요로 세면 추천이 계속 모자란다</span></td>
+          <td><code>stock_counts.was_stockout</code></td>
+          <td>그림 3</td></tr>
+        <tr class="r2"><td class="num">G</td>
+          <td><b>제품의 절반이 설계에 없었다</b><br>
+              <span class="sub">프렙 · 체크리스트 · 근무 · 근태 · 계약 · 설정</span></td>
+          <td><b>표 13개를 더했다</b> (22 → 37)</td>
+          <td>그림 5</td></tr>
+        <tr class="r3"><td class="num">H</td>
+          <td><b>「만드는 것」 자리에 아무 품목이나 붙었다</b><br>
+              <span class="sub">우유를 "매장에서 만든다" 고 적어도 통과했다</span></td>
+          <td>항상 <code>made</code> 인 <b>계산되는 칸</b>을 두고, 연결선이 그것을
+              <code>items.kind</code> 와 맞춘다 — 사람이 못 바꾼다</td>
+          <td>그림 5</td></tr>
+        <tr class="r3"><td class="num">I</td>
+          <td><b>그날 체크에 고유 번호가 없었다</b><br>
+              <span class="sub">"이 체크만 지워" 를 할 방법이 없다</span></td>
+          <td>기본키 신설 + 체크리스트·프렙 <b>한쪽만</b> 채우도록 강제</td>
+          <td>그림 5</td></tr>
+        <tr class="r3"><td class="num">J</td>
+          <td><b>기록을 남긴 사람이 아무나였다</b><br>
+              <span class="sub">B매장 직원이 A매장 재고를 센 것으로 저장됐다</span></td>
+          <td>사람 칸 <b>6개 전부</b>를 「번호 + 매장」으로 묶었다 —
+              기록을 만든 <b>계정</b>은 <code>users</code>, 손을 댄 <b>직원</b>은 <code>staff</code></td>
+          <td>그림 3 · 그림 5</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:13.5px">
+    <b>E·F는 지적에 없었지만 같은 이유로 막았다.</b> 5번이 "추천 근거를 남겨라" 였는데
+    입력과 결과만 남기면 <b>절반만 푼 것</b>이다 — 추천은 여러 보정을 거친 결과라서,
+    단계를 안 남기면 재현하려고 다시 계산해야 하고 그 사이 원장이 바뀌면 숫자가 달라진다.
+    품절은 더 고약하다: <b>품절난 날의 판매량은 수요가 아니라 재고 한계</b>인데
+    그걸 평균에 넣으면 추천이 모자라고 → 또 품절나고 → 평균이 더 내려간다.
+  </p>
+  <p style="font-size:13.5px">
+    <b>C·D는 2차 심사 피드백이다.</b> 1차에서 제가 <b>매장 축만 보고 대상 축은 안 봤다.</b>
+    "같은 매장인가"는 전부 잠갔는데 "같은 품목인가 · 같은 메뉴인가"는 놓쳤다.
+    같은 실수를 단위 계열에서도 했다 — 레시피에는 걸고 규격·산출량에는 안 걸었다.
+  </p>
+  <p style="font-size:13.5px">
+    <b>H·I·J는 3차 심사 피드백이다.</b> 셋 다 같은 모양이다 —
+    <b>문서에는 규칙이 적혀 있는데 데이터베이스는 그 규칙을 모르고 있었다.</b>
+    설명은 사람만 읽는다. 막으려면 제약이어야 한다.
+    같은 종류가 또 새지 않도록 <b>전수 훑기에 규칙 세 개를 더했다</b> —
+    ⑨ 사람 칸은 전부 같은 매장으로 묶였는가 ⑩ 모든 표에 기본키가 있는가
+    ⑪ 계산되는 칸이 그림에도 그렇게 적혀 있는가.
+    ⑪ 은 <b>지적을 받기 전에 만들었다면 이번 건을 스스로 찾아냈을 검사</b>다.
+  </p>
+  <p style="font-size:13.5px">
+    A·B는 심사가 지적하지 않았다. 그런데 <b>1번과 뿌리가 같고</b>(관계를 프로그램이 판단한다),
+    <b>결과는 더 조용하다</b> — 원가가 틀려도 화면에 아무 표시가 안 뜬다. 그래서 같이 고쳤다.
+  </p>
+</section>
+
+<!-- ================= 읽는 법 ================= -->
+<section>
+  <div class="zone-head"><h2>그림 읽는 법</h2><span class="tag t-plain">기호 4개면 됩니다</span></div>
+  <div class="legend">
+    <div class="lg"><span class="sym">▭</span>
+      <h4>네모 한 칸 = 표 한 장</h4>
+      <p>거래처 표, 품목 표처럼 <b>종류마다 한 장</b>입니다. 안에 적힌 것이 그 표의 칸 이름입니다.</p></div>
+    <div class="lg"><span class="sym">PK</span>
+      <h4>줄마다 붙는 고유 번호</h4>
+      <p>표의 줄을 하나로 지목하는 번호입니다. 사람으로 치면 주민번호 자리입니다.</p></div>
+    <div class="lg"><span class="sym">FK</span>
+      <h4>다른 표를 가리키는 칸</h4>
+      <p><b>"이 칸은 저쪽 표의 저 줄을 가리킨다"</b>는 뜻. 가리키는 줄이 없으면 <b>저장 자체가 안 됩니다.</b></p></div>
+    <div class="lg"><span class="sym">||──o&lt;</span>
+      <h4>하나가 여럿을 거느린다</h4>
+      <p>왼쪽 하나에 오른쪽이 여럿 딸립니다. 거래처 하나에 품목이 여럿인 것처럼요.</p></div>
+  </div>
+  <div class="note">
+    <h4>선 위의 <code>(id, store_id)</code>가 이 설계의 핵심입니다</h4>
+    <p>
+      보통 연결선은 <b>"번호" 하나</b>로 잇습니다. 그러면 데이터베이스는
+      <b>"존재하는 거래처인가"만 보고 "어느 매장 것인지는 안 봅니다."</b>
+      그래서 1차에서 남의 매장 거래처가 붙을 수 있었습니다.
+    </p>
+    <p>
+      2차는 <b>「번호 + 매장번호」 두 칸을 묶어서</b> 잇습니다.
+      매장이 다르면 <b>저장이 거부됩니다.</b> 프로그램이 무엇을 보내든 상관없습니다.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 그림 1 ================= -->
+<section>
+  <div class="zone-head"><h3>그림 1 — 매장 · 거래처 · 품목 · 규격 이력</h3>
+    <span class="tag t-fix">지적 1 · 2 · A · B</span></div>
+  <p>
+    <b>모든 것의 뿌리입니다.</b> 매장이 맨 위에 있고, 거래처와 품목이 거기 매달립니다.
+    <code>items</code>(품목)가 <b>재료 원본 명단</b>이라서, 레시피도 원가도 발주도 전부 여기를 가리킵니다.
+  </p>
+  <div class="dia">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#dbe7ef','primaryTextColor':'#14181b','primaryBorderColor':'#5d7a92','lineColor':'#7b8a96','textColor':'#5a6873','fontFamily':'IBM Plex Sans KR, sans-serif','fontSize':'13px'}}}%%
+erDiagram
+  STORES ||--o{ USERS : "소속"
+  STORES ||--o{ SUPPLIERS : "매장의 거래처"
+  STORES ||--o{ ITEMS : "매장의 품목"
+  SUPPLIERS ||--o{ ITEMS : "(id, store_id)"
+  ITEMS ||--o{ ITEM_VERSIONS : "(id, store_id)"
+  UNITS ||--o{ ITEMS : "(code, family)"
+  UNITS ||--o{ ITEM_VERSIONS : "(code, family)"
+
+  STORES {
+    uuid id PK
+    text name "매장 이름"
+    time business_day_start "하루가 바뀌는 시각 04:00"
+  }
+  USERS {
+    uuid id PK "로그인 계정"
+    uuid store_id FK "어느 매장 사람인가"
+    text role "owner manager staff"
+  }
+  UNITS {
+    text code PK "g kg ml L 개"
+    text family "weight volume count"
+    numeric to_base "기준단위 배수"
+  }
+  SUPPLIERS {
+    uuid id PK
+    uuid store_id FK
+    time cutoff_time "주문 마감 시각"
+    array delivery_days "배송 요일"
+    int lead_days "며칠 뒤 오나"
+  }
+  ITEMS {
+    uuid id PK
+    uuid store_id FK
+    uuid supplier_id FK "같은 매장 거래처만"
+    text name "매장 안에서 이름 중복 금지"
+    text kind "사는 것 / 만드는 것"
+    text base_unit FK "기준 단위"
+    text base_family "무게 부피 개수"
+  }
+  ITEM_VERSIONS {
+    uuid id PK
+    uuid item_id FK
+    numeric unit_cost "한 팩 값"
+    numeric per_unit "그 팩의 수량"
+    numeric yield_count "1배합 산출 개수"
+    bool is_tax_free "면세 여부"
+    daterange validity "언제부터 언제까지"
+  }
+</pre>
+  </div>
+  <p class="dcap">
+    <b><code>ITEM_VERSIONS</code>가 지적 2번의 답입니다.</b> 1차는 매입가만 남겼는데,
+    팩 용량이 1000ml에서 900ml로 줄거나 1배합 개수가 바뀌거나 면세가 과세로 돌아서면
+    <b>"3월 원가"를 다시 뽑았을 때 3월 가격에 지금 규격이 섞인 숫자</b>가 나왔습니다.
+    이제 원가에 들어가는 값이 <b>한 줄에 통째로, 기간과 함께</b> 남습니다.
+  </p>
+  <div class="note">
+    <h4>같은 품목의 적용 기간이 겹치는 상태를 아예 만들 수 없습니다</h4>
+    <p>
+      "3월 1일부터"와 "2월 15일부터"가 둘 다 살아 있으면 <b>어느 값을 쓸지 조회가 마음대로 고릅니다.</b>
+      2차는 겹치는 순간 <b>저장이 거부되게</b> 해뒀습니다.
+      (<code>daterange</code> + 겹침 금지 제약 — 시작·끝을 칸 두 개로 두면 이걸 못 막습니다.)
+    </p>
+  </div>
+  <div class="note hot">
+    <h4>B — g과 ml이 여기서 갈립니다</h4>
+    <p>
+      <code>UNITS</code>가 단위마다 <b>계열</b>(무게·부피·개수)을 들고 있고,
+      <code>ITEMS</code>가 <b>(단위, 계열) 짝으로</b> 그것을 가리킵니다.
+      그림 2에서 레시피 줄이 <b>(품목, 매장, 계열) 세 칸으로</b> 품목을 가리키는데,
+      이 때문에 <b>밀가루(무게)를 ml로 적는 것이 불가능해집니다.</b>
+      밀도를 모르는 환산은 원가를 조용히 틀리게 만듭니다 (밀가루 0.55 · 우유 1.03).
+    </p>
+  </div>
+</section>
+
+<!-- ================= 그림 2 ================= -->
+<section>
+  <div class="zone-head"><h3>그림 2 — 메뉴 · 레시피 (판 번호 구조)</h3>
+    <span class="tag t-fix">지적 2 · A · B</span></div>
+  <p>
+    레시피가 <b>판(버전) 단위로 얼어붙습니다.</b> 판매 기록이 <b>"그때 그 판"</b>을 가리키므로,
+    나중에 레시피를 고쳐도 <b>과거 원가가 흔들리지 않습니다.</b>
+    그리고 <b>재료를 뺀 것도 자연히 표현됩니다</b> — 다음 판에 그 줄이 없으면 뺀 것입니다.
+  </p>
+  <div class="dia">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#dbe7ef','primaryTextColor':'#14181b','primaryBorderColor':'#5d7a92','lineColor':'#7b8a96','textColor':'#5a6873','fontFamily':'IBM Plex Sans KR, sans-serif','fontSize':'13px'}}}%%
+erDiagram
+  MENUS ||--o{ MENU_PRICES : "판매가 이력"
+  MENUS ||--o{ MENU_RECIPE_VERSIONS : "(id, store_id)"
+  MENU_RECIPE_VERSIONS ||--o{ MENU_RECIPE_LINES : "(id, store_id)"
+  ITEMS ||--o{ MENU_RECIPE_LINES : "(id, store_id, family)"
+  ITEMS ||--o{ MAKE_RECIPE_VERSIONS : "만들어지는 품목"
+  MAKE_RECIPE_VERSIONS ||--o{ MAKE_RECIPE_LINES : "(id, store_id)"
+  ITEMS ||--o{ MAKE_RECIPE_LINES : "(id, store_id, family)"
+
+  MENUS {
+    uuid id PK
+    uuid store_id FK
+    text name "매장 안 이름 중복 금지"
+  }
+  MENU_PRICES {
+    uuid menu_id FK
+    numeric price "판매가"
+    bool is_tax_free
+    daterange validity "언제부터 언제까지"
+  }
+  MENU_RECIPE_VERSIONS {
+    uuid id PK
+    uuid menu_id FK
+    int version "판 번호"
+    date valid_from
+    date valid_to "비면 현재 판"
+    text note "원두 1g 줄임 같은 사유"
+  }
+  MENU_RECIPE_LINES {
+    uuid version_id FK
+    uuid item_id FK "재료 원본 명단을 가리킨다"
+    numeric amount
+    text unit FK
+    text unit_family "품목 계열과 같아야 함"
+    bool excluded_from_cost "추출량처럼 원가에서 빼는 줄"
+  }
+  MAKE_RECIPE_VERSIONS {
+    uuid id PK
+    uuid item_id FK "만들어지는 부재료"
+    numeric yield_amount "1배합 산출량"
+    numeric lead_time_hours "걸고 몇 시간 뒤 쓰나"
+    bool recoverable "돈으로 되돌릴 수 있나"
+  }
+  MAKE_RECIPE_LINES {
+    uuid version_id FK
+    uuid ingredient_item_id FK
+    numeric amount
+    text unit FK
+  }
+</pre>
+  </div>
+  <p class="dcap">
+    <b>레시피가 두 갈래인 것은 이 업종 때문입니다.</b>
+    <code>MENU_RECIPE</code>는 파는 것(아메리카노 = 원두 18g),
+    <code>MAKE_RECIPE</code>는 <b>매장에서 만드는 부재료</b>(르방·수제청·시럽·크림폼)입니다.
+    부재료가 다시 다른 것의 재료가 되므로 — 르방은 식빵의 재료입니다 —
+    <b>품목 표 하나가 양쪽에 다 등장합니다.</b>
+  </p>
+  <div class="note">
+    <h4><code>lead_time_hours</code>와 <code>recoverable</code> — 이 제품의 존재 이유</h4>
+    <p>
+      콜드브루 12~24시간, 반죽 냉장 12~18시간, 르방 갱신 매일(복구 2~3일).
+      <b>오늘은 아무 일도 안 일어나고 내일 아침에 터집니다.</b>
+      <code>recoverable</code>이 <code>false</code>인 것만 화면이 빨갛게 띄웁니다 —
+      <b>전부 경고하면 사람은 전부 무시하기 때문입니다.</b>
+    </p>
+  </div>
+  <div class="note hot">
+    <h4><code>excluded_from_cost</code>를 빼먹으면 원두가 두 번 계산됩니다</h4>
+    <p>
+      아메리카노 레시피에 <b>"원두 18g"과 "추출량 36g"이 둘 다</b> 있습니다.
+      그런데 <b>추출량은 사는 게 아니라 결과</b>입니다. 안 빼면 같은 원두를 두 번 셉니다.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 그림 3 ================= -->
+<section>
+  <div class="zone-head"><h3>그림 3 — 계획과 실제 기록</h3>
+    <span class="tag t-fix">지적 1 · 3</span></div>
+  <p>
+    <b>굵은 선 두 개가 지적 3번의 답입니다.</b>
+    입고 기록이 <b>어느 발주 계획에서 나왔는지</b>, 제조 기록이 <b>어느 제조 계획에서 나왔는지</b>
+    거꾸로 가리킵니다. 이게 없으면 "이 발주가 실제로 들어왔나"를 따질 방법이 없습니다.
+  </p>
+  <div class="dia">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#dbe7ef','primaryTextColor':'#14181b','primaryBorderColor':'#5d7a92','lineColor':'#7b8a96','textColor':'#5a6873','fontFamily':'IBM Plex Sans KR, sans-serif','fontSize':'13px'}}}%%
+erDiagram
+  ITEMS ||--o{ ORDER_PLANS : "(id, store_id)"
+  ITEMS ||--o{ BAKE_PLANS : "(id, store_id)"
+  ORDER_PLANS ||--o{ RECEIVED_LINES : "이행됐나"
+  BAKE_PLANS ||--o{ BAKED_LINES : "이행됐나"
+  ITEMS ||--o{ RECEIVED_LINES : "(id, store_id)"
+  ITEMS ||--o{ BAKED_LINES : "(id, store_id)"
+  ITEMS ||--o{ WASTE_LINES : "(id, store_id)"
+  ITEMS ||--o{ STOCK_COUNTS : "(id, store_id)"
+  DAILY_SALES ||--o{ SALES_LINES : "(id, store_id)"
+  MENUS ||--o{ SALES_LINES : "(id, store_id)"
+
+  ORDER_PLANS {
+    uuid id PK
+    uuid item_id FK
+    date planned_on "계획 세운 날"
+    date expected_on "들어올 예정일"
+    numeric qty
+    uuid run_id FK "어느 추천에서 나왔나"
+  }
+  BAKE_PLANS {
+    uuid id PK
+    uuid item_id FK
+    date planned_on
+    date expected_on "쓸 수 있게 될 날"
+    numeric batches "배수"
+  }
+  RECEIVED_LINES {
+    uuid id PK
+    uuid item_id FK
+    uuid order_plan_id FK "계획 없이 받은 것은 비워 둔다"
+    date occurred_on "실제 들어온 날"
+    numeric qty
+    numeric unit_cost
+  }
+  BAKED_LINES {
+    uuid id PK
+    uuid item_id FK
+    uuid bake_plan_id FK
+    timestamptz started_at "걸어둔 시각"
+    timestamptz ready_at "쓸 수 있는 시각"
+    numeric batches
+  }
+  DAILY_SALES {
+    uuid id PK
+    date business_date "달력 날짜가 아닌 영업일"
+    numeric total_amount
+  }
+  SALES_LINES {
+    uuid daily_sales_id FK
+    uuid menu_id FK "같은 매장 메뉴만"
+    numeric qty
+    uuid menu_recipe_version_id FK "그때 그 레시피 판"
+  }
+  WASTE_LINES {
+    uuid item_id FK
+    date occurred_on
+    numeric qty
+    text reason "유통기한 품질 실수"
+  }
+  STOCK_COUNTS {
+    uuid item_id FK
+    date counted_on
+    numeric qty
+  }
+</pre>
+  </div>
+  <p class="dcap">
+    <b>날짜가 세 개인 것</b>도 지적 3번입니다. 1차는 "확정일" 한 칸이었습니다.
+    <code>planned_on</code>(계획 세운 날) · <code>expected_on</code>(들어올 예정일) ·
+    <code>occurred_on</code>(실제 들어온 날)은 서로 다른 날입니다 —
+    <b>금요일에 주말치까지 몰아 주문하는 것</b>이 표현되려면 주문한 날과 도착할 날이 따로 있어야 합니다.
+  </p>
+  <div class="note">
+    <h4>이행 상태는 저장하지 않고 <b>물어볼 때마다 계산</b>합니다</h4>
+    <p>
+      "완료 / 부분입고 / 미이행" 같은 칸을 만들어 두면 <b>입고될 때마다 사람이 고쳐야 하고,
+      반드시 실제와 어긋납니다.</b> 그래서 저장하지 않고 원장에서 그때그때 셉니다.
+    </p>
+    <p>
+      <b>그중 「미이행」과 「초과입고」가 따로 잡히는 게 핵심입니다.</b>
+      앞의 것은 <b>내일 아침에 물건이 없다</b>는 뜻이고,
+      뒤의 것은 대개 <b>같은 걸 두 번 시킨 것</b>입니다. 1차에서는 둘 다 아무 데도 안 떴습니다.
+    </p>
+  </div>
+  <div class="note warn">
+    <h4><code>order_plan_id</code>를 비워 둘 수 있게 한 것은 일부러입니다</h4>
+    <p>
+      계획 없이 급하게 받은 입고가 실제로 있습니다. <b>못 넣게 막으면 사람이 장부를 아예 안 씁니다.</b>
+      그리고 계획 한 줄에 <b>여러 번 나눠 들어올 수 있어서</b>,
+      계획 쪽이 아니라 <b>실제 기록 쪽</b>이 계획을 가리킵니다.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 그림 4 ================= -->
+<section>
+  <div class="zone-head"><h3>그림 4 — 추천 근거와 접근 통제</h3>
+    <span class="tag t-fix">지적 4 · 5</span></div>
+  <p>
+    <b>"왜 그때 12개를 시켰나"에 답할 수 있게 하는 부분</b>입니다.
+    그리고 이 그림의 모든 표 — 앞의 그림들까지 포함해 <b>37개 전부</b> — 에
+    <b>자기 매장 줄만 보이게 하는 통제</b>가 걸립니다.
+  </p>
+  <div class="dia">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#dbe7ef','primaryTextColor':'#14181b','primaryBorderColor':'#5d7a92','lineColor':'#7b8a96','textColor':'#5a6873','fontFamily':'IBM Plex Sans KR, sans-serif','fontSize':'13px'}}}%%
+erDiagram
+  RECOMMENDATION_RUNS ||--o{ RECOMMENDATION_INPUTS : "(id, store_id)"
+  RECOMMENDATION_RUNS ||--o{ ORDER_PLANS : "이 추천에서 나온 계획"
+  RECOMMENDATION_RUNS ||--o{ BAKE_PLANS : "이 추천에서 나온 계획"
+  ITEMS ||--o{ RECOMMENDATION_INPUTS : "(id, store_id)"
+  ITEM_VERSIONS ||--o{ RECOMMENDATION_INPUTS : "그때 그 규격"
+
+  RECOMMENDATION_RUNS {
+    uuid id PK
+    uuid store_id FK
+    timestamptz ran_at "돌린 시각"
+    text algo_version "계산식 판 번호"
+    jsonb params "안전재고일수 리드타임 등"
+    date horizon_from "무엇을 근거로 봤나"
+    date horizon_to
+  }
+  RECOMMENDATION_INPUTS {
+    uuid run_id FK
+    uuid item_id FK
+    numeric sold_qty "그때 판매량"
+    numeric on_hand "그때 재고"
+    numeric unit_cost "그때 단가"
+    uuid item_version_id FK
+    numeric recommended_qty "추천 수량"
+    text reason "사람이 읽는 한 줄"
+  }
+</pre>
+  </div>
+  <p class="dcap">
+    <b>"다시 계산해 보면 되지 않나"가 안 되는 이유는 원장이 움직이기 때문입니다.</b>
+    판매가 정정되고, 단가 이력이 나중에 입력되고, 계산식이 바뀝니다.
+    그리고 <b>"왜 그때 12개였나"를 묻는 순간은 거의 항상 사고가 난 다음</b>입니다 —
+    재고가 터졌거나 폐기가 났거나. 그때 재현이 안 되면 원인을 영영 못 찾습니다.
+  </p>
+  <div class="note">
+    <h4><code>reason</code> 한 칸이 나머지 전부보다 실전에서 쓸모 있습니다</h4>
+    <p>
+      점주가 보는 것은 숫자 열 개가 아니라 <b>문장 하나</b>입니다.
+      <code>최근 14일 하루 평균 3.2개 · 현재고 2개 · 리드타임 2일 · 안전재고 1일 → 12개</code>
+      처럼 <b>계산 결과가 아니라 계산 과정</b>을 문장으로 남깁니다.
+      나머지 칸은 개발자가 보는 것이고, 이 한 줄은 <b>점주가 추천을 믿을지 정하는 근거</b>입니다.
+    </p>
+  </div>
+
+  <h3 style="margin-top:26px">접근 통제 — 지적 4번</h3>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>무엇을</th><th>어떻게</th><th>안 하면</th></tr></thead>
+      <tbody>
+        <tr><td><b>37개 표 전부</b>에 줄 단위 통제</td>
+            <td>로그인한 사람의 매장과 <b>줄의 매장이 같을 때만</b> 보이고 저장된다</td>
+            <td>남의 매장 원가·매출·거래처 단가가 그대로 보인다</td></tr>
+        <tr><td>새로 쓰는 것도 검사</td>
+            <td>읽기 조건과 <b>쓰기 조건을 따로</b> 건다</td>
+            <td class="no">읽기만 막히고 <b>남의 매장 이름으로 심는 것</b>은 통과한다</td></tr>
+        <tr><td>표 주인도 예외 없이</td>
+            <td>강제 적용을 같이 켠다</td>
+            <td class="no">표 주인에게는 통제가 <b>적용되지 않는다</b></td></tr>
+        <tr><td>서버가 요청을 안 믿게</td>
+            <td>매장 번호를 <b>요청에서 받지 않고</b> 로그인 정보에서만 꺼낸다</td>
+            <td class="no">관리자 열쇠로 도는 경로 하나가 <b>위 전부를 무의미하게</b> 만든다</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note hot">
+    <h4>제출 전에 이걸로 확인하시면 됩니다</h4>
+    <p>
+      데이터베이스에 <b>"통제가 안 걸린 표를 전부 보여줘"</b>라고 물었을 때
+      <b>아무것도 안 나와야</b> 4번이 끝난 것입니다. 명령문은
+      <code>db/schema_v2.sql</code> 맨 아래 12-1에 있습니다.
+      <b>그 결과 화면을 그대로 캡처해서 제출하셔도 됩니다.</b>
+    </p>
+  </div>
+</section>
+
+<!-- ================= 그림 5 ================= -->
+<section>
+  <div class="zone-head"><h3>그림 5 — 프렙 · 교육 · 근무 · 근태</h3>
+    <span class="tag t-fix">3차에서 채운 13표</span></div>
+  <p>
+    2차까지 이 그림은 <b>통째로 없었다.</b> 심사 의견이 지목한 표 이름이
+    원가·재고·발주 축이었고, 이 제품의 나머지 절반은 그 목록에 없었기 때문이다.
+    <b>법정 3년 보존 대상(출퇴근·근로계약)과 제품의 핵심(프렙)이 여기 있다.</b>
+  </p>
+  <div class="dia">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#dbe7ef','primaryTextColor':'#14181b','primaryBorderColor':'#5d7a92','lineColor':'#7b8a96','textColor':'#5a6873','fontFamily':'IBM Plex Sans KR, sans-serif','fontSize':'13px'}}}%%
+erDiagram
+  POSITIONS ||--o{ SECTIONS : "(id, store_id)"
+  SECTIONS ||--o{ STEPS : "(id, store_id)"
+  PREP_LISTS ||--o{ PREP_TASKS : "(id, store_id)"
+  PREP_TASKS ||--o{ PREP_TASKS : "옵션 — 한 겹만"
+  PREP_TASKS ||--o| PREP_CYCLE_STATE : "마지막으로 한 날"
+  PREP_TASKS ||--o{ DAILY_CHECKS : "그날 체크"
+  STEPS ||--o{ DAILY_CHECKS : "그날 체크"
+  SHIFTS ||--o{ SHIFT_FOCUS : "어느 화면을 띄울까"
+  SHIFTS ||--o{ SHIFT_ASSIGNMENTS : "근무표"
+  STAFF ||--o{ SHIFT_ASSIGNMENTS : "(id, store_id)"
+  STAFF ||--o{ PUNCHES : "(id, store_id)"
+  STAFF ||--o{ CONTRACTS : "(id, store_id)"
+
+  POSITIONS {
+    uuid id PK
+    uuid store_id FK
+    text share_slug "주소가 된다"
+    text name "오픈조 · 마감조 · 제빵"
+  }
+  SECTIONS {
+    uuid id PK
+    uuid position_id FK "주인은 셋 중 하나뿐"
+    uuid menu_recipe_version_id FK
+    uuid make_recipe_version_id FK
+    text title
+  }
+  STEPS {
+    uuid id PK
+    text title
+    bool critical "건너뛰면 안 되는 것"
+    text good_image "이렇게 되면 맞다"
+    text bad_image "이러면 잘못된 것"
+    text video_url
+  }
+  PREP_LISTS {
+    uuid id PK
+    text slug "afternoon evening cycle"
+    text name
+  }
+  PREP_TASKS {
+    uuid id PK
+    uuid list_id FK
+    text kind "time order cycle routine"
+    text trigger_type "daily weekday condition cycle"
+    numeric lead_time_hours "걸고 몇 시간 뒤"
+    int lead_time_days "주문하면 며칠 뒤"
+    bool recoverable "돈으로 되돌릴 수 있나"
+    text consequence "false 면 필수"
+    bool quantity_varies "매일 수량이 달라짐"
+    uuid option_of FK "부모 항목 — 한 겹만"
+    bool optional "진행률 분모에 들어가나"
+  }
+  PREP_CYCLE_STATE {
+    uuid task_id FK
+    date last_done "null = 기록 없음"
+    int every_days "매장이 정한다"
+  }
+  DAILY_CHECKS {
+    date business_date "새벽 4시 경계"
+    uuid step_id FK
+    uuid prep_task_id FK
+  }
+  SHIFTS {
+    uuid id PK
+    text name "제빵 오픈 미들 마감"
+    time start_at
+    time end_at "자정을 넘을 수 있다"
+  }
+  SHIFT_FOCUS {
+    text kind "training checklist prep recipes"
+    text label
+  }
+  STAFF {
+    uuid id PK
+    text name
+    text section "제빵 바 홀 주방"
+    uuid user_id FK "로그인도 하면 연결"
+  }
+  SHIFT_ASSIGNMENTS {
+    date business_date
+    uuid shift_id FK "null = 휴무"
+  }
+  PUNCHES {
+    date business_date "영업일"
+    time in_at
+    time out_at
+    bool crosses_midnight "23시->1시"
+    int break_min
+  }
+  CONTRACTS {
+    date start_date
+    date end_date "비면 기간의 정함 없음"
+    numeric hourly_wage
+    numeric weekly_hours
+  }
+</pre>
+  </div>
+  <p class="dcap">
+    <b><code>PREP_TASKS</code> 가 이 그림의 중심이다.</b>
+    리드타임(<code>lead_time_hours</code>)과 <code>recoverable</code> 이 여기 있고,
+    그 둘이 <b>"오늘 안 걸면 내일 아침에 터진다"</b> 를 화면에 띄우는 근거다.
+  </p>
+
+  <div class="note">
+    <h4>제품 규칙 여섯 개를 데이터베이스 제약으로 옮겼다</h4>
+    <p>
+      <b>① 옵션의 옵션은 못 만든다.</b> 르방은 반죽의 옵션인데, 르방의 옵션은 없다.
+      계산되는 칸 두 개로 <b>외래키가 "부모는 옵션이 아니어야 한다" 를 강제</b>한다 —
+      트리거 없이 선언으로 된다.
+    </p>
+    <p>
+      <b>② <code>routine</code> 은 리드타임을 못 갖는다.</b> 홀 정리·화장실 청소는
+      걸어놓고 기다리는 일이 아니다. 리드타임을 적으면 화면이 <b>없는 약속</b>을 만든다.
+    </p>
+    <p>
+      <b>③ 되돌릴 수 없는 것은 이유를 반드시 적어야 한다.</b>
+      <b>④ 섹션의 주인은 하나뿐이다.</b>
+      <b>⑤ 주기는 0 이나 음수가 못 들어간다</b> — 들어가면 늘 빨갛게 뜬다.
+      <b>⑥ 주민등록번호 칸은 여기서도 안 만든다</b>(개인정보보호법 제24조의2).
+    </p>
+    <p>
+      여섯 개 전부 <b>실제로 넣어 보고 거부되는 것을 확인했다</b> — §검증의 신규 11건.
+    </p>
+  </div>
+
+  <div class="note hot">
+    <h4>교육 모드 진도는 <code>daily_checks</code> 에 안 쌓는다</h4>
+    <p>
+      공용 태블릿이라 <b>앞사람 진도가 다음 신입에게 보이면 안 된다.</b>
+      지금 앱이 교육 모드만 <code>sessionStorage</code> 를 쓰는 이유가 그것이고,
+      서버로 와도 같은 규칙을 지킨다.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 표 목록 ================= -->
+<section>
+  <div class="zone-head"><h2>표 37개 전체 목록</h2><span class="tag t-plain">역할과 출처</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>표</th><th>무엇을 담나</th><th>1차 대비</th></tr></thead>
+      <tbody>
+        <tr><td><code>units</code></td><td>단위와 그 계열 (무게·부피·개수)</td><td class="ok">신설 · B</td></tr>
+        <tr><td><code>stores</code></td><td>매장. <b>하루가 바뀌는 시각(04:00)</b>도 여기</td><td>유지</td></tr>
+        <tr><td><code>users</code></td><td>로그인 계정과 소속 매장</td><td>유지</td></tr>
+        <tr><td><code>suppliers</code></td><td>거래처 · 주문 마감 시각 · 배송 요일</td><td class="ok">복합 연결</td></tr>
+        <tr><td><code>items</code></td><td><b>재료 원본 명단.</b> 사는 것 / 만드는 것</td><td class="ok">마스터화 · A</td></tr>
+        <tr><td><code>item_versions</code></td><td>품목 규격의 <b>기간별 이력</b> (값·용량·수율·면세)</td><td class="ok">신설 · 지적 2</td></tr>
+        <tr><td><code>menus</code></td><td>파는 메뉴</td><td class="ok">복합 연결</td></tr>
+        <tr><td><code>menu_prices</code></td><td>판매가 이력 — 원가율의 분모</td><td class="ok">신설 · 지적 2</td></tr>
+        <tr><td><code>menu_recipe_versions</code></td><td>메뉴 레시피의 <b>판 번호</b></td><td class="ok">신설 · 지적 2</td></tr>
+        <tr><td><code>menu_recipe_lines</code></td><td>그 판의 재료 줄</td><td class="ok">신설</td></tr>
+        <tr><td><code>make_recipe_versions</code></td><td>부재료 제조 레시피 판 + <b>리드타임 · 되돌림 여부</b></td><td class="ok">신설</td></tr>
+        <tr><td><code>make_recipe_lines</code></td><td>그 판의 재료 줄</td><td class="ok">신설</td></tr>
+        <tr><td><code>order_plans</code></td><td>발주 계획 + <b>예정일</b> + 어느 추천에서 나왔나</td><td class="ok">지적 3 · 5</td></tr>
+        <tr><td><code>bake_plans</code></td><td>제조 계획 + 예정일</td><td class="ok">지적 3 · 5</td></tr>
+        <tr><td><code>daily_sales</code></td><td>하루 판매 머리 — <b>영업일</b> 기준</td><td>유지</td></tr>
+        <tr><td><code>sales_lines</code></td><td>메뉴별 판매 + <b>그때 그 레시피 판</b></td><td class="ok">지적 1 · 2</td></tr>
+        <tr><td><code>received_lines</code></td><td>입고 + <b>어느 발주 계획인가</b></td><td class="ok">지적 3</td></tr>
+        <tr><td><code>baked_lines</code></td><td>제조 + <b>어느 제조 계획인가</b> + 걸어둔/쓸 수 있는 시각</td><td class="ok">지적 3</td></tr>
+        <tr><td><code>waste_lines</code></td><td>폐기</td><td class="ok">복합 연결</td></tr>
+        <tr><td><code>stock_counts</code></td><td>재고 실사</td><td class="ok">복합 연결</td></tr>
+        <tr><td><code>recommendation_runs</code></td><td>추천을 돌린 기록 · <b>계산식 판 번호</b></td><td class="ok">신설 · 지적 5</td></tr>
+        <tr><td><code>recommendation_inputs</code></td><td><b>그때 쓴 값</b>과 사람이 읽는 이유 한 줄</td><td class="ok">신설 · 지적 5</td></tr>
+        <tr class="r2"><td colspan="3"><b>── 3차에서 더한 13개 (프렙 · 교육 · 근무 · 근태) ──</b></td></tr>
+        <tr class="r2"><td><code>positions</code></td><td>포지션 — 체크리스트와 교육 모드가 같이 쓴다</td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>sections</code></td><td>섹션. <b>주인은 포지션/메뉴레시피/제조레시피 중 하나뿐</b></td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>steps</code></td><td>단계 — 제목·설명·한마디·좋은예/나쁜예·영상</td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>prep_lists</code></td><td>프렙 목록 (오후 · 마감 준비 · 주기)</td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>prep_tasks</code></td><td><b>프렙 항목 — 리드타임 · 되돌림 여부 · 옵션 · 발동 조건</b></td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>prep_cycle_state</code></td><td>주기 점검의 <b>마지막으로 한 날</b> + 매장이 정한 주기</td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>daily_checks</code></td><td>그날 체크 (영업일 기준). 교육 모드는 안 쌓는다</td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>shifts</code></td><td>근무조. <b>자정을 넘을 수 있다</b></td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>shift_focus</code></td><td>그 근무조에 어느 화면을 띄울지</td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>staff</code></td><td>직원. <b><code>users</code>(로그인 계정)와 다르다</b></td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>shift_assignments</code></td><td>근무표(계획). 출퇴근과의 차이가 근태</td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>punches</code></td><td>출퇴근(실제). <b>법정 3년 보존</b></td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>contracts</code></td><td>근로계약. <b>법정 3년 보존 · 주민번호 칸 없음</b></td><td class="ok">신설 · 3차</td></tr>
+        <tr class="r2"><td><code>store_settings</code> · <code>cost_excluded_items</code></td><td>최저임금 · 목표원가율 · 원가에서 뺄 재료</td><td class="ok">신설 · 3차</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<!-- ================= 3칸 연결 ================= -->
+<section>
+  <div class="zone-head"><h2>대상까지 잠그는 연결 16개</h2>
+    <span class="tag t-fix">3차의 핵심</span></div>
+  <p>
+    2차까지는 연결선이 <b>「번호 + 매장」 두 칸</b>이었다. 그래서
+    <b>같은 매장 안에서는 아무거나 붙었다</b> — 아메리카노 판매에 라떼 레시피,
+    우유 입고에 원두 발주 계획. 3차는 여기에 <b>한 칸을 더</b> 넣는다.
+  </p>
+  <p>
+    아래는 <b>실제로 만들어진 제약을 데이터베이스에서 뽑은 것</b>이다. 손으로 적은 목록이 아니다.
+  </p>
+
+  <h3 style="margin-top:22px">가. 같은 <u>대상</u>인지까지 본다 — 7개</h3>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>이 기록이</th><th>이걸 가리킬 때</th><th>세 번째 칸</th><th>막는 것</th></tr></thead>
+      <tbody>
+        <tr><td><code>sales_lines</code><br><span class="sub">판매 한 줄</span></td>
+            <td><code>menu_recipe_versions</code><br><span class="sub">메뉴 레시피 판</span></td>
+            <td><code>menu_id</code></td>
+            <td><b>아메리카노 판매에 라떼 레시피</b></td></tr>
+        <tr><td><code>received_lines</code><br><span class="sub">입고</span></td>
+            <td><code>order_plans</code><br><span class="sub">발주 계획</span></td>
+            <td><code>item_id</code></td>
+            <td><b>우유 입고에 원두 발주 계획</b></td></tr>
+        <tr><td><code>received_lines</code></td>
+            <td><code>item_versions</code><br><span class="sub">그때 규격</span></td>
+            <td><code>item_id</code></td>
+            <td>다른 품목의 규격을 붙이는 것</td></tr>
+        <tr><td><code>baked_lines</code><br><span class="sub">제조 기록</span></td>
+            <td><code>bake_plans</code></td>
+            <td><code>item_id</code></td>
+            <td>우유 제조에 식빵 계획</td></tr>
+        <tr><td><code>baked_lines</code></td>
+            <td><code>make_recipe_versions</code></td>
+            <td><code>item_id</code></td>
+            <td>그 품목의 레시피가 아닌 것</td></tr>
+        <tr><td><code>bake_plans</code><br><span class="sub">제조 계획</span></td>
+            <td><code>make_recipe_versions</code></td>
+            <td><code>item_id</code></td>
+            <td>르방 계획에 식빵 레시피</td></tr>
+        <tr><td><code>recommendation_inputs</code><br><span class="sub">추천 근거</span></td>
+            <td><code>item_versions</code></td>
+            <td><code>item_id</code></td>
+            <td>원두 추천에 우유 단가</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:22px">나. 단위 <u>계열</u>이 맞는지까지 본다 — 9개</h3>
+  <p style="font-size:13.5px">
+    전부 <code>items</code> 를 가리키면서 <b>(품목, 매장, 계열)</b> 세 칸으로 잇는다.
+    품목의 기준 계열이 무게인데 부피 단위를 적으면 <b>저장이 거부된다.</b>
+  </p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>표</th><th>세 번째 칸</th><th>막는 것</th></tr></thead>
+      <tbody>
+        <tr><td><code>item_versions</code></td><td><code>pack_family</code></td>
+            <td><b>무게 품목(원두)에 1,000ml 규격을 등록</b></td></tr>
+        <tr><td><code>make_recipe_versions</code></td><td><code>yield_family</code></td>
+            <td><b>개수로 나오는 식빵의 산출량을 g 으로</b></td></tr>
+        <tr><td><code>menu_recipe_lines</code></td><td><code>unit_family</code></td>
+            <td>레시피 재료를 다른 계열 단위로</td></tr>
+        <tr><td><code>make_recipe_lines</code></td><td><code>unit_family</code></td>
+            <td>제조 재료를 다른 계열 단위로</td></tr>
+        <tr><td><code>order_plans</code></td><td><code>unit_family</code></td>
+            <td>발주 수량을 다른 계열 단위로</td></tr>
+        <tr><td><code>received_lines</code></td><td><code>unit_family</code></td>
+            <td>입고 수량을 다른 계열 단위로</td></tr>
+        <tr><td><code>baked_lines</code></td><td><code>unit_family</code></td>
+            <td><b>식빵 제조 수량을 ml 로</b></td></tr>
+        <tr><td><code>waste_lines</code></td><td><code>unit_family</code></td>
+            <td>폐기 수량을 다른 계열 단위로</td></tr>
+        <tr><td><code>stock_counts</code></td><td><code>unit_family</code></td>
+            <td>실사 수량을 다른 계열 단위로</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <h4>제약 하나가 두 가지를 동시에 막는다</h4>
+    <p>
+      「나」의 아홉 줄은 <code>store_id</code> 와 <code>family</code> 를 <b>같은 키 안에</b> 담고 있다.
+      그래서 이 한 줄이 <b>「다른 매장 품목」과 「계열 불일치」를 함께</b> 막는다.
+      제약을 따로 두 개 걸 필요가 없다.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 검증 ================= -->
+<section>
+  <div class="zone-head"><h2>검증 — 말이 아니라 실행 결과</h2>
+    <span class="tag t-fix">동작 55 · 대조 27 · 훑기 11 · 그림 2 — 실패 0</span></div>
+  <p>
+    2차 피드백에 <b>"현재 자료만으로는 적용 여부를 확인할 수 없다"</b>는 지적이 있었다.
+    맞는 말이다. 설명만 적혀 있고 <b>돌아가는 것을 보여주지 못했다.</b>
+  </p>
+  <p>
+    그래서 <b>이 설계를 진짜 PostgreSQL 18 에 올리고, 뚫렸던 구멍마다 실제로 찔러 봤다.</b>
+    아래는 그 실행 결과를 그대로 옮긴 것이다.
+    <code>node db/verify.js</code> 한 줄로 누구나 재현할 수 있다 —
+    데이터베이스를 설치할 필요가 없다(PostgreSQL 을 브라우저 기술로 빌드한 판을 쓴다).
+  </p>
+
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>무엇을 확인했나</th><th>어떻게</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td><b>표·외래키·인덱스가 오류 없이 만들어지는가</b></td>
+            <td>스키마 전체를 통째로 실행</td>
+            <td class="ok">표 37 · 외래키 93 · 유니크 45 · 겹침금지 2 · 인덱스 95 · 뷰 2 · 정책 38</td></tr>
+        <tr><td>연결선이 정말 두 칸·세 칸인가</td>
+            <td>만들어진 제약을 세어 봄</td>
+            <td class="ok"><b>2칸 이상 68개 · 그중 3칸(대상까지) 20개</b></td></tr>
+        <tr><td>A매장 품목에 B매장 거래처를 붙인다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>아메리카노 판매에 라떼 레시피를 붙인다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td>아메리카노에 아메리카노 레시피는 통과하는가</td><td>막기만 하면 안 되므로 확인</td><td class="ok">통과</td></tr>
+        <tr class="r2"><td><b>우유 입고에 원두 발주 계획을 붙인다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>원두 입고에 우유 규격을 붙인다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>우유 제조 기록에 식빵 제조 계획을 붙인다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>원두 추천에 우유 규격을 붙인다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>무게 품목(원두)에 1,000ml 규격을 등록한다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>개수로 나오는 식빵의 산출량을 g으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>식빵 제조 수량을 ml로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr><td><b>같은 품목 규격을 겹치는 기간으로 등록한다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr><td>겹치지 않는 기간은 통과하는가</td><td>확인</td><td class="ok">통과</td></tr>
+        <tr><td><b>미이행·대기·부분입고·완료·초과입고</b>가 맞게 계산되는가</td>
+            <td>계획 10에 입고 0·0·7·10·12를 넣고 뷰를 읽음</td>
+            <td class="ok">5가지 전부 정확</td></tr>
+        <tr><td><b>다른 매장 데이터가 조회되는가</b></td><td>A사장으로 로그인해 전체 조회</td><td class="ok">A매장 것만 보임 · B매장 0건</td></tr>
+        <tr><td>번호를 알면 볼 수 있는가</td><td>B매장 행 번호로 직접 조회</td><td class="ok">0건</td></tr>
+        <tr><td><b>B매장 이름으로 데이터를 심는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr><td>B매장 행을 수정한다</td><td>실제로 고쳐 봄</td><td class="ok">0행 — 안 보이므로 무효</td></tr>
+        <tr><td><b>내 품목을 B매장 소유로 바꾼다</b></td><td>실제로 고쳐 봄</td><td class="ok">거부됨</td></tr>
+        <tr><td>정책이 안 걸린 표가 있는가</td><td>전체 표를 훑음</td><td class="ok">0개 — 37개 전부 걸림</td></tr>
+        <tr><td>표 주인에게도 적용되는가</td><td>강제 설정 확인</td><td class="ok">전부 적용</td></tr>
+        <tr class="r2"><td colspan="3"><b>── 3차 신규 11건 (프렙 · 근태 제약) ──</b></td></tr>
+        <tr class="r2"><td><b>★ 옵션의 옵션을 만든다</b><br><span class="sub">르방의 옵션</span></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td>옵션 한 겹은 통과하는가 <span class="sub">르방 → 반죽</span></td><td>막기만 하면 안 되므로 확인</td><td class="ok">통과</td></tr>
+        <tr class="r2"><td><b>routine 에 리드타임을 적는다</b><br><span class="sub">화면이 없는 약속을 만든다</span></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>되돌릴 수 없는데 이유를 안 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td>조건 발동인데 조건 문장이 없다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td>섹션에 주인을 둘 붙인다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td><b>B매장 직원의 출퇴근을 A매장에 넣는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td>자정을 넘는 마감조를 기록한다 <span class="sub">23:00 → 01:00</span></td><td>확인</td><td class="ok">통과</td></tr>
+        <tr class="r2"><td>주기를 0 으로 둔다 <span class="sub">늘 빨갛게 뜬다</span></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r2"><td>주기를 안 정하고 비워 둔다</td><td>확인</td><td class="ok">통과</td></tr>
+        <tr class="r2"><td>같은 날 같은 항목을 두 번 체크한다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td colspan="3"><b>── 3차 피드백으로 새로 막은 것 11건 ──</b></td></tr>
+        <tr class="r3"><td><b>★ 자기 자신을 옵션의 부모로 지정한다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ 사 오는 품목을 「만드는 것」 자리에 붙인다</b><br><span class="sub">우유를 "만든다" 고 적는다</span></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td>만드는 부재료는 통과하는가 <span class="sub">식빵 반죽</span></td><td>막기만 하면 안 되므로 확인</td><td class="ok">통과</td></tr>
+        <tr class="r3"><td>체크리스트와 프렙을 <b>둘 다 비워</b> 둔다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td>체크리스트와 프렙을 <b>둘 다 채운다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td>한 쪽만 채우면 통과하는가</td><td>막기만 하면 안 되므로 확인</td><td class="ok">통과</td></tr>
+        <tr class="r3"><td>같은 날 같은 단계를 두 번 체크한다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ B매장 직원이 A매장 체크를 한 것으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ B매장 직원이 A매장 재고를 센 것으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ B매장 계정이 A매장 발주 계획을 만든 것으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ B매장 계정이 A매장 추천을 돌린 것으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:26px">대조 — 지적 한 줄당 제약 하나</h3>
+  <p>
+    <b>"다 고쳤나" 에 기억으로 답하지 않으려고 만들었다.</b>
+    피드백 한 줄마다 <b>그것을 막는 제약의 이름</b>을 적어두고, 실제 데이터베이스에서
+    그 제약이 있는지 확인한다.
+  </p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>지적</th><th>막는 제약</th><th></th></tr></thead>
+      <tbody>
+        <tr class="r2"><td>판매 메뉴 ↔ 메뉴 레시피 버전</td><td><code>fk_sl_recipe_same_menu</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td>입고 품목 ↔ 발주 계획</td><td><code>fk_rl_plan_same_item</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td>입고 품목 ↔ 품목 규격</td><td><code>fk_rl_version_same_item</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td>생산 품목 ↔ 생산 계획</td><td><code>fk_bl_plan_same_item</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td>생산 품목 ↔ 제조 레시피</td><td><code>fk_bl_version_same_item</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td>생산 계획 ↔ 제조 레시피</td><td><code>fk_bp_version_same_item</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td>추천 품목 ↔ 당시 규격</td><td><code>fk_ri_version_same_item</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td><code>item_versions.pack_family</code> ↔ <code>base_family</code></td><td><code>fk_item_versions_item_same_store_and_family</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td><code>yield_unit</code> → <code>units</code></td><td><code>fk_krv_yield_family</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td><code>yield_family</code> ↔ <code>base_family</code></td><td><code>fk_krv_item_same_store_and_family</code></td><td class="ok">있음</td></tr>
+        <tr class="r2"><td><code>baked_lines.unit_family</code> — 칸 자체가 없었다</td><td>칸 생성 + <code>fk_bl_unit_family</code></td><td class="ok">있음</td></tr>
+        <tr><td><b>그림(DBML)과 명령문(SQL)이 같은가</b></td><td>외래키 93 ↔ 관계 92 대조</td><td class="ok">일치</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note hot">
+    <h4>전수 훑기가 아무도 지적하지 않은 구멍 3개를 더 찾았습니다</h4>
+    <p>
+      규칙마다 <b>적용돼야 할 자리를 전부 세는</b> 검사를 만들었더니 이렇게 나왔다:
+    </p>
+    <p>
+      <b>①</b> 직원이 로그인 계정을 <b>번호만으로</b> 가리켰다 — A매장 직원에 B매장 계정이 붙었다.
+      <b>②</b> 제조 기록이 계획과 레시피를 <b>따로</b> 가리켜서, 계획은 1판인데 기록은 2판을
+      가리킬 수 있었다 — 원가가 어느 판으로 계산될지 갈린다.
+      <b>③</b> 옵션이 <b>다른 프렙 목록</b>의 항목에 붙을 수 있었다 —
+      오후 프렙 카드 안에 주기 점검 항목이 그려진다.
+    </p>
+    <p>셋 다 막았고, 실제로 넣어 보고 거부되는 것까지 확인했다.</p>
+  </div>
+
+  <div class="note hot">
+    <h4>대조가 그림과 명령문이 22군데 갈린 것을 잡았습니다</h4>
+    <p>
+      심사 의견 마지막이 <b>"DBML 에 적힌 제약이 실제 SQL 에 구현됐는지 확인이 필요합니다"</b> 였다.
+      그 확인을 실제로 돌려 보니 <b>22군데가 갈려 있었다.</b>
+    </p>
+    <p>
+      <b>같은 참조가 두 번 걸린 곳 10개</b>(한 칸짜리와 두 칸짜리가 같이) —
+      두 칸짜리가 한 칸짜리를 이미 포함하므로 중복분을 뺐다. <b>계열 검사는 그대로다.</b>
+      그리고 <b><code>store_id → stores</code> 를 그림이 7곳, 단위 계열 참조를 4곳 안 그리고 있었다</b> —
+      명령문에는 있는데 그림에 없으면 "이 표는 매장에 안 매달렸나" 로 읽힌다. 전부 채웠다.
+    </p>
+  </div>
+
+  <div class="note hot">
+    <h4>검증이 제 실수를 세 개 잡았습니다</h4>
+    <p>
+      <b>① <code>units</code> 표에 강제 적용이 빠져 있었다.</b>
+      다른 21개에는 걸었는데 이 하나만 놓쳤다. 설명만 읽었으면 못 찾았을 것이다.
+    </p>
+    <p>
+      <b>② 제가 쓴 검사 두 개가 틀렸다.</b>
+      "다른 매장 행 수정"이 오류를 낼 거라고 봤는데,
+      실제로는 <b>안 보이니까 0행이 바뀌는 것</b>이 맞는 동작이었다.
+      그래서 검사를 고치고, <b>"내 행을 남의 매장으로 옮기기"</b>라는 진짜 공격을 따로 넣었다 — 그건 거부된다.
+    </p>
+    <p>
+      이게 실행해 보는 것과 설명만 적는 것의 차이다. <b>지적이 맞았다.</b>
+    </p>
+  </div>
+</section>
+
+<!-- ================= 범위 ================= -->
+<section>
+  <div class="zone-head"><h2>빠져 있던 9덩어리 — 3차에서 채웠다</h2>
+    <span class="tag t-fix">표 13개 추가</span></div>
+  <p>
+    <b>2차까지의 22표에 지금 앱의 데이터를 하나씩 대응시켜 봤더니, 절반만 자리가 있었다.</b>
+    그 22표는 심사 의견이 지목한 표 이름을 근거로 만들었고 그 목록이
+    <b>원가 · 재고 · 발주 축</b>이었기 때문이다. 3차에서 나머지를 채웠다.
+  </p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>지금 있는 데이터</th><th>3차에서 받는 표</th><th>왜 중요한가</th></tr></thead>
+      <tbody>
+        <tr><td><b>프렙</b> — 목록 3 · 항목 30<br><span class="sub">리드타임 · 되돌림 여부 · 옵션</span></td>
+            <td class="ok"><code>prep_lists</code> · <code>prep_tasks</code></td>
+            <td><b>매일 아침 반드시 열리는 화면.</b> "오늘 안 걸면 내일 아침에 터진다" 가 사는 곳이고, 이 제품이 종이를 이긴다는 주장의 근거 자체다</td></tr>
+        <tr><td><b>출퇴근</b></td><td class="ok"><code>punches</code></td>
+            <td class="no"><b>근로기준법 제42조 — 3년 보존 대상</b></td></tr>
+        <tr><td><b>근로계약</b></td><td class="ok"><code>contracts</code></td>
+            <td class="no"><b>근로기준법 제42조 — 3년 보존 대상</b></td></tr>
+        <tr><td><b>체크리스트 · 교육 모드</b><br><span class="sub">포지션 3 · 섹션 9 · 단계 26</span></td>
+            <td class="ok"><code>positions</code> · <code>sections</code> · <code>steps</code></td><td>신입이 첫날 여는 화면</td></tr>
+        <tr><td><b>직원 · 근무표</b></td><td class="ok"><code>staff</code> · <code>shift_assignments</code></td>
+            <td><code>users</code> 는 <b>로그인 계정</b>이라 직원과 다르다 — 알바는 로그인하지 않는다</td></tr>
+        <tr><td><b>근무조</b> 4</td><td class="ok"><code>shifts</code> · <code>shift_focus</code></td>
+            <td>태블릿을 켰을 때 어느 화면을 먼저 띄울지 고르는 기준</td></tr>
+        <tr><td><b>주기 점검</b><br><span class="sub">마지막으로 한 날 · 매장이 정한 주기</span></td>
+            <td class="ok"><code>prep_cycle_state</code></td>
+            <td><b>절대 안 지우는 기록.</b> 잃으면 되찾을 방법이 없다</td></tr>
+        <tr><td><b>설정</b><br><span class="sub">최저임금 · 목표원가율 · 원가 제외</span></td>
+            <td class="ok"><code>store_settings</code> · <code>cost_excluded_items</code></td>
+            <td>판매가는 <code>menu_prices</code> 로 간다</td></tr>
+        <tr><td><b>레시피의 만드는 순서</b></td><td class="ok"><code>sections</code> · <code>steps</code> 공유</td>
+            <td>재료와 순서는 한 몸이다</td></tr>
+        <tr><td><b>그날 체크</b> <span class="sub">(새로)</span></td><td class="ok"><code>daily_checks</code></td>
+            <td>지금은 영업일이 바뀌면 버린다. 서버에서는 남길 수 있고, <b>"기록" 이 이 제품의 세 가치 중 하나다</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <h4>이제 설계도가 제품을 다 설명한다</h4>
+    <p>
+      <b>"프렙이 핵심이라면서 왜 표가 없나"</b> 에 답할 수 있게 됐다 —
+      <code>prep_tasks</code> 에 리드타임과 <code>recoverable</code> 이 있고,
+      그 둘이 이 제품이 종이를 이긴다고 주장하는 근거다. <b>그림 5</b>가 그것이다.
+    </p>
+    <p>
+      지금 데이터를 칸 단위로 어디에 넣을지는 <code>docs/이관_매핑.md</code> 에 있다.
+      <b>이관에서 제일 어려운 것은 표가 아니라 재료 이름이다</b> —
+      지금은 이름 문자열로 잇고 있어서, 번호로 바꾸면 <b>짝을 못 찾는 재료가 목록으로 튀어나온다.</b>
+      그 목록이 0건이 되기 전에는 이관을 끝내면 안 된다.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 남은 것 ================= -->
+<section>
+  <div class="zone-head"><h2>1차와 대조해야 하는 것</h2><span class="tag t-hole">이름만 남았습니다</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>항목</th><th>지금 상태</th></tr></thead>
+      <tbody>
+        <tr><td>표·칸의 <b>실제 이름</b></td><td><code>menus</code>·<code>daily_sales</code>·<code>qty</code> 등은 <b>제가 지어 쓴 이름</b>입니다</td></tr>
+        <tr><td>고유 번호의 형식</td><td><code>uuid</code>로 가정했습니다. 숫자형이면 전부 바꿔야 합니다</td></tr>
+        <tr><td>각 표에 매장번호가 이미 있는지</td><td>없으면 <b>먼저 넣고 기존 줄을 채우는</b> 작업이 선행됩니다</td></tr>
+        <tr><td>1차 <code>item_prices</code>의 칸 구성</td><td>새 이력 표로 옮기는 명령을 정확히 쓰려면 필요합니다</td></tr>
+        <tr><td>발주·제조 계획이 두 표인지 한 표인지</td><td>한 표로 보고 그렸습니다</td></tr>
+        <tr><td><b>실제 데이터베이스에서 실행</b></td><td class="ok">✅ 끝났습니다 — PostgreSQL 18에서 <b>동작 55 · 대조 27 · 훑기 11 · 그림 2</b> 통과. 아래 §검증 참조</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:13.5px">
+    <b>그래도 1차 원문 없이 진행할 수 있습니다.</b> 명령문 1번 항목에
+    <b>데이터베이스가 자기 구조를 스스로 훑어 고칠 곳을 찾아내는 조회</b>를 넣어 뒀습니다.
+    제가 지어낸 이름이 실제와 달라도, 그 조회는 <b>실제 이름으로 돌아갑니다.</b>
+  </p>
+</section>
+
+<footer>
+  <p>
+    <b>매장수첩 ERD v3</b> · 개인 카페·베이커리 운영 도구 · 2026-09-11 ·
+    전체 명령문 <code>db/schema_v2.sql</code> (37개 표 · 접근 통제 · 검증 조회 포함)
+    · 숫자는 <code>npm run check</code> 가 매번 다시 세고, 문서와 어긋나면 검사가 실패합니다
+  </p>
+  <p>
+    지금 돌고 있는 앱의 구조는 이것이 아닙니다 — 현재는 파일 한 개와 태블릿 저장소로 돌아가며,
+    <b>현재 구조는 별도 ERD 문서</b>에 있습니다. 이 그림은 그다음 단계인 2차 설계입니다.
+  </p>
+</footer>
+
+</div>

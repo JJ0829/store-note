@@ -156,6 +156,7 @@ footer code{background:none}
 .okmeta b{color:var(--fix)!important}
 .okmeta{color:var(--fix)}
 tr.r2 td{background:var(--fix-bg)}
+tr.r3 td{background:var(--acc-bg)}
 .sub{font-size:11.5px;color:var(--ink-3)}
 </style>
 
@@ -221,7 +222,7 @@ tr.r2 td{background:var(--fix-bg)}
 
 <!-- ================= 요약 ================= -->
 <section id="s1">
-  <div class="zone-head"><h2>1차 → 3차, 무엇이 바뀌었나</h2><span class="tag t-fix">12건</span></div>
+  <div class="zone-head"><h2>1차 → 3차, 무엇이 바뀌었나</h2><span class="tag t-fix">15건</span></div>
   <div class="tablebox">
     <table>
       <thead><tr><th>#</th><th>1차의 구멍</th><th>어떻게 막았나</th><th>그림에서 보는 곳</th></tr></thead>
@@ -279,6 +280,23 @@ tr.r2 td{background:var(--fix-bg)}
               <span class="sub">프렙 · 체크리스트 · 근무 · 근태 · 계약 · 설정</span></td>
           <td><b>표 13개를 더했다</b> (22 → 37)</td>
           <td>그림 5</td></tr>
+        <tr class="r3"><td class="num">H</td>
+          <td><b>「만드는 것」 자리에 아무 품목이나 붙었다</b><br>
+              <span class="sub">우유를 "매장에서 만든다" 고 적어도 통과했다</span></td>
+          <td>항상 <code>made</code> 인 <b>계산되는 칸</b>을 두고, 연결선이 그것을
+              <code>items.kind</code> 와 맞춘다 — 사람이 못 바꾼다</td>
+          <td>그림 5</td></tr>
+        <tr class="r3"><td class="num">I</td>
+          <td><b>그날 체크에 고유 번호가 없었다</b><br>
+              <span class="sub">"이 체크만 지워" 를 할 방법이 없다</span></td>
+          <td>기본키 신설 + 체크리스트·프렙 <b>한쪽만</b> 채우도록 강제</td>
+          <td>그림 5</td></tr>
+        <tr class="r3"><td class="num">J</td>
+          <td><b>기록을 남긴 사람이 아무나였다</b><br>
+              <span class="sub">B매장 직원이 A매장 재고를 센 것으로 저장됐다</span></td>
+          <td>사람 칸 <b>6개 전부</b>를 「번호 + 매장」으로 묶었다 —
+              기록을 만든 <b>계정</b>은 <code>users</code>, 손을 댄 <b>직원</b>은 <code>staff</code></td>
+          <td>그림 3 · 그림 5</td></tr>
       </tbody>
     </table>
   </div>
@@ -293,6 +311,15 @@ tr.r2 td{background:var(--fix-bg)}
     <b>C·D는 2차 심사 피드백이다.</b> 1차에서 제가 <b>매장 축만 보고 대상 축은 안 봤다.</b>
     "같은 매장인가"는 전부 잠갔는데 "같은 품목인가 · 같은 메뉴인가"는 놓쳤다.
     같은 실수를 단위 계열에서도 했다 — 레시피에는 걸고 규격·산출량에는 안 걸었다.
+  </p>
+  <p style="font-size:13.5px">
+    <b>H·I·J는 3차 심사 피드백이다.</b> 셋 다 같은 모양이다 —
+    <b>문서에는 규칙이 적혀 있는데 데이터베이스는 그 규칙을 모르고 있었다.</b>
+    설명은 사람만 읽는다. 막으려면 제약이어야 한다.
+    같은 종류가 또 새지 않도록 <b>전수 훑기에 규칙 세 개를 더했다</b> —
+    ⑨ 사람 칸은 전부 같은 매장으로 묶였는가 ⑩ 모든 표에 기본키가 있는가
+    ⑪ 계산되는 칸이 그림에도 그렇게 적혀 있는가.
+    ⑪ 은 <b>지적을 받기 전에 만들었다면 이번 건을 스스로 찾아냈을 검사</b>다.
   </p>
   <p style="font-size:13.5px">
     A·B는 심사가 지적하지 않았다. 그런데 <b>1번과 뿌리가 같고</b>(관계를 프로그램이 판단한다),
@@ -993,7 +1020,7 @@ erDiagram
 <!-- ================= 검증 ================= -->
 <section id="s10">
   <div class="zone-head"><h2>검증 — 말이 아니라 실행 결과</h2>
-    <span class="tag t-fix">29건 통과 · 실패 0</span></div>
+    <span class="tag t-fix">동작 55 · 대조 27 · 훑기 11 · 그림 2 — 실패 0</span></div>
   <p>
     2차 피드백에 <b>"현재 자료만으로는 적용 여부를 확인할 수 없다"</b>는 지적이 있었다.
     맞는 말이다. 설명만 적혀 있고 <b>돌아가는 것을 보여주지 못했다.</b>
@@ -1011,10 +1038,10 @@ erDiagram
       <tbody>
         <tr><td><b>표·외래키·인덱스가 오류 없이 만들어지는가</b></td>
             <td>스키마 전체를 통째로 실행</td>
-            <td class="ok">표 37 · 외래키 87 · 유니크 44 · 겹침금지 2 · 인덱스 93 · 뷰 2 · 정책 38</td></tr>
+            <td class="ok">표 37 · 외래키 93 · 유니크 45 · 겹침금지 2 · 인덱스 95 · 뷰 2 · 정책 38</td></tr>
         <tr><td>연결선이 정말 두 칸·세 칸인가</td>
             <td>만들어진 제약을 세어 봄</td>
-            <td class="ok"><b>2칸 이상 62개 · 그중 3칸(대상까지) 19개</b></td></tr>
+            <td class="ok"><b>2칸 이상 68개 · 그중 3칸(대상까지) 20개</b></td></tr>
         <tr><td>A매장 품목에 B매장 거래처를 붙인다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
         <tr class="r2"><td><b>아메리카노 판매에 라떼 레시피를 붙인다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
         <tr class="r2"><td>아메리카노에 아메리카노 레시피는 통과하는가</td><td>막기만 하면 안 되므로 확인</td><td class="ok">통과</td></tr>
@@ -1049,6 +1076,18 @@ erDiagram
         <tr class="r2"><td>주기를 0 으로 둔다 <span class="sub">늘 빨갛게 뜬다</span></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
         <tr class="r2"><td>주기를 안 정하고 비워 둔다</td><td>확인</td><td class="ok">통과</td></tr>
         <tr class="r2"><td>같은 날 같은 항목을 두 번 체크한다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td colspan="3"><b>── 3차 피드백으로 새로 막은 것 11건 ──</b></td></tr>
+        <tr class="r3"><td><b>★ 자기 자신을 옵션의 부모로 지정한다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ 사 오는 품목을 「만드는 것」 자리에 붙인다</b><br><span class="sub">우유를 "만든다" 고 적는다</span></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td>만드는 부재료는 통과하는가 <span class="sub">식빵 반죽</span></td><td>막기만 하면 안 되므로 확인</td><td class="ok">통과</td></tr>
+        <tr class="r3"><td>체크리스트와 프렙을 <b>둘 다 비워</b> 둔다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td>체크리스트와 프렙을 <b>둘 다 채운다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td>한 쪽만 채우면 통과하는가</td><td>막기만 하면 안 되므로 확인</td><td class="ok">통과</td></tr>
+        <tr class="r3"><td>같은 날 같은 단계를 두 번 체크한다</td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ B매장 직원이 A매장 체크를 한 것으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ B매장 직원이 A매장 재고를 센 것으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ B매장 계정이 A매장 발주 계획을 만든 것으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
+        <tr class="r3"><td><b>★ B매장 계정이 A매장 추천을 돌린 것으로 적는다</b></td><td>실제로 넣어 봄</td><td class="ok">거부됨</td></tr>
       </tbody>
     </table>
   </div>
@@ -1074,7 +1113,7 @@ erDiagram
         <tr class="r2"><td><code>yield_unit</code> → <code>units</code></td><td><code>fk_krv_yield_family</code></td><td class="ok">있음</td></tr>
         <tr class="r2"><td><code>yield_family</code> ↔ <code>base_family</code></td><td><code>fk_krv_item_same_store_and_family</code></td><td class="ok">있음</td></tr>
         <tr class="r2"><td><code>baked_lines.unit_family</code> — 칸 자체가 없었다</td><td>칸 생성 + <code>fk_bl_unit_family</code></td><td class="ok">있음</td></tr>
-        <tr><td><b>그림(DBML)과 명령문(SQL)이 같은가</b></td><td>외래키 53 ↔ 관계 52 대조</td><td class="ok">일치</td></tr>
+        <tr><td><b>그림(DBML)과 명령문(SQL)이 같은가</b></td><td>외래키 93 ↔ 관계 92 대조</td><td class="ok">일치</td></tr>
       </tbody>
     </table>
   </div>
@@ -1192,7 +1231,7 @@ erDiagram
         <tr><td>각 표에 매장번호가 이미 있는지</td><td>없으면 <b>먼저 넣고 기존 줄을 채우는</b> 작업이 선행됩니다</td></tr>
         <tr><td>1차 <code>item_prices</code>의 칸 구성</td><td>새 이력 표로 옮기는 명령을 정확히 쓰려면 필요합니다</td></tr>
         <tr><td>발주·제조 계획이 두 표인지 한 표인지</td><td>한 표로 보고 그렸습니다</td></tr>
-        <tr><td><b>실제 데이터베이스에서 실행</b></td><td class="ok">✅ 끝났습니다 — PostgreSQL 18에서 29건 검사 통과. 아래 §검증 참조</td></tr>
+        <tr><td><b>실제 데이터베이스에서 실행</b></td><td class="ok">✅ 끝났습니다 — PostgreSQL 18에서 <b>동작 55 · 대조 27 · 훑기 11 · 그림 2</b> 통과. 아래 §검증 참조</td></tr>
       </tbody>
     </table>
   </div>
@@ -1207,6 +1246,7 @@ erDiagram
   <p>
     <b>매장수첩 ERD v3</b> · 개인 카페·베이커리 운영 도구 · 2026-09-11 ·
     전체 명령문 <code>db/schema_v2.sql</code> (37개 표 · 접근 통제 · 검증 조회 포함)
+    · 숫자는 <code>npm run check</code> 가 매번 다시 세고, 문서와 어긋나면 검사가 실패합니다
   </p>
   <p>
     지금 돌고 있는 앱의 구조는 이것이 아닙니다 — 현재는 파일 한 개와 태블릿 저장소로 돌아가며,

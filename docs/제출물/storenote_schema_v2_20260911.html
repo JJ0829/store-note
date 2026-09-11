@@ -264,7 +264,8 @@ footer code{font-family:var(--mono);font-size:11.5px;background:none;color:var(-
 <li><a href="#s5"><span class="n">05</span>계획과 실행을 잇는다 — 날짜 한 칸으로는 부족하다</a></li>
 <li><a href="#s6"><span class="n">06</span>RLS — 요청이 보낸 매장 번호를 믿지 않는다</a></li>
 <li><a href="#s7"><span class="n">07</span>추천의 근거를 그때 그대로 얼려 둔다</a></li>
-<li><a href="#s8"><span class="n">08</span>적용 순서</a></li>
+<li><a href="#s8"><span class="n">08</span>3차 지적 — 설명에만 있고 데이터베이스는 모르던 규칙 세 가지</a></li>
+<li><a href="#s9"><span class="n">09</span>적용 순서</a></li>
 </ol></nav>
 
 <div class="premise">
@@ -277,8 +278,15 @@ footer code{font-family:var(--mono);font-size:11.5px;background:none;color:var(-
     특히 컬럼 이름과 PK 타입(<code>uuid</code>로 가정).
   </p>
   <p>
-    <b>2. SQL(데이터베이스에 시키는 말) 문법 검증을 하지 못했다.</b> 이 작업 환경에 PostgreSQL·Docker·Supabase CLI가
-    전부 없다. <b>한 번도 실행해 보지 않은 명령문이다.</b> Supabase 브랜치에서 먼저 실행해 봐야 한다.
+    <b>2. 이 명령문은 실제 PostgreSQL 에서 돌려 봤다.</b>
+    <code>@electric-sql/pglite</code>(PostgreSQL 18 을 WebAssembly 로 옮긴 것)에
+    <b>통째로 올려서</b> 확인했다 — 데이터베이스를 따로 설치하지 않아도
+    <code>node db/verify.js</code> 한 줄이면 누구나 재현할 수 있다.
+    <b>문법이 통과할 뿐 아니라, 막아야 할 입력을 실제로 거부하는지까지</b> 넣어 보고 확인한다.
+    <span class="kv">동작 55건 · 대조 27건 · 훑기 11건 · 그림 2건 — 실패 0</span>
+    <br>
+    다만 <b>Supabase 는 아직 붙이지 않았다.</b> 실제 프로젝트에 올릴 때는
+    운영 DB 가 아니라 브랜치에서 먼저 돌릴 것.
   </p>
   <p>
     <b>3. 이것은 현재 배포 준비 중인 앱의 스키마가 아니다.</b>
@@ -1137,8 +1145,100 @@ alter table bake_plans
   </div>
 </section>
 
-<!-- ============ 적용 순서 ============ -->
+<!-- ============ 6 (3차) ============ -->
 <section id="s8" class="fix">
+  <div class="fix-head"><span class="fix-n">6</span>
+    <h2>3차 지적 — 설명에만 있고 데이터베이스는 모르던 규칙 세 가지</h2></div>
+  <div class="fix-body">
+
+    <div class="said">
+      <p><span class="who">받은 지적</span>
+        ① 문서 상단에는 29개 검사를 통과했다고 적혀 있지만 하단에는 실제 DB에서 실행한 적이
+        없다고 적혀 있습니다. RLS 설명은 22개 테이블인데 이후 운영 테이블 13개가 추가됐습니다.
+        직원 이름·전화번호·근무시간·급여가 들어 있는 표(<code>staff</code>·<code>shift_assignments</code>·
+        <code>punches</code>·<code>contracts</code>·<code>daily_checks</code>)가 빠지면
+        다른 매장의 민감정보가 노출됩니다.
+        ② <code>is_option</code>·<code>option_parent_is_root</code>는 계산되는 칸이라고
+        설명돼 있지만 DBML 에서는 일반 nullable boolean 입니다.
+        <code>make_recipe_item</code>은 <code>items.kind = made</code>만 연결해야 하는데
+        외래키가 품목 종류를 확인하지 않습니다.
+        ③ <code>daily_checks</code>에 PK나 고유 식별자가 없고 <code>step_id</code>·
+        <code>prep_task_id</code>가 모두 nullable 입니다. <code>checked_by</code>에 외래키가 없고
+        <code>created_by</code>·<code>counted_by</code>·<code>ran_by</code>도 같은 문제입니다.</p>
+    </div>
+
+    <p>
+      <b>세 가지가 전부 같은 모양이다 — 문서에는 규칙이 적혀 있는데 데이터베이스는 그 규칙을 몰랐다.</b>
+      설명은 사람만 읽는다. 사람이 안 읽거나 잘못 읽으면 그대로 저장된다.
+      <b>막으려면 제약이어야 한다.</b>
+    </p>
+
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>지적</th><th>무엇으로 막았나</th><th>확인</th></tr></thead>
+        <tbody>
+          <tr><td><b>RLS 가 운영 표 13개에 없는가</b><br>
+                  <span class="sub">직원 이름 · 전화 · 근무시간 · 급여</span></td>
+              <td><b>빠진 곳은 없었다 — 문서가 낡았다.</b> 37개 표 전부에 정책이 걸려 있고
+                  표 주인에게도 적용되도록 강제 옵션까지 켜져 있다.
+                  민감한 5개 표(<code>staff</code>·<code>shift_assignments</code>·<code>punches</code>·
+                  <code>contracts</code>·<code>daily_checks</code>)를 하나씩 확인했다</td>
+              <td class="ok">훑기 규칙 5 가 매번 전수로 확인</td></tr>
+          <tr><td><b>문서가 스스로 모순됐다</b><br>
+                  <span class="sub">위에서는 29건 통과, 아래에서는 실행한 적 없음</span></td>
+              <td><b>맞는 지적이다.</b> 실행은 진작 했는데 아랫부분을 안 고쳤다.
+                  같은 일이 또 생기지 않도록 <b>문서의 숫자를 기계가 대조</b>하게 했다 —
+                  <code>db/docs.js</code> 가 인용 12곳을 현재 값과 맞춰 보고, 어긋나면
+                  <code>npm run check</code> 가 실패한다. 사실이 아닌 문장 6종도 같이 막는다</td>
+              <td class="ok">문서 검사 2건</td></tr>
+          <tr><td><b>계산되는 칸이 그림에서는 평범한 칸</b></td>
+              <td>DBML 에는 <code>generated</code> 문법이 <b>없다.</b> 그래서 값은 못 옮기지만
+                  <b>읽는 사람이 오해하지 않게</b> 세 칸 모두에 &ldquo;계산되는 칸(generated)&rdquo; 을 적고,
+                  표 설명에 정본이 <code>schema_v2.sql</code> 임을 밝혔다.
+                  <b>훑기 규칙 11</b> 이 SQL 의 생성 칸과 그림의 표시를 매번 대조한다</td>
+              <td class="ok">규칙 11 — 생성 칸 3개</td></tr>
+          <tr><td><b><code>make_recipe_item</code>이 품목 종류를 안 봤다</b><br>
+                  <span class="sub">우유를 &ldquo;매장에서 만든다&rdquo; 고 적어도 통과했다</span></td>
+              <td>항상 <code>made</code> 인 생성 칸 <code>made_kind</code> 를 두고,
+                  외래키가 <code>(품목, 매장, made_kind) → items(id, store_id, kind)</code> 로 묶는다.
+                  <b>값이 계산되는 칸이라 사람이 못 바꾼다</b></td>
+              <td class="ok">사 오는 품목 거부 · 만드는 부재료 통과</td></tr>
+          <tr><td><b><code>daily_checks</code>에 고유 번호가 없다</b></td>
+              <td>기본키 신설. 그리고 체크리스트·프렙을 <b>둘 다 비우거나 둘 다 채우면 거부</b>한다
+                  (<code>ck_daily_checks_one</code>). 같은 날 같은 칸을 두 번 체크하는 것도 막는다.
+                  <b>훑기 규칙 10</b> 이 모든 표에 기본키가 있는지 매번 센다</td>
+              <td class="ok">둘 다 빔 · 둘 다 참 · 중복 — 전부 거부</td></tr>
+          <tr><td><b>기록을 남긴 사람이 아무나였다</b><br>
+                  <span class="sub">B매장 직원이 A매장 재고를 센 것으로 저장됐다</span></td>
+              <td>사람 칸 <b>6개 전부</b>를 <code>(사람, 매장)</code> 로 묶었다.
+                  기록을 만든 <b>계정</b>은 <code>users</code>, 실제로 손을 댄 <b>직원</b>은
+                  <code>staff</code> — 알바는 대부분 로그인하지 않으므로 둘은 다른 것이다.
+                  <b>훑기 규칙 9</b> 가 <code>*_by</code> 칸을 전부 훑는다</td>
+              <td class="ok">B매장 사람 이름으로 넣기 — 4가지 전부 거부</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <h4>같은 실수를 반복하지 않으려고 한 일</h4>
+      <p>
+        이번 지적 세 건은 <b>제가 지적받은 자리만 고치고 같은 규칙이 적용될 나머지를 안 본</b> 결과다.
+        그래서 개별 건을 고치는 것으로 끝내지 않고 <b>전수 훑기에 규칙 세 개를 더했다</b> —
+        ⑨ 사람 칸은 전부 같은 매장으로 묶였는가 · ⑩ 모든 표에 기본키가 있는가 ·
+        ⑪ 계산되는 칸이 그림에도 그렇게 적혀 있는가.
+      </p>
+      <p>
+        <b>세 규칙 모두 일부러 고장 내서 정말 잡는지 확인했다.</b>
+        ⑪ 은 이번 지적을 <b>받기 전에 있었다면 스스로 찾아냈을</b> 검사다.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ============ 적용 순서 ============ -->
+<section id="s9" class="fix">
   <div class="fix-head"><span class="fix-n">▸</span>
     <h2>적용 순서</h2></div>
   <div class="fix-body">
@@ -1184,7 +1284,9 @@ alter table bake_plans
     <li><b><code>item_prices</code>의 현재 컬럼 구성</b> — <code>item_versions</code>로 이관하는 문을 정확히 쓰려면 필요합니다</li>
     <li><b><code>order_plans</code>·<code>bake_plans</code>가 헤더+라인 두 표인지</b> — 한 표로 보고 썼습니다</li>
     <li><b>추천 계산식의 실제 입력 항목</b> — <code>recommendation_inputs</code>의 칸을 그것에 맞춰야 합니다</li>
-    <li><b>SQL 문법 검증</b> — 이 환경에 PostgreSQL·Docker·Supabase CLI가 없어 <b>한 번도 실행해 보지 못했습니다</b></li>
+    <li><s><b>SQL 문법 검증</b></s> — <b>끝났습니다.</b> PGlite(PostgreSQL 18)에 올려서
+      <b>동작 55건 · 대조 27건 · 훑기 11건 · 그림 2건</b>을 통과합니다.
+      <code>node db/verify.js</code> 로 재현할 수 있고, 설치가 필요 없습니다</li>
   </ul>
 </div>
 

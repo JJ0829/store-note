@@ -258,6 +258,67 @@ const 공통칸 = new Set([
       : no("그림에 없는 유일키", bad);
   }
 
+  // ── 규칙 9. 사람을 가리키는 칸은 같은 매장 사람에 묶인다 ────────────
+  console.log("\n[규칙 9] 사람 칸(*_by)은 같은 매장의 계정·직원에 묶인다");
+  /* ★ 3차 피드백이 잡은 것. 내 규칙 2 는 created_by 를 '공통칸' 으로 빼놨는데,
+     그러면 **아무도 안 보는 칸**이 된다. 빼는 것과 보는 것은 다르다.
+     사람 칸에 외래키가 없으면 **다른 매장 사람이 한 것처럼 적힌다.** */
+  {
+    const bad = [];
+    let 대상 = 0;
+    for (const [t, cs] of cols) {
+      for (const c of cs) {
+        if (!c.endsWith("_by")) continue;
+        대상++;
+        const ok2 = fks.some((f) => f.child === t && f.ccols.includes(c) &&
+                                    (f.parent === "users" || f.parent === "staff") &&
+                                    f.ccols.includes("store_id"));
+        if (!ok2) bad.push(`${t}.${c}  :  users 또는 staff 에 (칸, store_id) 로 묶이지 않았다`);
+      }
+    }
+    bad.length === 0
+      ? ok("빠진 곳 없음", `사람 칸 ${대상}개 전부 같은 매장으로 묶임`)
+      : no("묶이지 않은 사람 칸", bad);
+  }
+
+  // ── 규칙 10. 모든 표에 기본키가 있다 ────────────────────────────────
+  console.log("\n[규칙 10] 모든 표에 기본키가 있다");
+  /* 기본키가 없으면 **한 줄을 가리킬 방법이 없다.**
+     "이 체크만 지워" 도, "이 줄만 고쳐" 도 못 한다. */
+  {
+    const pks = new Set((await q(`
+      select t.relname n from pg_constraint c join pg_class t on t.oid = c.conrelid
+       where c.contype = 'p' and c.connamespace = 'public'::regnamespace`)).map((r) => r.n));
+    const bad = [...cols.keys()].filter((t) => !pks.has(t)).map((t) => `${t} 에 기본키가 없다`);
+    bad.length === 0
+      ? ok("빠진 곳 없음", `표 ${cols.size}개 전부`)
+      : no("기본키가 없는 표", bad);
+  }
+
+  // ── 규칙 11. 생성 칸은 그림에도 "생성" 이라고 적혀 있다 ─────────────
+  console.log("\n[규칙 11] 계산되는 칸(generated)이 그림에도 그렇게 적혀 있다");
+  /* ★ DBML 에는 generated 문법이 없다. 그래서 그냥 두면
+     **그림에서는 사람이 값을 넣는 평범한 칸으로 읽힌다.**
+     실제로 3차 피드백이 그 지점을 지적했다 —
+     "생성 칸이라고 설명돼 있지만 DBML 에서는 일반 nullable boolean 이다".
+     값은 못 고치더라도 **읽는 사람이 오해하지 않게** 표시는 있어야 한다. */
+  {
+    const gen = await q(`select table_name t, column_name c
+       from information_schema.columns
+      where table_schema='public' and is_generated='ALWAYS'`);
+    const bad = [];
+    for (const g of gen) {
+      const m = DBML.match(new RegExp(`^Table\\s+"?${g.t}"?\\s*\\{([\\s\\S]*?)^\\}`, "m"));
+      if (!m) { bad.push(`${g.t} : 표가 그림에 없다`); continue; }
+      const line = m[1].split("\n").find((l) => new RegExp(`^\\s{2}${g.c}\\s`).test(l)) || "";
+      if (!/생성|계산|generated/i.test(line))
+        bad.push(`${g.t}.${g.c}  :  그림에 "계산되는 칸" 이라는 표시가 없다`);
+    }
+    bad.length === 0
+      ? ok("빠진 곳 없음", `생성 칸 ${gen.length}개 전부 표시됨`)
+      : no("표시가 없는 생성 칸", bad);
+  }
+
   // ── 예외 목록이 낡지 않았는가 ────────────────────────────────────
   console.log("\n[규칙 7] 예외로 빼둔 것이 아직도 예외인가");
   {
@@ -281,5 +342,7 @@ const 공통칸 = new Set([
   console.log("\n" + "=".repeat(74));
   console.log(`  통과 ${pass} · 실패 ${fail}`);
   console.log("=".repeat(74) + "\n");
+  // ★ 문서가 인용할 수 있게 통과 건수를 남긴다 (db/docs.js 가 대조한다)
+  require("./counts").합치기({ "훑기": pass });
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error("오류:", e.message); process.exit(1); });

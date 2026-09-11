@@ -27,3 +27,6 @@ public/media/*
 
 # 미리보기용 임시 폴더 (작업 중에만 씀)
 .tmp-preview/
+
+# 스키마 숫자 — npm run check 가 매번 다시 만든다
+db/.counts.json

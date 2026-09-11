@@ -185,7 +185,9 @@ create table items (
     foreign key (base_unit, base_family) references units (code, family),
 
   -- ★ 레시피 줄이 계열까지 맞추도록 참조할 키
-  constraint uq_items_id_store_family unique (id, store_id, base_family)
+  constraint uq_items_id_store_family unique (id, store_id, base_family),
+  -- ★ 3차 피드백 — "만드는 것만 붙는다" 를 외래키로 강제하기 위한 키
+  constraint uq_items_id_store_kind unique (id, store_id, kind)
 );
 
 create index ix_items_store on items(store_id);
@@ -227,6 +229,9 @@ create table item_versions (
   created_by uuid,
 
   constraint uq_item_versions_id_store unique (id, store_id),
+  -- ★ 3차 피드백 — 같은 매장 계정만 적힌다
+  constraint fk_item_versions_creator_same_store
+    foreign key (created_by, store_id) references users (id, store_id),
   -- ★ 2차 피드백 1 — 이 규격이 "어느 품목의 것인지" 까지 잠근다.
   --   입고·추천이 (규격, 매장, 품목) 세 칸으로 가리킬 수 있게 하는 열쇠다.
   constraint uq_item_versions_id_store_item unique (id, store_id, item_id),
@@ -432,6 +437,8 @@ create table order_plans (
   created_by uuid,
 
   constraint uq_order_plans_id_store unique (id, store_id),
+  constraint fk_op_creator_same_store
+    foreign key (created_by, store_id) references users (id, store_id),
   -- ★ 2차 피드백 1 — 입고가 (계획, 매장, 품목) 으로 가리키게 하는 열쇠
   constraint uq_order_plans_id_store_item unique (id, store_id, item_id),
   constraint fk_op_item_same_store_and_family
@@ -460,6 +467,8 @@ create table bake_plans (
   created_by uuid,
 
   constraint uq_bake_plans_id_store unique (id, store_id),
+  constraint fk_bp_creator_same_store
+    foreign key (created_by, store_id) references users (id, store_id),
   -- ★ 2차 피드백 1 — 제조 기록이 (계획, 매장, 품목) 으로 가리키게 하는 열쇠
   constraint uq_bake_plans_id_store_item unique (id, store_id, item_id),
   -- ★ 전수 훑기 — 제조 기록이 (계획, 레시피) 를 같이 가리킬 때 짝이 맞아야 한다
@@ -664,7 +673,9 @@ create table recommendation_runs (
   horizon_from date not null,
   horizon_to   date not null,
 
-  constraint uq_reco_runs_id_store unique (id, store_id)
+  constraint uq_reco_runs_id_store unique (id, store_id),
+  constraint fk_reco_runner_same_store
+    foreign key (ran_by, store_id) references users (id, store_id)
 );
 
 create table recommendation_inputs (
@@ -966,6 +977,9 @@ create table prep_tasks (
   --   그래서 아래 외래키가 "부모는 옵션이 아니어야 한다" 를 강제한다.
   is_option             boolean generated always as (option_of is not null) stored,
   option_parent_is_root boolean generated always as (false) stored,
+  -- ★ 3차 피드백 — 항상 'made' 인 칸. 아래 외래키가 이걸 items.kind 와 맞춰서
+  --   "만드는 부재료만 붙는다" 를 강제한다. 값을 손으로 못 바꾼다(생성 칸).
+  made_kind             text    generated always as ('made') stored,
 
   constraint uq_prep_tasks_id_store unique (id, store_id),
   constraint uq_prep_tasks_id_store_opt unique (id, store_id, is_option),
@@ -976,8 +990,10 @@ create table prep_tasks (
     foreign key (list_id, store_id) references prep_lists (id, store_id),
   constraint fk_prep_menu_same_store
     foreign key (menu_id, store_id) references menus (id, store_id),
-  constraint fk_prep_make_item_same_store
-    foreign key (make_recipe_item, store_id) references items (id, store_id),
+  -- ★ 3차 피드백 — 전에는 아무 품목이나 붙었다. 이제 kind='made' 만 붙는다
+  constraint fk_prep_make_item_is_made
+    foreign key (make_recipe_item, store_id, made_kind)
+    references items (id, store_id, kind),
 
   -- ★ 옵션의 옵션 금지 — 부모의 is_option 이 false 여야만 통과한다
   constraint fk_prep_option_one_level
@@ -1193,6 +1209,9 @@ create table cost_excluded_items (
 --    다음 신입에게 보이면 안 된다 (지금도 sessionStorage 를 쓰는 이유).
 
 create table daily_checks (
+  -- ★ 3차 피드백 — 기본키가 없었다. 한 줄을 가리킬 방법이 없으면
+  --   나중에 "이 체크만 지워" 를 못 한다.
+  id            uuid primary key default gen_random_uuid(),
   store_id      uuid not null references stores(id),
   business_date date not null,            -- ★ 새벽 4시 경계
   step_id       uuid,                     -- 체크리스트
@@ -1205,12 +1224,29 @@ create table daily_checks (
   constraint fk_check_step_same_store
     foreign key (step_id, store_id) references steps (id, store_id),
   constraint fk_check_prep_same_store
-    foreign key (prep_task_id, store_id) references prep_tasks (id, store_id)
+    foreign key (prep_task_id, store_id) references prep_tasks (id, store_id),
+  -- ★ 3차 피드백 — 체크는 직원이 한다. 같은 매장 직원만 적힌다
+  constraint fk_check_staff_same_store
+    foreign key (checked_by, store_id) references staff (id, store_id)
 );
+--  ★ 체크 취소는 **줄을 지운다** (checked_at 을 비우지 않는다).
+--    "체크했다가 풀었다" 를 남기려면 별도의 이력 표가 필요한데,
+--    지금 화면에는 그 기능이 없다. 없는 것을 있는 척 하지 않는다.
+--    아래 유일 인덱스가 "하루에 한 번" 을 보장한다.
 create unique index uq_daily_checks_step
   on daily_checks (store_id, business_date, step_id) where step_id is not null;
 create unique index uq_daily_checks_prep
   on daily_checks (store_id, business_date, prep_task_id) where prep_task_id is not null;
+
+
+-- ── 10-A-8. 앞 표가 뒤 표를 가리키는 것 ────────────────────────────────
+--
+--  stock_counts 는 staff 보다 먼저 만들어지므로, 그 제약만 여기서 건다.
+--  ★ 실사는 직원이 한다. 같은 매장 직원만 적힌다 (3차 피드백).
+
+alter table stock_counts
+  add constraint fk_sc_counter_same_store
+  foreign key (counted_by, store_id) references staff (id, store_id);
 
 
 -- ============================================================================
