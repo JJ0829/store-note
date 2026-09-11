@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0}
+img{max-width:100%;height:auto}
+[hidden]{display:none!important}
+section[id]{scroll-margin-top:16px}
+
+/* 목차 */
+.toc{background:var(--surface,#fff);border:1px solid var(--line,#dde2e6);
+  border-radius:5px;padding:14px 18px;margin:0 0 34px}
+.toc h2{font-size:13px!important;margin:0 0 10px!important;
+  font-family:var(--mono,monospace);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3,#8a959e);font-weight:600}
+.toc ol{margin:0;padding-left:0;list-style:none;
+  display:grid;gap:5px 22px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.toc li{font-size:13.5px}
+.toc a{color:var(--ink-2,#55626c);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover,.toc a:focus{color:var(--ink,#14181b);text-decoration:underline}
+.toc .n{font-family:var(--mono,monospace);font-size:11px;color:var(--ink-3,#8a959e);
+  margin-right:7px}
+
+/* 그림이 아직 안 그려졌거나 인터넷이 없을 때도 읽히게 */
+pre.mermaid{font-family:"IBM Plex Mono",Consolas,monospace;font-size:11.5px;
+  text-align:left;white-space:pre;color:#5a6873}
+pre.mermaid[data-processed="true"]{font-size:0}
+
+/* 종이로 뽑을 때 (제출용 PDF) */
+@media print{
+  body{background:#fff!important;color:#000!important}
+  .wrap{max-width:none;padding:0 8mm}
+  .toc{break-after:page}
+  section{break-inside:avoid-page}
+  .dia,.tablebox,.note,.card,pre{break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+  .mapbox,.dia{background:#fff!important}
+}
+</style>
+<title>매장수첩 아키텍처</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#f4f6f7; --surface:#ffffff; --surface-2:#eef1f3; --code-bg:#f0f3f5;
+  --ink:#14181b; --ink-2:#55626c; --ink-3:#8a959e;
+  --line:#dde2e6; --line-2:#c6ced5;
+  --srv:#2d5f86; --srv-bg:#eaf1f7; --srv-line:#b9d0e2;
+  --brw:#8f5510; --brw-bg:#faf1e5; --brw-line:#e5cba4;
+  --fix:#1f6b56; --fix-bg:#e9f4f0; --fix-line:#b2d8cb;
+  --hole:#a33636; --hole-bg:#fbecec; --hole-line:#e7bfbf;
+  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  --sans:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#14181b; --surface:#1c2126; --surface-2:#232a30; --code-bg:#191f24;
+    --ink:#e6eaed; --ink-2:#9aa6b0; --ink-3:#6f7c86;
+    --line:#2c343b; --line-2:#3d474f;
+    --srv:#7db2dc; --srv-bg:#1a2733; --srv-line:#2f4b63;
+    --brw:#dda75a; --brw-bg:#2b2318; --brw-line:#57432a;
+    --fix:#67c0a2; --fix-bg:#162a25; --fix-line:#2e5145;
+    --hole:#e58e8a; --hole-bg:#2e1e1e; --hole-line:#5c3636;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#14181b; --surface:#1c2126; --surface-2:#232a30; --code-bg:#191f24;
+  --ink:#e6eaed; --ink-2:#9aa6b0; --ink-3:#6f7c86;
+  --line:#2c343b; --line-2:#3d474f;
+  --srv:#7db2dc; --srv-bg:#1a2733; --srv-line:#2f4b63;
+  --brw:#dda75a; --brw-bg:#2b2318; --brw-line:#57432a;
+  --fix:#67c0a2; --fix-bg:#162a25; --fix-line:#2e5145;
+  --hole:#e58e8a; --hole-bg:#2e1e1e; --hole-line:#5c3636;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:40px 24px 96px}
+
+.masthead{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:30px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+h1{font-size:clamp(29px,5vw,42px);line-height:1.14;letter-spacing:-.022em;
+  font-weight:700;margin:0 0 14px;text-wrap:balance}
+.thesis{font-size:16.5px;color:var(--ink-2);max-width:62ch;margin:0 0 20px}
+.thesis b{color:var(--ink);font-weight:600}
+.meta{display:flex;flex-wrap:wrap;gap:8px 26px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.meta b{color:var(--ink-2);font-weight:500}
+
+h2{font-size:23px;font-weight:600;letter-spacing:-.018em;margin:0 0 6px;line-height:1.3}
+h3{font-size:16.5px;font-weight:600;margin:24px 0 6px;letter-spacing:-.012em}
+section{margin-bottom:50px}
+.zone-head{display:flex;align-items:baseline;gap:13px;flex-wrap:wrap;
+  padding-bottom:10px;margin-bottom:16px;border-bottom:1px solid var(--line-2)}
+.tag{font-family:var(--mono);font-size:11.5px;padding:2px 9px;border-radius:3px}
+.t-srv{background:var(--srv-bg);color:var(--srv);border:1px solid var(--srv-line)}
+.t-brw{background:var(--brw-bg);color:var(--brw);border:1px solid var(--brw-line)}
+.t-fix{background:var(--fix-bg);color:var(--fix);border:1px solid var(--fix-line)}
+.t-plain{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-2)}
+p{margin:0 0 12px;max-width:78ch;color:var(--ink-2);font-size:14px}
+p b{color:var(--ink);font-weight:600}
+code{font-family:var(--mono);font-size:12.5px;color:var(--ink);
+  background:var(--code-bg);padding:1px 4px;border-radius:3px}
+
+.dia{background:#f7f9fa;border:1px solid var(--line);border-radius:6px;
+  padding:16px 12px;margin:14px 0 10px;overflow-x:auto}
+.dia pre.mermaid{margin:0;background:none;border:0;padding:0;min-width:560px;text-align:center}
+.dcap{font-size:13px;color:var(--ink-2);margin:0 0 22px;padding-left:2px;max-width:76ch}
+.dcap b{color:var(--ink)}
+
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:5px;
+  background:var(--surface);margin:14px 0 20px}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:13px}
+th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{background:var(--surface-2);font-weight:600;font-size:11.5px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-2);border-bottom:1px solid var(--line-2);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td code,th code{font-family:var(--mono);font-size:11.5px;background:none;padding:0}
+.srv{color:var(--srv);font-weight:600}
+.brw{color:var(--brw);font-weight:600}
+.ok{color:var(--fix);font-weight:600}
+.no{color:var(--hole);font-weight:600}
+.sub{font-size:11.5px;color:var(--ink-3)}
+
+pre.tree{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;
+  padding:16px 18px;overflow-x:auto;margin:12px 0 18px;font-family:var(--mono);
+  font-size:12.5px;line-height:1.75;color:var(--ink)}
+pre.tree b{color:var(--srv);font-weight:600}
+pre.tree i{color:var(--ink-3);font-style:normal}
+
+.note{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--fix);
+  border-radius:0 5px 5px 0;padding:13px 16px;margin:16px 0}
+.note.hot{border-left-color:var(--hole)}
+.note.srvb{border-left-color:var(--srv)}
+.note h4{margin:0 0 6px;font-size:13.5px;color:var(--fix)}
+.note.hot h4{color:var(--hole)} .note.srvb h4{color:var(--srv)}
+.note p{margin:0 0 7px;font-size:13px}
+.note p:last-child{margin-bottom:0}
+
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin:14px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:14px 16px}
+.card .big{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--ink);
+  display:block;line-height:1.2;margin-bottom:2px}
+.card h4{margin:0 0 5px;font-size:13px;font-weight:600}
+.card p{margin:0;font-size:12.5px;line-height:1.6}
+
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-3)}
+footer p{margin:0 0 8px;max-width:78ch;font-size:12.5px;color:var(--ink-3)}
+footer code{background:none}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">매장수첩 · 개인 카페·베이커리 운영 도구</p>
+  <h1>보안 경계가 데이터 위치와 같은 구조</h1>
+  <p class="thesis">
+    이 앱에는 서버가 거의 없다. 화면 18개 중 <b>11개는 빌드할 때 HTML 로 구워져 나가고</b>,
+    <b>7개만 요청마다 서버를 거친다.</b> 그 7개가 정확히 <b>서버가 비밀을 들고 있는 화면</b>이다 —
+    레시피. 나머지는 <b>서버가 애초에 그 데이터를 모른다.</b>
+    그래서 잠금을 어디에 걸지가 취향이 아니라 <b>데이터가 어디 있느냐로 결정된다.</b>
+  </p>
+  <div class="meta">
+    <span><b>화면</b> 18 + API 4</span>
+    <span><b>코드</b> 13,927줄 · 테스트 7,184줄</span>
+    <span><b>런타임 의존성</b> 3개</span>
+    <span><b>2026-09-11</b></span>
+  </div>
+</header>
+
+<nav class="toc"><h2>목차</h2><ol>
+<li><a href="#s1"><span class="n">01</span>한 장으로</a></li>
+<li><a href="#s2"><span class="n">02</span>★ 잠금이 두 종류인 이유</a></li>
+<li><a href="#s3"><span class="n">03</span>화면 18개 + API 4개</a></li>
+<li><a href="#s4"><span class="n">04</span>폴더</a></li>
+<li><a href="#s5"><span class="n">05</span>요청이 흐르는 길</a></li>
+<li><a href="#s6"><span class="n">06</span>검사 층</a></li>
+<li><a href="#s7"><span class="n">07</span>다음 단계에서 달라지는 것</a></li>
+</ol></nav>
+
+<!-- ================= 한 장 ================= -->
+<section id="s1">
+  <div class="zone-head"><h2>한 장으로</h2><span class="tag t-plain">데이터가 사는 세 곳</span></div>
+  <div class="dia">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#dbe7ef','primaryTextColor':'#14181b','primaryBorderColor':'#5d7a92','lineColor':'#7b8a96','textColor':'#5a6873','fontFamily':'IBM Plex Sans KR, sans-serif','fontSize':'13px'}}}%%
+flowchart TB
+  subgraph 태블릿["태블릿 · 폰 브라우저"]
+    UI["화면 18개<br/>React 19"]
+    LS[("localStorage<br/>sop: 키 11개<br/><i>매출 · 시급 · 거래처 단가</i>")]
+    SS[("sessionStorage<br/>교육 모드 진도")]
+  end
+
+  subgraph 서버["Vercel · Next.js 15"]
+    STATIC["정적 11화면<br/><i>빌드할 때 HTML 로 구워둠</i>"]
+    DYN["동적 7화면<br/><i>요청마다 쿠키를 본다</i>"]
+    API["API 4개"]
+    SEED[("data/seed.json<br/><i>레시피 · 프렙 · 포지션</i><br/>읽기 전용")]
+  end
+
+  AI["Anthropic API<br/><i>촬영 목록 생성</i>"]
+
+  UI <--> LS
+  UI <--> SS
+  UI -->|"링크를 연다"| STATIC
+  UI -->|"매장 번호 쿠키"| DYN
+  UI -->|"지표 · 촬영목록"| API
+  DYN --> SEED
+  STATIC --> SEED
+  API -->|"키는 서버에만"| AI
+</pre>
+  </div>
+  <p class="dcap">
+    <b>서버가 들고 있는 비밀은 하나뿐이다 — 레시피.</b>
+    매출·시급·거래처 단가는 <b>서버에 올라간 적이 없다.</b> 각 태블릿 안에만 있다.
+    그래서 그 화면들은 정적으로 구워도 샐 것이 없고, 레시피 화면만 서버가 지킨다.
+  </p>
+
+  <div class="cards">
+    <div class="card"><span class="big">11</span>
+      <h4 class="srv">정적 화면</h4>
+      <p>빌드할 때 HTML 로 나간다. 서버가 <b>그 데이터를 모르기 때문에</b> 구워도 된다.</p></div>
+    <div class="card"><span class="big">7</span>
+      <h4 class="srv">동적 화면</h4>
+      <p>요청마다 <b>쿠키를 확인</b>한다. 전부 레시피를 보여주는 화면이다.</p></div>
+    <div class="card"><span class="big">3</span>
+      <h4>런타임 의존성</h4>
+      <p><code>next</code> · <code>react</code> · <code>react-dom</code>.
+         <b>그 외 0개</b> — 라이선스 감사를 무효화하지 않으려고.</p></div>
+    <div class="card"><span class="big">0</span>
+      <h4>서버에 저장되는 개인정보</h4>
+      <p>이름 · 시급 · 매출 · 단가가 <b>서버 디스크에 한 번도 안 닿는다.</b></p></div>
+  </div>
+</section>
+
+<!-- ================= 경계 ================= -->
+<section id="s2">
+  <div class="zone-head"><h2>★ 잠금이 두 종류인 이유</h2><span class="tag t-fix">이 설계의 핵심</span></div>
+  <p>
+    잠금이 둘인 것은 취향이 아니다. <b>서버가 그 데이터를 들고 있느냐</b>로 갈린다.
+  </p>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>잠금</th><th>어디서 도나</th><th>거는 화면</th><th>왜 그걸로 충분한가</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>ServerStoreGate</code><br><span class="sub">매장 번호 · 서버 검증</span></td>
+          <td class="srv"><b>서버</b><br><span class="sub">쿠키를 확인하고<br>없으면 <b>아예 안 그린다</b></span></td>
+          <td><code>/r</code> <code>/r/[slug]</code> <code>/r/my</code> <code>/r/new</code><br>
+              <code>/prep</code> <code>/prep/[slug]</code> <code>/shoot</code></td>
+          <td><b>레시피는 서버가 들고 있다.</b> 화면만 가리면 페이지 소스에 배합이 남는다.
+              그래서 <b>서버가 내용을 안 보내는</b> 방식이어야 한다</td>
+        </tr>
+        <tr>
+          <td><code>OwnerGate</code><br><span class="sub">사장님 번호 · 브라우저</span></td>
+          <td class="brw"><b>브라우저</b><br><span class="sub">가림막이다</span></td>
+          <td><code>/sales</code> <code>/cost</code> <code>/vendors</code><br>
+              <code>/contracts</code> <code>/roster</code> <code>/backup</code> <code>/</code><br>
+              <span class="sub"><code>/attendance</code> 는 <code>InlineUnlock</code> 으로 <b>인건비 숫자만</b> 가린다 —
+              출퇴근 찍는 것은 누구나 해야 하므로 화면 전체를 잠그면 안 된다</span></td>
+          <td><b>서버가 그 데이터를 모른다.</b> 매출·시급·단가는 그 태블릿 안에만 있어서
+              페이지 소스에 담길 내용 자체가 없다. 가림막으로 충분하다</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note srvb">
+    <h4>정적/동적이 갈리는 것도 같은 이유다</h4>
+    <p>
+      <code>ServerStoreGate</code> 는 <b>쿠키를 읽는다.</b> 쿠키를 읽는 화면은
+      Next 가 미리 구워둘 수 없다 — 사람마다 다르니까. 그래서 <b>그 7개만 동적</b>이다.
+    </p>
+    <p>
+      반대로 <code>OwnerGate</code> 화면은 <b>서버가 아무것도 모르는 빈 껍데기</b>라
+      구워도 아무 일이 없다. <b>빠르고, 안전하고, 서버 비용이 0 이다.</b>
+    </p>
+  </div>
+
+  <div class="note hot">
+    <h4>이 구조가 깨지는 조건 — 알고 있어야 한다</h4>
+    <p>
+      <b>지금 레시피 수치는 표준 비율 자리표시자다.</b> 그래서 서버 게이트가 없어도
+      실제로 새는 영업비밀이 없다. <b>실매장 수치를 넣는 순간 사정이 달라진다.</b>
+    </p>
+    <p>
+      그리고 <code>STORE_PIN</code> 환경변수를 안 넣으면 <b>서버가 막지 않는다</b> —
+      대신 화면 위에 빨간 띠가 뜬다. 심사 시연 중에 레시피가 통째로 안 열리는 것이
+      더 큰 사고라고 판단해서 그렇게 했다. <b>의도된 선택이고, 조용히 열지는 않는다.</b>
+    </p>
+  </div>
+</section>
+
+<!-- ================= 화면 ================= -->
+<section id="s3">
+  <div class="zone-head"><h2>화면 18개 + API 4개</h2><span class="tag t-plain">전수</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>주소</th><th>무엇</th><th>서버</th><th>잠금</th><th>데이터</th></tr></thead>
+      <tbody>
+        <tr><td><code>/</code></td><td>사장님 화면 — 지금 시각의 근무조</td><td class="srv">정적</td><td>인건비만</td><td>시드 + 태블릿</td></tr>
+        <tr><td><code>/t/[slug]</code></td><td>교육 모드 — 한 장씩, 진도 안 남김</td><td class="srv">정적</td><td>—</td><td>시드</td></tr>
+        <tr><td><code>/p/[slug]</code></td><td>체크리스트 — 카톡으로 여는 공개 링크</td><td class="srv">정적</td><td>—</td><td>시드 + 태블릿</td></tr>
+        <tr class="r2"><td><code>/prep</code> <code>/prep/[slug]</code></td><td><b>프렙 — 리드타임</b></td><td class="brw">동적</td><td>매장</td><td>시드 + 태블릿</td></tr>
+        <tr class="r2"><td><code>/r</code> <code>/r/[slug]</code> <code>/r/my</code> <code>/r/new</code></td><td><b>레시피 — 배수 계산</b></td><td class="brw">동적</td><td>매장</td><td>시드 + 태블릿</td></tr>
+        <tr class="r2"><td><code>/shoot</code></td><td>촬영 진행 + <b>AI 촬영목록</b></td><td class="brw">동적</td><td>매장</td><td>시드</td></tr>
+        <tr><td><code>/attendance</code></td><td>출퇴근 — 하루 두 번 열린다</td><td class="srv">정적</td><td><code>InlineUnlock</code><br><span class="sub">인건비 숫자만 가림</span></td><td>태블릿</td></tr>
+        <tr><td><code>/order</code></td><td>발주 체크 — 주문함 / 들어옴</td><td class="srv">정적</td><td>—</td><td>시드 + 태블릿</td></tr>
+        <tr><td><code>/roster</code></td><td>근무표(계획)</td><td class="srv">정적</td><td>사장님</td><td>태블릿</td></tr>
+        <tr><td><code>/sales</code></td><td>매출 — 오늘 남은 돈</td><td class="srv">정적</td><td>사장님</td><td>태블릿</td></tr>
+        <tr><td><code>/cost</code></td><td>원가 — 못 구한 단가는 0원으로 안 셈</td><td class="srv">정적</td><td>사장님</td><td>시드 + 태블릿</td></tr>
+        <tr><td><code>/vendors</code></td><td>거래처 · 품목 단가</td><td class="srv">정적</td><td>사장님</td><td>태블릿</td></tr>
+        <tr><td><code>/contracts</code></td><td>근로계약 — 주민번호 칸 없음</td><td class="srv">정적</td><td>사장님</td><td>태블릿</td></tr>
+        <tr><td><code>/backup</code></td><td>내보내기 · 되돌리기 (CSV + JSON)</td><td class="srv">정적</td><td>사장님</td><td>태블릿</td></tr>
+        <tr><td><code>/api/shoot-plan</code></td><td><b>AI 호출 — 이 앱에서 돈이 나가는 유일한 길</b></td><td class="brw">동적</td><td>매장 + 횟수제한</td><td>—</td></tr>
+        <tr><td><code>/api/store-unlock</code></td><td>매장 번호 확인 → 쿠키 발급</td><td class="brw">동적</td><td>—</td><td>—</td></tr>
+        <tr><td><code>/api/log</code></td><td>지표 15종</td><td class="brw">동적</td><td>—</td><td>파일</td></tr>
+        <tr><td><code>/api/media</code></td><td>촬영 파일 목록</td><td class="brw">동적</td><td>—</td><td>파일</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================= 폴더 ================= -->
+<section id="s4">
+  <div class="zone-head"><h2>폴더</h2><span class="tag t-plain">코드 13,927줄 · 테스트 7,184줄</span></div>
+<pre class="tree">
+<b>src/app/</b>              화면과 API. 폴더 이름이 곧 주소다
+<b>src/components/</b>       화면 조각 30개. <i>「use client」 가 붙는 곳 — 여기가 브라우저 경계다</i>
+<b>src/lib/</b>              계산 29개. <i>화면이 없다. 그래서 전부 테스트로 덮인다</i>
+  ├ repo.ts             시드 접근. <i>Supabase 로 갈 때 여기만 고친다</i>
+  ├ units.ts            단위 환산. <i>★ 계열이 다르면 계산 안 함 (g↔ml 금지)</i>
+  ├ cost.ts             원가. <i>★ 못 구한 값을 0원으로 안 셈</i>
+  ├ businessDay.ts      <i>★ 매장의 하루. 경계는 자정이 아니라 새벽 4시</i>
+  ├ shiftClock.ts       <i>★ 자정을 넘는 마감조 판정</i>
+  ├ leadTime.ts         <i>지금 걸면 → 내일 07:43부터</i>
+  ├ attendance.ts       근태·인건비(추정)
+  ├ serverGate.ts       <i>매장 번호 서버 검증 + 시도 제한</i>
+  ├ ownerGate.ts        <i>사장님 번호 — 가림막이다</i>
+  ├ rateLimit.ts        <i>AI 호출 횟수. 사람당 20/시간 · 전체 60/시간</i>
+  └ backup.ts           <i>내보내기. ★ CSV 는 BOM 필수 + 수식 주입 차단</i>
+
+<b>data/seed.json</b>        지금은 이 파일이 DB. <i>앱이 절대 쓰지 않는다</i>
+<b>db/</b>                   Supabase 목표 스키마 + 검사 3종
+<b>tests/</b>                30파일. <i>lib 전부 + 시드 숫자 + 빌드 산출물</i>
+<b>presentation/</b>         시연용 단일 HTML. <i>외부 요청 0건</i>
+</pre>
+  <div class="note">
+    <h4>계산을 <code>lib/</code> 으로 뺀 이유</h4>
+    <p>
+      화면(<code>.tsx</code>)은 브라우저가 있어야 돌아서 <b>테스트하기 어렵다.</b>
+      그래서 <b>틀리면 돈이 걸리는 계산</b>은 전부 <code>lib/</code> 의 순수 함수로 뺐다 —
+      원가 · 인건비 · 리드타임 · 단위 환산 · 영업일.
+      그 결과 <b>테스트 코드가 본 코드의 절반을 넘는다</b>(7,184 : 13,927).
+    </p>
+  </div>
+</section>
+
+<!-- ================= 흐름 ================= -->
+<section id="s5">
+  <div class="zone-head"><h2>요청이 흐르는 길</h2><span class="tag t-plain">레시피를 여는 경우</span></div>
+  <div class="dia">
+<pre class="mermaid">
+%%{init:{'theme':'base','themeVariables':{'primaryColor':'#dbe7ef','primaryTextColor':'#14181b','primaryBorderColor':'#5d7a92','lineColor':'#7b8a96','textColor':'#5a6873','fontFamily':'IBM Plex Sans KR, sans-serif','fontSize':'13px'}}}%%
+sequenceDiagram
+  participant 직원 as 직원 (태블릿)
+  participant 서버 as Next 서버
+  participant 시드 as seed.json
+  직원->>서버: /r/shokupan 열기
+  서버->>서버: 쿠키 확인 (sn_store)
+  alt 쿠키 없음
+    서버-->>직원: 번호 입력 화면만 (재료 0줄)
+    직원->>서버: POST /api/store-unlock
+    서버->>서버: 해시 비교 · 시도 제한
+    서버-->>직원: 쿠키 12시간
+  end
+  서버->>시드: 레시피 읽기
+  시드-->>서버: 재료 · 배수 · 순서
+  서버-->>직원: 완성된 HTML
+  직원->>직원: 배수 계산은 브라우저에서
+</pre>
+  </div>
+  <p class="dcap">
+    <b>쿠키가 없으면 서버가 재료를 아예 안 실어 보낸다.</b> 페이지 소스를 열어도 없다 —
+    이게 「가림막」과 「서버 검증」의 실제 차이다. 확인 방법은
+    <code>curl -s 주소/r/shokupan | grep -c 강력분</code> 이 <b>0</b> 이어야 한다.
+  </p>
+</section>
+
+<!-- ================= 검사 ================= -->
+<section id="s6">
+  <div class="zone-head"><h2>검사 층</h2><span class="tag t-fix">npm run check 한 줄</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>단계</th><th>무엇을 보나</th><th>건수</th></tr></thead>
+      <tbody>
+        <tr><td><code>typecheck</code></td><td>타입</td><td class="ok">오류 0</td></tr>
+        <tr><td><code>build</code></td><td>프로덕션 빌드 + 정적/동적 갈림</td><td class="ok">통과</td></tr>
+        <tr><td><code>test</code></td><td>계산 · 시드 숫자 · 두 앱 일치 · <b>빌드된 HTML</b> · <b>문서↔코드</b></td><td class="ok">543</td></tr>
+        <tr><td><code>verify:db</code></td><td>스키마를 <b>진짜 PostgreSQL 에 올려</b> 막히는지</td><td class="ok">44</td></tr>
+        <tr><td><code>audit:db</code></td><td>심사 지적 한 줄당 제약 1:1 + 그림↔SQL</td><td class="ok">27</td></tr>
+        <tr><td><code>sweep:db</code></td><td><b>규칙마다 적용돼야 할 자리를 전부</b></td><td class="ok">8</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <h4>빌드된 HTML 을 검사하는 이유</h4>
+    <p>
+      <b>화면이 아니라 결과물을 본다.</b> 잠긴 레시피가 페이지 소스에 남는 사고는
+      화면을 봐서는 안 보인다. 그래서 <code>.next</code> 의 HTML 을 직접 긁어서
+      <b>배합이 들어 있는지</b> 센다.
+      <code>.next</code> 가 없으면 <b>건너뜀으로 크게 표시</b>한다 —
+      조용히 통과하는 것이 제일 위험하다.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 다음 ================= -->
+<section id="s7">
+  <div class="zone-head"><h2>다음 단계에서 달라지는 것</h2><span class="tag t-plain">Supabase</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>지금</th><th>옮기면</th><th>그래서 풀리는 것</th></tr></thead>
+      <tbody>
+        <tr><td>태블릿마다 따로 쌓이는 저장소</td><td>매장 단위 공유</td><td><b>교대 인계</b> — 지금 종이가 우리보다 나은 유일한 지점</td></tr>
+        <tr><td><code>seed.json</code> 읽기 전용</td><td>표 37개 + 편집 화면</td><td>레시피 수치를 사장님이 직접 고친다</td></tr>
+        <tr><td>매장 번호 = 서버 게이트</td><td>로그인 + 줄 단위 접근통제</td><td>실매장 레시피를 넣어도 안전하다</td></tr>
+        <tr><td><code>/api/log</code> → 파일</td><td>표 insert</td><td>배포본에서 <b>지표가 실제로 쌓인다</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    고칠 곳은 <code>src/lib/repo.ts</code> 와 각 <code>lib</code> 의 <code>load/save</code> 뿐이다.
+    <b>화면 코드는 안 건드린다</b> — 처음부터 그렇게 나눠 뒀다.
+    칸 단위 대응표는 <code>docs/이관_매핑.md</code> 에 있다.
+  </p>
+</section>
+
+<footer>
+  <p>
+    <b>매장수첩 아키텍처</b> · 2026-09-11 ·
+    Next.js 15 · React 19 · TypeScript · Tailwind v4 · Vercel ·
+    런타임 의존성 <code>next</code> <code>react</code> <code>react-dom</code> 3개
+  </p>
+  <p>
+    숫자는 저장소에서 직접 센 값이다 —
+    화면 18 + API 4, 정적 11 / 동적 7, 코드 13,927줄, 테스트 7,184줄.
+    <b>개수는 커밋마다 바뀐다. 현재 값은 <code>npm run check</code> 가 말한다.</b>
+  </p>
+</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  (function () {
+    function 앵커로() {
+      if (location.hash) {
+        var el = document.querySelector(location.hash);
+        if (el) el.scrollIntoView();
+      }
+    }
+    if (!window.mermaid) {
+      // 인터넷이 없으면 그림 대신 안내를 띄운다 — 조용히 비어 있는 것보다 낫다
+      document.querySelectorAll("pre.mermaid").forEach(function (el) {
+        var p = document.createElement("p");
+        p.textContent = "※ 이 자리에 그림이 들어갑니다. 인터넷에 연결한 뒤 새로고침하세요.";
+        p.style.cssText = "font-size:13px;color:#8a959e;margin:0 0 8px";
+        el.parentNode.insertBefore(p, el);
+      });
+      앵커로();
+      return;
+    }
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      flowchart: { htmlLabels: true, useMaxWidth: true },
+      er: { useMaxWidth: true },
+      sequence: { useMaxWidth: true },
+    });
+    // 그림이 그려지면 높이가 바뀌므로 앵커로 다시 간다
+    window.addEventListener("load", function () { setTimeout(앵커로, 400); });
+  })();
+</script>
+</body>
+</html>

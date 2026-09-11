@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0}
+img{max-width:100%;height:auto}
+[hidden]{display:none!important}
+section[id]{scroll-margin-top:16px}
+
+/* 목차 */
+.toc{background:var(--surface,#fff);border:1px solid var(--line,#dde2e6);
+  border-radius:5px;padding:14px 18px;margin:0 0 34px}
+.toc h2{font-size:13px!important;margin:0 0 10px!important;
+  font-family:var(--mono,monospace);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3,#8a959e);font-weight:600}
+.toc ol{margin:0;padding-left:0;list-style:none;
+  display:grid;gap:5px 22px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.toc li{font-size:13.5px}
+.toc a{color:var(--ink-2,#55626c);text-decoration:none;display:block;padding:1px 0}
+.toc a:hover,.toc a:focus{color:var(--ink,#14181b);text-decoration:underline}
+.toc .n{font-family:var(--mono,monospace);font-size:11px;color:var(--ink-3,#8a959e);
+  margin-right:7px}
+
+/* 그림이 아직 안 그려졌거나 인터넷이 없을 때도 읽히게 */
+pre.mermaid{font-family:"IBM Plex Mono",Consolas,monospace;font-size:11.5px;
+  text-align:left;white-space:pre;color:#5a6873}
+pre.mermaid[data-processed="true"]{font-size:0}
+
+/* 종이로 뽑을 때 (제출용 PDF) */
+@media print{
+  body{background:#fff!important;color:#000!important}
+  .wrap{max-width:none;padding:0 8mm}
+  .toc{break-after:page}
+  section{break-inside:avoid-page}
+  .dia,.tablebox,.note,.card,pre{break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+  .mapbox,.dia{background:#fff!important}
+}
+</style>
+<title>매장수첩 데이터 구조</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  --ground:#f4f6f7;
+  --surface:#ffffff;
+  --surface-2:#eef1f3;
+  --ink:#14181b;
+  --ink-2:#55626c;
+  --ink-3:#8a959e;
+  --line:#dde2e6;
+  --line-2:#c6ced5;
+
+  --server:#2d5f86;
+  --server-bg:#eaf1f7;
+  --server-line:#b9d0e2;
+
+  --local:#8f5510;
+  --local-bg:#faf1e5;
+  --local-line:#e5cba4;
+
+  --danger:#a33636;
+  --danger-bg:#fbecec;
+  --danger-line:#e7bfbf;
+
+  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  --sans:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#14181b;
+    --surface:#1c2126;
+    --surface-2:#232a30;
+    --ink:#e6eaed;
+    --ink-2:#9aa6b0;
+    --ink-3:#6f7c86;
+    --line:#2c343b;
+    --line-2:#3d474f;
+
+    --server:#7db2dc;
+    --server-bg:#1a2733;
+    --server-line:#2f4b63;
+
+    --local:#dda75a;
+    --local-bg:#2b2318;
+    --local-line:#57432a;
+
+    --danger:#e58e8a;
+    --danger-bg:#2e1e1e;
+    --danger-line:#5c3636;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#14181b;
+  --surface:#1c2126;
+  --surface-2:#232a30;
+  --ink:#e6eaed;
+  --ink-2:#9aa6b0;
+  --ink-3:#6f7c86;
+  --line:#2c343b;
+  --line-2:#3d474f;
+
+  --server:#7db2dc;
+  --server-bg:#1a2733;
+  --server-line:#2f4b63;
+
+  --local:#dda75a;
+  --local-bg:#2b2318;
+  --local-line:#57432a;
+
+  --danger:#e58e8a;
+  --danger-bg:#2e1e1e;
+  --danger-line:#5c3636;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1060px;margin:0 auto;padding:40px 24px 96px}
+
+/* ---------- 머리 ---------- */
+.masthead{
+  border-bottom:2px solid var(--ink);
+  padding-bottom:22px;
+  margin-bottom:34px;
+}
+.eyebrow{
+  font-family:var(--mono);
+  font-size:11.5px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+  margin:0 0 10px;
+}
+h1{
+  font-size:clamp(30px,5vw,44px);
+  line-height:1.14;
+  letter-spacing:-.022em;
+  font-weight:700;
+  margin:0 0 14px;
+  text-wrap:balance;
+}
+.thesis{
+  font-size:17px;
+  color:var(--ink-2);
+  max-width:60ch;
+  margin:0 0 22px;
+}
+.thesis b{color:var(--ink);font-weight:600}
+.meta{
+  display:flex;flex-wrap:wrap;gap:8px 26px;
+  font-family:var(--mono);font-size:12px;color:var(--ink-3);
+}
+.meta span b{color:var(--ink-2);font-weight:500}
+
+/* ---------- 지도 ---------- */
+figure{margin:0 0 40px}
+.mapbox{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:18px 14px 8px;
+  overflow-x:auto;
+}
+.mapbox svg{display:block;min-width:700px;width:100%;height:auto}
+figcaption{
+  font-size:13px;color:var(--ink-2);margin-top:12px;
+  padding-left:2px;max-width:72ch;
+}
+figcaption code{font-family:var(--mono);font-size:12px;color:var(--ink)}
+
+/* ---------- 구역 ---------- */
+section{margin-bottom:52px;scroll-margin-top:20px}
+.zone-head{
+  display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  padding-bottom:10px;margin-bottom:20px;
+  border-bottom:1px solid var(--line-2);
+}
+h2{
+  font-size:23px;font-weight:600;letter-spacing:-.015em;margin:0;
+}
+.zone-key{
+  font-family:var(--mono);font-size:12.5px;
+  padding:2px 9px;border-radius:3px;
+}
+.k-server{background:var(--server-bg);color:var(--server);border:1px solid var(--server-line)}
+.k-local{background:var(--local-bg);color:var(--local);border:1px solid var(--local-line)}
+.k-gone{background:var(--surface-2);color:var(--ink-2);border:1px dashed var(--line-2)}
+.zone-note{font-size:13.5px;color:var(--ink-2);margin:0 0 24px;max-width:70ch}
+
+/* ---------- 엔티티 ---------- */
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.ent{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:5px;
+  overflow:hidden;
+}
+.ent.wide{grid-column:1/-1}
+.ent-top{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:11px 14px;border-bottom:1px solid var(--line);
+  background:var(--surface-2);
+}
+.ent-name{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:-.01em}
+.ent-count{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.ent-sub{padding:9px 14px 0;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+.fields{
+  list-style:none;margin:0;padding:8px 14px 13px;
+  display:flex;flex-direction:column;
+}
+.fields li{
+  display:flex;gap:10px;align-items:baseline;
+  padding:3.5px 0;
+  border-bottom:1px dotted var(--line);
+  font-size:12.5px;
+}
+.fields li:last-child{border-bottom:0}
+.fn{font-family:var(--mono);font-size:12px;color:var(--ink);flex:0 0 auto}
+.ft{font-family:var(--mono);font-size:11px;color:var(--ink-3);flex:0 0 auto}
+.fd{color:var(--ink-2);margin-left:auto;text-align:right;font-size:11.5px;line-height:1.45}
+.fields li.hot .fn{color:var(--danger);font-weight:600}
+.fields li.ref .fn{color:var(--server)}
+.zone-local .fields li.ref .fn{color:var(--local)}
+.star{color:var(--danger);font-weight:700}
+
+/* ---------- 표 ---------- */
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:5px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:13px}
+th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{
+  background:var(--surface-2);font-weight:600;font-size:11.5px;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);
+  border-bottom:1px solid var(--line-2);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td code,th code{font-family:var(--mono);font-size:11.5px}
+td code{color:var(--ink)}
+.ok{color:var(--server);font-weight:600}
+.no{color:var(--danger);font-weight:600}
+
+/* ---------- 경고 ---------- */
+.warn{
+  background:var(--danger-bg);
+  border:1px solid var(--danger-line);
+  border-radius:5px;
+  padding:16px 18px;
+  margin:22px 0;
+}
+.warn h3{
+  margin:0 0 8px;font-size:15px;font-weight:600;color:var(--danger);
+  display:flex;align-items:center;gap:8px;
+}
+.warn p{margin:0 0 8px;font-size:13.5px;color:var(--ink-2);max-width:72ch}
+.warn p:last-child{margin-bottom:0}
+.warn code{font-family:var(--mono);font-size:12px;color:var(--ink)}
+
+/* ---------- 제약 목록 ---------- */
+.rules{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));margin-top:4px}
+.rule{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:5px;padding:14px 16px;
+}
+.rule h4{
+  margin:0 0 6px;font-size:13.5px;font-weight:600;letter-spacing:-.01em;
+}
+.rule p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.6}
+.rule code{font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+.rule .where{
+  display:block;margin-top:8px;font-family:var(--mono);
+  font-size:10.5px;color:var(--ink-3);letter-spacing:.02em;
+}
+
+footer{
+  margin-top:64px;padding-top:20px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-3);
+}
+footer code{font-family:var(--mono);font-size:11.5px}
+footer p{margin:0 0 6px;max-width:74ch}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">매장수첩 · 개인 카페·베이커리 운영 도구</p>
+    <h1>데이터가 사는 두 곳</h1>
+    <p class="thesis">
+      이 앱의 데이터는 <b>서버의 시드 파일</b>과 <b>각 태블릿의 브라우저 저장소</b>로
+      갈라져 있다. 둘을 잇는 것은 외래키가 아니라 <b>문자열 id 비교</b>이고,
+      그것을 강제하는 곳은 지금 어디에도 없다. 이 문서는 그 경계가
+      정확히 어디를 지나가는지 그린 것이다.
+    </p>
+    <div class="meta">
+      <span><b>기준</b> 2026-09-11 · <code>dedd10c</code></span>
+      <span><b>엔티티</b> 서버 11 · 브라우저 17</span>
+      <span><b>테스트</b> 537 통과</span>
+    </div>
+  </header>
+
+<nav class="toc"><h2>목차</h2><ol>
+<li><a href="#s1"><span class="n">01</span>서버가 가진 것</a></li>
+<li><a href="#s2"><span class="n">02</span>브라우저가 가진 것</a></li>
+<li><a href="#s3"><span class="n">03</span>경계를 건너는 참조</a></li>
+<li><a href="#s4"><span class="n">04</span>이 구조가 지키는 규칙</a></li>
+<li><a href="#s5"><span class="n">05</span>Supabase로 옮기면 달라지는 것</a></li>
+</ol></nav>
+
+  <figure>
+    <div class="mapbox">
+      <svg viewBox="0 0 936 356" role="img" aria-label="서버 시드 파일과 브라우저 저장소로 나뉜 데이터 구조와 경계를 건너는 네 개의 참조">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--ink-3)"/>
+          </marker>
+          <marker id="ah-hot" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--danger)"/>
+          </marker>
+        </defs>
+
+        <!-- 구역 이름표 -->
+        <text x="16" y="28" font-family="IBM Plex Mono, monospace" font-size="12.5"
+              font-weight="500" fill="var(--server)">서버 · data/seed.json · 읽기 전용</text>
+        <text x="580" y="28" font-family="IBM Plex Mono, monospace" font-size="12.5"
+              font-weight="500" fill="var(--local)">브라우저 · localStorage · 기기마다 따로</text>
+
+        <rect x="16" y="44" width="340" height="290" rx="8"
+              fill="var(--server-bg)" stroke="var(--server-line)"/>
+        <rect x="580" y="44" width="340" height="290" rx="8"
+              fill="var(--local-bg)" stroke="var(--local-line)"/>
+
+        <!-- 서버 칩 -->
+        <g font-family="IBM Plex Mono, monospace">
+          <rect x="32" y="72"  width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--server-line)"/>
+          <text x="46" y="91"  font-size="13" font-weight="600" fill="var(--ink)">Store</text>
+          <text x="46" y="107" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">매장 1건 · 이름과 슬러그뿐</text>
+
+          <rect x="32" y="124" width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--server-line)"/>
+          <text x="46" y="143" font-size="13" font-weight="600" fill="var(--ink)">Position → Section → Step</text>
+          <text x="46" y="159" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">체크리스트·교육 3 · 9 · 26</text>
+
+          <rect x="32" y="176" width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--server-line)"/>
+          <text x="46" y="195" font-size="13" font-weight="600" fill="var(--ink)">Recipe → Ingredient</text>
+          <text x="46" y="211" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">레시피 10 · 재료 28 · 순서 32</text>
+
+          <rect x="32" y="228" width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--server-line)"/>
+          <text x="46" y="247" font-size="13" font-weight="600" fill="var(--ink)">PrepList → PrepTask</text>
+          <text x="46" y="263" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">목록 3 · 항목 30 · 못 되돌림 8</text>
+
+          <rect x="32" y="280" width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--server-line)"/>
+          <text x="46" y="299" font-size="13" font-weight="600" fill="var(--ink)">Shift → ShiftFocus</text>
+          <text x="46" y="315" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">근무조 4 · 어느 화면을 띄울지</text>
+        </g>
+
+        <!-- 브라우저 칩 -->
+        <g font-family="IBM Plex Mono, monospace">
+          <rect x="596" y="72"  width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--local-line)"/>
+          <text x="610" y="91"  font-size="12" font-weight="600" fill="var(--ink)">roster · punch · contracts</text>
+          <text x="610" y="107" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">직원 · 출퇴근 · 근로계약 (3년 보존)</text>
+
+          <rect x="596" y="124" width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--local-line)"/>
+          <text x="610" y="143" font-size="12" font-weight="600" fill="var(--ink)">sales · settings</text>
+          <text x="610" y="159" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">매출 · 판매가 · 최저임금 · 원가 제외</text>
+
+          <rect x="596" y="176" width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--local-line)"/>
+          <text x="610" y="195" font-size="12" font-weight="600" fill="var(--ink)">vendors</text>
+          <text x="610" y="211" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">거래처 · 품목 단가 — 원가가 여기서 나온다</text>
+
+          <rect x="596" y="228" width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--local-line)"/>
+          <text x="610" y="247" font-size="12" font-weight="600" fill="var(--ink)">orderLog · orderLinks</text>
+          <text x="610" y="263" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">발주 — 주문함 / 들어옴</text>
+
+          <rect x="596" y="280" width="308" height="42" rx="4" fill="var(--surface)" stroke="var(--local-line)"/>
+          <text x="610" y="299" font-size="12" font-weight="600" fill="var(--ink)">cycleDone · cycleEvery · recipes</text>
+          <text x="610" y="315" font-size="10.5" fill="var(--ink-3)" font-family="IBM Plex Sans KR, sans-serif">마지막으로 한 날 · 매장이 정한 주기 · 내 레시피</text>
+        </g>
+
+        <!-- 경계를 건너는 참조 -->
+        <g stroke-width="1.4" fill="none">
+          <path d="M344 193 L592 145" stroke="var(--ink-3)" marker-end="url(#ah)"/>
+          <path d="M344 203 L592 197" stroke="var(--danger)" stroke-dasharray="5 3" marker-end="url(#ah-hot)"/>
+          <path d="M344 249 L592 249" stroke="var(--ink-3)" marker-end="url(#ah)"/>
+          <path d="M344 255 L592 301" stroke="var(--ink-3)" marker-end="url(#ah)"/>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="end">
+          <text x="586" y="137" fill="var(--ink-2)">Recipe.slug</text>
+          <text x="586" y="189" fill="var(--danger)" font-weight="600">Ingredient.name ⚠</text>
+          <text x="586" y="241" fill="var(--ink-2)">PrepTask.id</text>
+          <text x="586" y="293" fill="var(--ink-2)">PrepTask.id</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>
+      화살표 넷은 전부 <b>문자열 비교</b>다. 세 개는 <code>id</code>로 잇고,
+      빨간 점선 하나만 <b>사람이 쓴 이름</b>으로 잇는다 —
+      레시피의 <code>Ingredient.name</code>과 거래처의 <code>VendorItem.name</code>이
+      한 글자라도 다르면 원가에서 그 재료가 빠진다.
+    </figcaption>
+  </figure>
+
+  <!-- ================= 서버 ================= -->
+  <section id="s1" class="zone-server">
+    <div class="zone-head">
+      <h2>서버가 가진 것</h2>
+      <span class="zone-key k-server">data/seed.json</span>
+    </div>
+    <p class="zone-note">
+      지금은 JSON 파일 하나가 DB다. <code>src/lib/repo.ts</code>가 런타임에 읽어서
+      메모리에 캐시한다. <b>앱이 절대 쓰지 않는다 — 전부 읽기 전용이다.</b>
+      매장이 바꾸는 값은 전부 반대쪽(브라우저)에 쌓인다.
+    </p>
+
+    <div class="grid">
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">Store</span><span class="ent-count">1건</span></div>
+        <p class="ent-sub">매장 하나. 화면 머리에 이름을 띄우는 것이 전부다.</p>
+        <ul class="fields">
+          <li><span class="fn">id</span><span class="ft">string</span></li>
+          <li><span class="fn">name</span><span class="ft">string</span><span class="fd">○○ 베이커리 카페 (자리표시)</span></li>
+          <li><span class="fn">slug</span><span class="ft">string</span><span class="fd">our-cafe</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">Position</span><span class="ent-count">3건</span></div>
+        <p class="ent-sub">포지션 하나가 체크리스트 한 장이자 교육 과정 하나다. 오픈조 · 마감조 · 제빵.</p>
+        <ul class="fields">
+          <li><span class="fn">id</span><span class="ft">string</span></li>
+          <li class="ref"><span class="fn">shareSlug</span><span class="ft">string</span><span class="fd">주소가 된다 <code>/p/{slug}</code> <code>/t/{slug}</code></span></li>
+          <li><span class="fn">name</span><span class="ft">string</span></li>
+          <li><span class="fn">subtitle</span><span class="ft">string</span></li>
+          <li><span class="fn">summary</span><span class="ft">string</span></li>
+          <li><span class="fn">sections[]</span><span class="ft">Section</span><span class="fd">9개</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">Section → Step</span><span class="ent-count">9 · 26</span></div>
+        <p class="ent-sub">화면 셋(체크리스트·교육·레시피 순서)이 같은 모양을 쓴다. 그래서 공통으로 뺐다.</p>
+        <ul class="fields">
+          <li><span class="fn">Section.id</span><span class="ft">string</span></li>
+          <li><span class="fn">.title / .note</span><span class="ft">string</span></li>
+          <li class="hot"><span class="fn">Step.id</span><span class="ft">string</span><span class="fd">체크 저장 키. <b>이게 바뀌면 체크가 다른 항목으로 간다</b></span></li>
+          <li><span class="fn">.title / .desc / .tip</span><span class="ft">string</span></li>
+          <li><span class="fn">.critical</span><span class="ft">boolean</span><span class="fd">위생·안전 — 건너뛰기 금지</span></li>
+          <li><span class="fn">.goodImage</span><span class="ft">string|null</span><span class="fd">이렇게 되면 맞다</span></li>
+          <li><span class="fn">.badImage</span><span class="ft">string|null</span><span class="fd">기준이 안 맞는 항목일수록 이쪽이 중요</span></li>
+          <li><span class="fn">.videoUrl</span><span class="ft">string|null</span><span class="fd">실사 0장 — 아직 다 비어 있다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">Recipe</span><span class="ent-count">10건</span></div>
+        <p class="ent-sub">바에서 만드는 부재료(르방·청·냉침차·시럽·크림폼)도 레시피를 갖는다. 비율을 아는 사람이 한 명뿐인 게 이 앱이 푸는 문제다.</p>
+        <ul class="fields">
+          <li><span class="fn">id</span><span class="ft">string</span></li>
+          <li class="ref"><span class="fn">slug</span><span class="ft">string</span><span class="fd">주소 <code>/r/{slug}</code> · 판매가·프렙이 이걸로 찾는다</span></li>
+          <li><span class="fn">name / category</span><span class="ft">string</span><span class="fd">음료 · 베이커리 · 브런치</span></li>
+          <li class="hot"><span class="fn">yield</span><span class="ft">{amount,unit}</span><span class="fd">1배합이 몇 개 — <b>배수 계산의 기준</b></span></li>
+          <li><span class="fn">ingredients[]</span><span class="ft">Ingredient</span><span class="fd">28개</span></li>
+          <li><span class="fn">sections[]</span><span class="ft">Section</span><span class="fd">만드는 순서 32단계</span></li>
+          <li><span class="fn">forNewbie</span><span class="ft">boolean</span><span class="fd">콘텐츠를 여기부터 채운다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">Ingredient</span><span class="ent-count">28건</span></div>
+        <p class="ent-sub">레시피에 박혀 있고 따로 떨어진 테이블이 아니다. 재료 마스터가 없다는 뜻이다.</p>
+        <ul class="fields">
+          <li class="hot"><span class="fn">name</span><span class="ft">string</span><span class="fd"><b>거래처 품목과 이름으로 이어진다</b></span></li>
+          <li><span class="fn">amount</span><span class="ft">number</span><span class="fd">"적당히"는 못 넣는다 — 배수 대상</span></li>
+          <li><span class="fn">unit</span><span class="ft">string</span><span class="fd">g · ml · 개 · 스쿱</span></li>
+          <li><span class="fn">note</span><span class="ft">string|null</span></li>
+        </ul>
+      </article>
+
+      <article class="ent wide">
+        <div class="ent-top"><span class="ent-name">PrepTask</span><span class="ent-count">30건 · 목록 3 (afternoon 11 · evening 3 · cycle 16)</span></div>
+        <p class="ent-sub">
+          이 앱에서 가장 큰 엔티티이자 제품의 논지 그 자체다.
+          <b>오늘은 아무 일도 안 일어나고 내일 아침에 터지는 것</b>을 다룬다.
+        </p>
+        <ul class="fields">
+          <li class="ref"><span class="fn">id</span><span class="ft">string</span><span class="fd">발주·주기 기록이 전부 이 값을 키로 쓴다</span></li>
+          <li><span class="fn">title / desc</span><span class="ft">string</span></li>
+          <li><span class="fn">kind</span><span class="ft">"time"|"order"|"cycle"|"routine"</span><span class="fd">time 7 · order 2 · cycle 16 · routine 5</span></li>
+          <li><span class="fn">trigger</span><span class="ft">4-union</span><span class="fd">daily 12 · weekday 1 · condition 1 · cycle 16</span></li>
+          <li><span class="fn">leadTimeHours</span><span class="ft">number|null</span><span class="fd">걸어놓고 몇 시간 뒤에 쓰나 (콜드브루 · 반죽)</span></li>
+          <li><span class="fn">leadTimeDays</span><span class="ft">number|null</span><span class="fd">주문하면 며칠 뒤 오나</span></li>
+          <li class="hot"><span class="fn">recoverable</span><span class="ft">boolean</span><span class="fd"><b class="star">★</b> 돈으로 되돌릴 수 있나. <code>false</code> 8건만 빨간 테두리</span></li>
+          <li><span class="fn">consequence</span><span class="ft">string</span><span class="fd">리드타임 줄이 있으면 화면에 안 띄운다 (같은 말 두 번 금지)</span></li>
+          <li><span class="fn">quantityVaries</span><span class="ft">boolean</span><span class="fd">매일 수량이 달라짐 — 종이로 못 하는 이유</span></li>
+          <li><span class="fn">critical</span><span class="ft">boolean</span></li>
+          <li><span class="fn">goodImage / badImage / videoUrl</span><span class="ft">string|null</span></li>
+          <li class="ref"><span class="fn">recipeSlug</span><span class="ft">string|null</span><span class="fd">8건이 레시피를 가리킨다 → <code>Recipe.slug</code></span></li>
+          <li class="ref"><span class="fn">optionOf</span><span class="ft">string|null</span><span class="fd"><b>배치</b> — 어느 카드 안에 들어가나. 19건. 한 겹만 허용</span></li>
+          <li><span class="fn">optional</span><span class="ft">boolean</span><span class="fd"><b>셈</b> — 진행률 분모에 들어가나. 6건이 빠진다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">Trigger</span><span class="ent-count">4-union</span></div>
+        <p class="ent-sub">전부 시간표에 매달면 안 된다. 추출 테스트는 "원두를 새로 깠을 때" 뜬다.</p>
+        <ul class="fields">
+          <li><span class="fn">daily</span><span class="ft">{at}</span><span class="fd">매일 정해진 시각 · 12건</span></li>
+          <li><span class="fn">weekday</span><span class="ft">{days[],at}</span><span class="fd">금요일 발주가 여기 · 1건</span></li>
+          <li><span class="fn">condition</span><span class="ft">{when}</span><span class="fd">사람이 읽는 문장 · 1건</span></li>
+          <li class="hot"><span class="fn">cycle</span><span class="ft">{everyDays:number|null}</span><span class="fd"><b>시드는 전부 null</b> — 주기는 매장이 정한다 · 16건</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">Shift → ShiftFocus</span><span class="ent-count">4건</span></div>
+        <p class="ent-sub">부가 기능이 아니다. 태블릿을 켰을 때 <b>어느 화면을 먼저 띄울지</b> 고르는 기준이다.</p>
+        <ul class="fields">
+          <li><span class="fn">name</span><span class="ft">string</span><span class="fd">제빵 · 오픈조 · 미들 · 마감조</span></li>
+          <li><span class="fn">start / end</span><span class="ft">"HH:MM"</span><span class="fd">05:00–13:00 / 07:30–15:30 / 11:00–19:00 / 14:30–22:30</span></li>
+          <li class="ref"><span class="fn">focus[]</span><span class="ft">4-union</span><span class="fd">training · checklist · prep · recipes — 첫 번째가 대표</span></li>
+          <li><span class="fn">note</span><span class="ft">string|null</span></li>
+        </ul>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ================= 브라우저 ================= -->
+  <section id="s2" class="zone-local">
+    <div class="zone-head">
+      <h2>브라우저가 가진 것</h2>
+      <span class="zone-key k-local">localStorage · sop:</span>
+    </div>
+    <p class="zone-note">
+      매장이 실제로 만들어내는 값은 전부 여기에 있다. <b>기기마다 따로 쌓인다</b> —
+      태블릿에서 찍은 출퇴근이 폰에서 안 보인다. 서버에 올라가지 않으므로
+      옮기려면 <code>/backup</code>으로 파일을 빼야 한다.
+    </p>
+
+    <div class="grid">
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:roster</span><span class="ent-count">RosterData</span></div>
+        <p class="ent-sub">직원 명부 + 근무표(계획). 이 앱에서 <b>사람</b>이 정의되는 유일한 곳이다.</p>
+        <ul class="fields">
+          <li class="ref"><span class="fn">staff[].id</span><span class="ft">string</span><span class="fd">출퇴근·계약이 이걸 가리킨다</span></li>
+          <li><span class="fn">.section</span><span class="ft">string</span><span class="fd">제빵 · 바 · 홀 · 주방</span></li>
+          <li><span class="fn">.name / .email / .phone</span><span class="ft">string</span></li>
+          <li><span class="fn">assign</span><span class="ft">{staffId:{날짜:조이름}}</span><span class="fd">""이면 휴무</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:punch</span><span class="ent-count">PunchData</span></div>
+        <p class="ent-sub">실제 출퇴근. 계획(roster)과의 <b>차이</b>가 근태가 된다. 근로기준법 제42조 3년 보존 대상.</p>
+        <ul class="fields">
+          <li><span class="fn">[staffId][날짜]</span><span class="ft">Punch</span><span class="fd">근무표와 같은 모양으로 맞췄다</span></li>
+          <li><span class="fn">.inAt / .outAt</span><span class="ft">"HH:MM"</span><span class="fd">outAt이 비면 근무 중</span></li>
+          <li><span class="fn">.breakMin</span><span class="ft">number</span><span class="fd">근로시간에서 뺀다</span></li>
+          <li class="hot"><span class="fn">파생</span><span class="ft">DayResult</span><span class="fd">자정을 넘는 마감조를 그냥 빼면 <b>−22시간</b>이 된다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:contracts</span><span class="ent-count">Contract[]</span></div>
+        <p class="ent-sub">인건비의 시급이 여기서 나온다. 제42조 3년 보존.</p>
+        <ul class="fields">
+          <li class="ref"><span class="fn">staffId</span><span class="ft">string</span><span class="fd">→ <code>roster.staff[].id</code></span></li>
+          <li><span class="fn">startDate / endDate</span><span class="ft">"YYYY-MM-DD"</span><span class="fd">endDate 비면 기간의 정함 없음</span></li>
+          <li><span class="fn">hourlyWage</span><span class="ft">number</span></li>
+          <li><span class="fn">weeklyHours / workDays[]</span><span class="ft">number / number[]</span></li>
+          <li class="hot"><span class="fn">주민등록번호</span><span class="ft">칸 없음</span><span class="fd"><b>일부러 안 만들었다</b> — 개인정보보호법 제24조의2가 암호화를 요구하는데 localStorage로는 못 맞춘다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:sales</span><span class="ent-count">Record&lt;날짜,DaySales&gt;</span></div>
+        <p class="ent-sub">매출 − 재료비 − 인건비 = <b>오늘 남은 돈</b>. 임대료·공과금·카드수수료·세금은 안 빠져 있다.</p>
+        <ul class="fields">
+          <li><span class="fn">total</span><span class="ft">number</span><span class="fd">카드+현금, 부가세 포함</span></li>
+          <li><span class="fn">count</span><span class="ft">number</span><span class="fd">객단가를 보려고 받는다</span></li>
+          <li><span class="fn">material</span><span class="ft">number</span><span class="fd">그날 발주 금액</span></li>
+          <li class="hot"><span class="fn">파생 left</span><span class="ft">number</span><span class="fd"><b>순이익이 아니다.</b> 화면도 "남은 돈"이라고만 쓴다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:vendors</span><span class="ent-count">VendorData</span></div>
+        <p class="ent-sub">원가의 출처. 여기 단가가 없으면 그 재료는 <b>0원이 아니라 "못 구함"</b>으로 빠진다.</p>
+        <ul class="fields">
+          <li class="ref"><span class="fn">vendors[].id</span><span class="ft">string</span><span class="fd">← <code>orderLinks</code>가 가리킨다</span></li>
+          <li><span class="fn">.cutoff</span><span class="ft">"HH:MM"</span><span class="fd">넘기면 주문일이 하루 밀린다</span></li>
+          <li><span class="fn">.deliveryDays[]</span><span class="ft">number[]</span><span class="fd">비면 매일. 일요일 배송이 거의 없어서 금요일에 몰아 주문한다</span></li>
+          <li class="hot"><span class="fn">items[].name</span><span class="ft">string</span><span class="fd"><b>레시피 재료와 이름으로 맞춘다</b> (앞뒤 공백만 무시)</span></li>
+          <li><span class="fn">.packAmount / .packUnit / .packPrice</span><span class="ft">number / string / number</span><span class="fd">1kg 28,000원 → g당 28원</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:settings</span><span class="ent-count">Settings</span></div>
+        <p class="ent-sub">해마다 바뀌는 숫자를 코드에 안 박는다. 박아두면 내년에 조용히 틀린 경고를 준다.</p>
+        <ul class="fields">
+          <li><span class="fn">minWage</span><span class="ft">number</span><span class="fd">기본 10,320 (2026년 고시)</span></li>
+          <li><span class="fn">fiveOrMore</span><span class="ft">boolean</span><span class="fd">5인 미만은 연장 가산수당 없음 (제11조)</span></li>
+          <li><span class="fn">targetCostRate</span><span class="ft">number</span><span class="fd">기본 30%</span></li>
+          <li class="ref"><span class="fn">prices</span><span class="ft">{Recipe.slug: 원}</span><span class="fd">판매가 — 원가율의 분모</span></li>
+          <li class="hot"><span class="fn">excluded</span><span class="ft">string[]</span><span class="fd"><b>"추출량"을 빼는 칸.</b> 안 빼면 원두가 두 번 계산된다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:orderLog · sop:orderLinks</span><span class="ent-count">2키</span></div>
+        <p class="ent-sub">발주는 프렙의 상류다. 따로 만들지 않고 프렙 항목에 붙였다.</p>
+        <ul class="fields">
+          <li class="ref"><span class="fn">orderLog[날짜][PrepTask.id]</span><span class="ft">OrderState</span></li>
+          <li><span class="fn">.ordered / .received</span><span class="ft">boolean</span><span class="fd">주문함 / 들어옴 두 단계</span></li>
+          <li><span class="fn">.memo</span><span class="ft">string</span><span class="fd">사람이 읽는 문장 — "우유 12팩"</span></li>
+          <li class="ref"><span class="fn">orderLinks[PrepTask.id]</span><span class="ft">Vendor.id</span><span class="fd">어느 거래처에 넣는가</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:cycleDone · sop:cycleEvery</span><span class="ent-count">2키</span></div>
+        <p class="ent-sub">주기 점검은 <b>"그날 체크"가 아니라 "마지막으로 한 날"</b>을 남긴다. 날짜별 키에 넣으면 다음 날 지워져서 주기를 못 센다.</p>
+        <ul class="fields">
+          <li class="ref"><span class="fn">cycleDone[PrepTask.id]</span><span class="ft">"YYYY-MM-DD"</span><span class="fd"><b>절대 안 지운다</b></span></li>
+          <li class="ref"><span class="fn">cycleEvery[PrepTask.id]</span><span class="ft">number (일)</span><span class="fd">0·음수는 걸러낸다 — 늘 빨갛게 뜬다</span></li>
+          <li class="hot"><span class="fn">둘 다 없으면</span><span class="ft">null</span><span class="fd">기한을 판단하지 않고 <b>"기록 없음"</b>이라고 말한다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">sop:recipes</span><span class="ent-count">Recipe[]</span></div>
+        <p class="ent-sub">매장이 직접 넣은 레시피. 서버 <code>Recipe</code>와 <b>같은 모양</b>이고, <code>/r/[slug]</code>가 양쪽을 다 뒤진다. ★ 영업비밀이 실제로 담기는 유일한 키다.</p>
+        <ul class="fields">
+          <li><span class="fn">(Recipe 와 동일)</span><span class="ft">Recipe</span></li>
+          <li class="hot"><span class="fn">isReadable() 검사</span><span class="ft">필수</span><span class="fd">하나가 깨지면 <b>레시피 화면 전체가 하얘졌다</b>. 깨진 것만 빼고 몇 개를 뺐는지 알린다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent">
+        <div class="ent-top"><span class="ent-name">백업에 안 담는 키</span><span class="ent-count">6키</span></div>
+        <p class="ent-sub">빠뜨린 게 아니라 <b>일부러 뺐다</b>. 이유를 안 적으면 다음 사람이 넣는다.</p>
+        <ul class="fields">
+          <li><span class="fn">sop:ownerPin</span><span class="ft">해시</span><span class="fd">백업 파일은 메일·USB로 돌아다닌다</span></li>
+          <li><span class="fn">sop:storePin</span><span class="ft">해시</span><span class="fd">같은 이유</span></li>
+          <li><span class="fn">sop:ownerOpen</span><span class="ft">session</span><span class="fd">해제 상태를 복원할 이유가 없다</span></li>
+          <li><span class="fn">sop:storeOpen</span><span class="ft">session</span><span class="fd">같은 이유</span></li>
+          <li><span class="fn">sop:sid</span><span class="ft">string</span><span class="fd">지표용 — <b>기기마다 달라야 한다</b></span></li>
+          <li class="hot"><span class="fn">sop:lastBackup</span><span class="ft">ISO</span><span class="fd">담으면 새 태블릿이 <b>"이미 백업함"을 물려받아</b> 재촉이 안 뜬다</span></li>
+        </ul>
+      </article>
+
+      <article class="ent wide">
+        <div class="ent-top"><span class="ent-name">하루가 지나면 버려지는 것</span><span class="ent-count">저장 대상 아님</span></div>
+        <p class="ent-sub">
+          lib이 아니라 화면이 직접 만드는 키다. <b>영업일이 바뀌면 초기화된다</b> —
+          그래서 백업 목록에도, 제외 목록에도 없다.
+        </p>
+        <ul class="fields">
+          <li><span class="fn">sop:{Position.shareSlug}:{영업일}</span><span class="ft">Step.id[]</span><span class="fd">체크리스트의 그날 체크 · localStorage</span></li>
+          <li><span class="fn">prep:{PrepList.slug}:{영업일}</span><span class="ft">PrepTask.id[]</span><span class="fd">프렙의 그날 체크 · localStorage</span></li>
+          <li class="hot"><span class="fn">sop:run:{shareSlug}</span><span class="ft">runId</span><span class="fd"><b>sessionStorage</b> — 공용 태블릿이라 앞사람 진도가 다음 신입에게 보이면 안 된다</span></li>
+          <li class="hot"><span class="fn">영업일 경계</span><span class="ft">04:00</span><span class="fd">자정이 아니다. 달력 날짜를 쓰면 23:50 체크가 00:10에 사라져 보인다</span></li>
+        </ul>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ================= 경계 ================= -->
+  <section id="s3">
+    <div class="zone-head">
+      <h2>경계를 건너는 참조</h2>
+      <span class="zone-key k-gone">강제하는 곳 없음</span>
+    </div>
+    <p class="zone-note">
+      이 표가 이 문서의 핵심이다. 왼쪽은 서버 파일에, 오른쪽은 각 브라우저에 있다.
+      <b>둘을 잇는 건 문자열 하나뿐이고, 어긋나도 아무도 오류를 내지 않는다.</b>
+    </p>
+
+    <div class="tablebox">
+      <table>
+        <thead>
+          <tr>
+            <th>서버 쪽</th><th>브라우저 쪽</th><th>무엇으로 잇나</th>
+            <th>어긋나면</th><th>지금 막고 있나</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>PrepTask.id</code></td>
+            <td><code>orderLog[날짜][id]</code></td>
+            <td><code>id</code></td>
+            <td>발주 기록이 고아가 된다 (화면에서 사라짐)</td>
+            <td class="no">안 막음</td>
+          </tr>
+          <tr>
+            <td><code>PrepTask.id</code></td>
+            <td><code>orderLinks[id]</code></td>
+            <td><code>id</code></td>
+            <td>거래처 연결이 끊긴다</td>
+            <td class="no">안 막음</td>
+          </tr>
+          <tr>
+            <td><code>PrepTask.id</code></td>
+            <td><code>cycleDone[id]</code> · <code>cycleEvery[id]</code></td>
+            <td><code>id</code></td>
+            <td><b>"마지막으로 한 날"을 잃는다.</b> 되찾을 방법이 없다</td>
+            <td class="no">안 막음</td>
+          </tr>
+          <tr>
+            <td><code>PrepTask.recipeSlug</code></td>
+            <td><code>Recipe.slug</code> 또는 <code>sop:recipes[].slug</code></td>
+            <td><code>slug</code></td>
+            <td>프렙 안에서 레시피가 안 열린다</td>
+            <td class="ok">seed 테스트</td>
+          </tr>
+          <tr>
+            <td><code>Recipe.slug</code></td>
+            <td><code>settings.prices[slug]</code></td>
+            <td><code>slug</code></td>
+            <td>원가율의 분모가 사라진다</td>
+            <td class="no">안 막음</td>
+          </tr>
+          <tr>
+            <td><code>Ingredient.name</code></td>
+            <td><code>vendors.items[].name</code></td>
+            <td class="no"><b>사람이 쓴 이름</b></td>
+            <td>그 재료가 원가에서 빠진다 → 원가율이 <b>실제보다 낮게</b> 나온다</td>
+            <td class="ok">missing 반환</td>
+          </tr>
+          <tr>
+            <td><code>Position.shareSlug</code></td>
+            <td><code>sop:{shareSlug}:{영업일}</code></td>
+            <td><code>slug</code></td>
+            <td>그날 체크가 초기화된다 (하루치라 손실이 작다)</td>
+            <td class="no">안 막음</td>
+          </tr>
+          <tr>
+            <td><code>Step.id</code> · <code>PrepTask.id</code></td>
+            <td>체크 배열의 원소</td>
+            <td><code>id</code></td>
+            <td><b>체크가 조용히 다른 항목으로 옮겨간다</b></td>
+            <td class="ok">seed 테스트</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="warn">
+      <h3>가장 약한 고리는 재료 이름이다</h3>
+      <p>
+        원가는 <code>findItemByName(items, ing.name)</code> 한 줄로 이어진다 —
+        <b>앞뒤 공백만 무시하고 나머지는 정확히 같아야 한다.</b>
+        "우유"와 "우유 "는 같고, "우유"와 "흰우유"는 다르다.
+      </p>
+      <p>
+        그래서 이 앱은 <b>못 찾은 재료를 0원으로 세지 않는다.</b>
+        <code>missing</code>을 항상 같이 돌려주고 화면이 그걸 말한다.
+        0원으로 셌다면 원가율이 실제보다 낮게 나오고,
+        사장님이 그 숫자로 판매가를 정하게 된다.
+      </p>
+    </div>
+
+    <div class="warn">
+      <h3>브라우저 안에서도 참조 무결성이 없다</h3>
+      <p>
+        <code>Punch.staffId</code> · <code>Contract.staffId</code> ·
+        <code>assign[staffId]</code>가 전부 <code>roster.staff[].id</code>를 가리키고,
+        <code>orderLinks[taskId]</code>가 <code>Vendor.id</code>를 가리킨다.
+        <b>직원이나 거래처를 지우면 그 기록들이 그대로 남는다.</b>
+      </p>
+      <p>
+        되돌리기(<code>/backup</code>)를 <b>합치지 않고 덮어쓰는</b> 이유도 여기 있다 —
+        같은 날짜 출퇴근이 양쪽에 다르면 어느 쪽이 맞는지 앱이 모른다.
+        조용히 고르면 급여가 틀린다.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 제약 ================= -->
+  <section id="s4">
+    <div class="zone-head">
+      <h2>이 구조가 지키는 규칙</h2>
+      <span class="zone-key k-gone">전부 테스트로 못 박음</span>
+    </div>
+    <p class="zone-note">
+      스키마가 <b>무엇을 담느냐</b>보다 <b>무엇을 담기를 거부하느냐</b>가 더 많은 것을 말한다.
+    </p>
+
+    <div class="rules">
+      <div class="rule">
+        <h4>g과 ml은 절대 안 바꾼다</h4>
+        <p>밀도를 모른다 (밀가루 0.55 · 우유 1.03). 바꾸면 원가가 조용히 틀리고 사람이 못 알아챈다. 화면에 "단위가 안 맞습니다"를 띄운다.
+        <span class="where">src/lib/units.ts</span></p>
+      </div>
+      <div class="rule">
+        <h4>못 구한 단가는 0원이 아니다</h4>
+        <p>0원으로 세면 원가율이 낮게 나오고, 그 숫자로 가격을 정한다. <code>missing</code>을 항상 같이 돌려준다.
+        <span class="where">src/lib/cost.ts</span></p>
+      </div>
+      <div class="rule">
+        <h4>"추출량"에 단가를 안 붙인다</h4>
+        <p>아메리카노에 "원두 18g"과 "추출량 36g"이 둘 다 있는데, 추출량은 <b>사는 게 아니라 결과다</b>. 안 빼면 원두가 두 번 계산된다.
+        <span class="where">settings.excluded</span></p>
+      </div>
+      <div class="rule">
+        <h4>주민등록번호 칸이 없다</h4>
+        <p>개인정보보호법 제24조의2가 암호화를 요구하는데 localStorage로는 못 맞춘다. 계약서 원본은 앱 밖에 둔다.
+        <span class="where">src/lib/contracts.ts</span></p>
+      </div>
+      <div class="rule">
+        <h4>매장의 하루는 04:00에 바뀐다</h4>
+        <p>자정이 아니다 — 마감조가 특별한 경우 01:00까지 일한다. 달력 날짜를 쓰면 23:50 체크가 00:10에 사라진다.
+        <span class="where">src/lib/businessDay.ts</span></p>
+      </div>
+      <div class="rule">
+        <h4>주기 숫자를 시드에 안 박는다</h4>
+        <p>제빙기를 매일 닦는 매장에 "1개월마다"를 띄우면 그 화면은 처음부터 틀린 말을 한다. <b>모르는 숫자를 앱이 단정하면 사장님이 그걸 믿는다.</b>
+        <span class="where">Trigger.cycle.everyDays = null</span></p>
+      </div>
+      <div class="rule">
+        <h4>지표에 이름·금액을 안 담는다</h4>
+        <p>"채워졌는가"만 남기고 "무엇이 채워졌는가"는 안 남긴다. 담기 시작하면 지표 파일이 개인정보·영업비밀 파일이 된다.
+        <span class="where">src/lib/metrics.ts · 이벤트 15종</span></p>
+      </div>
+      <div class="rule">
+        <h4>진행률의 분모가 둘이다</h4>
+        <p><code>optional</code>은 진행률에서 빠지지만 <b><code>recoverable:false</code>는 빨간 안내에 그대로 센다.</b> 서로 다른 질문에 답하기 때문이다.
+        <span class="where">PrepTask.optional / .recoverable</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 다음 ================= -->
+  <section id="s5">
+    <div class="zone-head">
+      <h2>Supabase로 옮기면 달라지는 것</h2>
+      <span class="zone-key k-gone">D-007 배포 뒤</span>
+    </div>
+    <p class="zone-note">
+      위 표의 <b class="no">안 막음</b> 여섯 줄이 그때 <b>진짜 외래키</b>가 된다.
+      고칠 곳은 <code>src/lib/repo.ts</code>와 각 lib의 <code>load/save</code>뿐이고,
+      화면 코드는 손댈 필요가 없다 — 처음부터 그렇게 나눠 뒀다.
+    </p>
+
+    <div class="tablebox">
+      <table>
+        <thead>
+          <tr><th>지금</th><th>옮기면</th><th>그래서 풀리는 것</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>data/seed.json</code> 읽기 전용</td>
+            <td>테이블 + 편집 화면</td>
+            <td>레시피 수치를 사장님이 직접 고친다</td>
+          </tr>
+          <tr>
+            <td>기기마다 따로 쌓이는 localStorage</td>
+            <td>매장 단위 공유</td>
+            <td><b>교대 인계</b> — 지금 종이가 우리보다 나은 지점</td>
+          </tr>
+          <tr>
+            <td>매장 PIN = 가림막</td>
+            <td>서버 인증</td>
+            <td>실매장 레시피 수치를 넣어도 안전하다</td>
+          </tr>
+          <tr>
+            <td><code>/api/log</code> → 파일 append</td>
+            <td>테이블 insert</td>
+            <td>배포본에서 지표가 실제로 쌓인다</td>
+          </tr>
+          <tr>
+            <td><code>Ingredient.name</code> 문자열 매칭</td>
+            <td>재료 마스터 + FK</td>
+            <td>이름이 달라서 원가에서 빠지는 일이 없어진다</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <b>매장수첩</b> · 개인 카페·베이커리 운영 도구 ·
+      기준 <code>dedd10c</code> (2026-09-11) ·
+      타입 정본 <code>src/lib/types.ts</code> ·
+      개수 정본 <code>docs/deliverables/21_화면명세.md §1-b</code>
+    </p>
+    <p>
+      수치는 <code>data/seed.json</code>에서 직접 센 값이고
+      <code>tests/seed.test.ts</code>가 못 박는다.
+      매장명과 레시피 수치는 아직 자리표시자다 — 실매장 값으로 바꾸는 데는 사장님 검수가 필요하다.
+    </p>
+  </footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  (function () {
+    function 앵커로() {
+      if (location.hash) {
+        var el = document.querySelector(location.hash);
+        if (el) el.scrollIntoView();
+      }
+    }
+    if (!window.mermaid) {
+      // 인터넷이 없으면 그림 대신 안내를 띄운다 — 조용히 비어 있는 것보다 낫다
+      document.querySelectorAll("pre.mermaid").forEach(function (el) {
+        var p = document.createElement("p");
+        p.textContent = "※ 이 자리에 그림이 들어갑니다. 인터넷에 연결한 뒤 새로고침하세요.";
+        p.style.cssText = "font-size:13px;color:#8a959e;margin:0 0 8px";
+        el.parentNode.insertBefore(p, el);
+      });
+      앵커로();
+      return;
+    }
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      flowchart: { htmlLabels: true, useMaxWidth: true },
+      er: { useMaxWidth: true },
+      sequence: { useMaxWidth: true },
+    });
+    // 그림이 그려지면 높이가 바뀌므로 앵커로 다시 간다
+    window.addEventListener("load", function () { setTimeout(앵커로, 400); });
+  })();
+</script>
+</body>
+</html>
