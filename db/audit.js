@@ -155,7 +155,7 @@ const 요구 = [
     : no("이행 상태 뷰", `있는 뷰: ${뷰.join(", ")}`);
 
   // ── E. 그림의 관계 "방향" 이 맞는가 (dbdiagram 경고) ────────────────
-  console.log("\n[E] 관계 방향 — 자식 쪽 유일성과 기호가 맞는가");
+  console.log("\n[E] 관계 방향 — 양쪽 유일키 선언과 기호가 맞는가");
   /* dbdiagram 은 두 방향 다 경고한다. ★ 처음엔 한쪽만 봐서 2건을 놓쳤다.
        A.(칸들) >  B  : A 쪽이 **유일하면** 틀렸다 (그건 1:1 이다)
        A.(칸들) -  B  : A 쪽이 **유일하지 않으면** 틀렸다 (1:1 이려면 유일해야 한다)
@@ -180,14 +180,17 @@ const 요구 = [
          dbdiagram 도 같은 기준으로 경고한다.
          여기에 부분집합을 쓰면 users.id 가 pk 라는 이유로
          (id, store_id) 가 없어도 통과해 버린다 — 실제로 그렇게 놓쳤다. */
-  const 자식유일한가 = (t, colArr) => {
-    const set = new Set(colArr);
-    return (uniqSets.get(t) ?? []).some((u) => u.every((c) => set.has(c)));
-  };
-  const 부모유일한가 = (t, colArr) => {
+  /* ★★ 기준은 하나다 — **그 칸 묶음이 유일키로 선언돼 있는가.**
+     "user_id 가 이미 unique 니까 (user_id, store_id) 도 유일하다" 는
+     논리적으로는 맞지만 **여기서는 안 통한다.**
+     외래키도, dbdiagram 도 **선언된 묶음**을 요구한다.
+     이 차이를 몰라서 경고를 세 번 되살렸다. 자식·부모 똑같이 본다. */
+  const 유일선언 = (t, colArr) => {
     const key = [...colArr].sort().join(",");
     return (uniqSets.get(t) ?? []).some((u) => [...u].sort().join(",") === key);
   };
+  const 자식유일한가 = 유일선언;
+  const 부모유일한가 = 유일선언;
   const 방향 = [];
   /* ★ dbdiagram 은 **양쪽 다** 본다. 한쪽만 보면 고친 뒤 반대쪽이 살아난다.
        부모 쪽 : '>' 든 '-' 든 **항상 유일해야 한다** (기댈 키가 있어야 하니까)

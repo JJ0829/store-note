@@ -864,7 +864,10 @@ Table staff {
   is_active boolean [not null, default: true]
   created_at timestamptz
 
-  Indexes { (id, store_id) [unique] }
+  Indexes {
+    (id, store_id) [unique]
+    (user_id, store_id) [unique, name: 'uq_staff_user_store']
+  }
   Note: '★ users 는 로그인 계정이라 직원과 다르다. 알바는 대부분 로그인하지 않는다.'
 }
 
