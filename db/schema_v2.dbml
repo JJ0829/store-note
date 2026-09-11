@@ -453,8 +453,9 @@ Table stock_counts {
   id          uuid [pk]
   store_id    uuid [not null]
   item_id     uuid [not null]
-  counted_on  date [not null]
-  qty         numeric [not null]
+  counted_on   date [not null]
+  qty          numeric [not null]
+  was_stockout boolean [not null, default: false, note: '★ 그날 도중 품절됐는가 — 품절일 판매량은 수요가 아니라 재고 한계다']
   unit        text [not null]
   unit_family unit_family [not null]
   counted_by  uuid
@@ -501,6 +502,10 @@ Table recommendation_inputs {
   item_version_id uuid
   lead_days       int
   safety_days     numeric
+  demand_avg             numeric [note: '기간 하루 평균 (예: 11.6)']
+  stockout_days_excluded int     [note: '품절이라 평균에서 뺀 날 수']
+  weekday_adjust         numeric [note: '요일 보정 (예: 주말 +3.0)']
+  round_unit             numeric [note: '반올림 단위 (예: 12개 들이)']
   recommended_qty numeric [not null]
   reason          text [note: '★ 사람이 읽는 한 줄']
 

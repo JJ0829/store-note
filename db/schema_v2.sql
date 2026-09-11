@@ -26,6 +26,13 @@
 --       → item_versions.pack_family · make_recipe_versions.yield_family
 --         · baked_lines.unit_family(칸 자체가 없었다)
 --
+--  2026-09-11 추가 (지적은 아니지만 같은 이유로 막았다)
+--    E. 추천의 "계산 단계" 가 안 남았다 → demand_avg · stockout_days_excluded
+--       · weekday_adjust · round_unit 을 스냅샷에 넣었다.
+--    F. 품절을 기록할 곳이 없었다 → stock_counts.was_stockout.
+--       품절난 날의 판매량은 수요가 아니라 재고 한계다. 그걸 평균에 넣으면
+--       추천이 계속 모자라고 → 또 품절나고 → 평균이 더 내려간다.
+--
 --  ⚠ 실행 순서대로 쓰여 있다. 위에서부터 그대로 돌린다.
 --  ⚠ 운영 DB 에 바로 돌리지 말 것. Supabase 브랜치에서 먼저 돌린다.
 -- ============================================================================
@@ -599,6 +606,13 @@ create table stock_counts (
   qty   numeric(14,4) not null check (qty >= 0),
   unit  text not null references units(code),
   unit_family text not null,
+
+  -- ★ 그날 도중에 품절됐는가.
+  --   품절이면 그날 판매량은 **수요가 아니라 재고 한계**다.
+  --   이 칸이 없으면 품절난 날이 평균을 끌어내려서 추천이 계속 모자라고,
+  --   그러면 또 품절나고, 평균이 더 내려간다. 스스로 악화되는 고리다.
+  was_stockout boolean not null default false,
+
   counted_by uuid,
   memo  text,
   created_at timestamptz not null default now(),
@@ -648,6 +662,16 @@ create table recommendation_inputs (
   item_version_id uuid,
   lead_days   int,
   safety_days numeric(6,2),
+
+  -- ★ 계산 "결과" 만이 아니라 "단계" 를 남긴다.
+  --   추천은 한 번에 나오는 숫자가 아니라 여러 보정을 거친 결과다:
+  --     평균 → 품절일 제외 → 요일 보정 → 납품일 반영 → 재고 차감 → 단위 반올림
+  --   단계를 안 남기면 "왜 24개인가" 에 답할 때 다시 계산해야 하고,
+  --   그 사이 원장이 바뀌었으면 같은 숫자가 안 나온다.
+  demand_avg             numeric(14,4),  -- 기간 하루 평균 (예: 11.6)
+  stockout_days_excluded int,            -- 품절이라 평균에서 뺀 날 수
+  weekday_adjust         numeric(14,4),  -- 요일 보정 (예: 주말 +3.0)
+  round_unit             numeric(14,4),  -- 반올림 단위 (예: 12개 들이)
 
   recommended_qty numeric(14,4) not null,
 
