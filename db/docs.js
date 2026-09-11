@@ -59,6 +59,13 @@ catch {
 
 const 합계 = 값.동작 + 값.대조 + 값.훑기 + 값.그림;
 
+/** 이 파일이 돌리는 검사 수. 아래 console.log("[n]") 갯수와 같아야 한다.
+ *  ★ 자기 자신의 숫자는 .counts.json 에서 못 읽는다 — 아직 안 돌았기 때문이다.
+ *     그래서 여기 상수로 두고, 끝에서 같은 값을 기록한다. */
+const 내검사 = 3;
+/** db/ 아래 검사기 수 — counts · verify · audit · sweep · checkdbml · docs */
+const 검사기수 = 6;
+
 /** 문서가 인용한 숫자 — [파일, 찾을 문구, 그 자리에 와야 할 값들] */
 const 주장 = [
   ["db/schema_v2.dbml", /(\d+)개 표 전부에 "로그인한 사람의 매장 줄만" 정책/, [값.표]],
@@ -87,6 +94,18 @@ const 주장 = [
     /<b>동작 (\d+)건 · 대조 (\d+)건 · 훑기 (\d+)건 · 그림 (\d+)건<\/b>/,
     [값.동작, 값.대조, 값.훑기, 값.그림]],
 
+  ["docs/제출물/storenote_architecture_20260911.html",
+    /<code>verify:db<[^>]*>[^]*?<td class="ok">(\d+)</, [값.동작]],
+  ["docs/제출물/storenote_architecture_20260911.html",
+    /<code>audit:db<[^>]*>[^]*?<td class="ok">(\d+)</, [값.대조]],
+  ["docs/제출물/storenote_architecture_20260911.html",
+    /<code>sweep:db<[^>]*>[^]*?<td class="ok">(\d+)</, [값.훑기]],
+  ["docs/제출물/storenote_architecture_20260911.html",
+    /<code>dbml:db<[^>]*>[^]*?<td class="ok">(\d+)</, [값.그림]],
+  ["docs/제출물/storenote_architecture_20260911.html",
+    /<code>docs:db<[^>]*>[^]*?<td class="ok">(\d+)</, [내검사]],
+  ["docs/제출물/storenote_architecture_20260911.html", /검사 (\d+)종/, [검사기수]],
+
   ["docs/제출물/index.html", /<b>DB<\/b> (\d+)/, [합계]],
 ];
 
@@ -111,6 +130,18 @@ console.log("\n[1] 문서에 적힌 숫자가 지금 값과 같은가");
     : no("낡은 숫자", bad);
 }
 
+/** ★ 전수 훑기용 — 이 낱말 뒤에 붙은 숫자는 **어디에 있든** 현재 값이어야 한다.
+ *
+ *  왜 필요한가 (2026-09-11, 같은 날 두 번째):
+ *    위 `주장` 은 **내가 손으로 적은 목록**이다. 그래서 빠졌다 —
+ *    아키텍처 문서를 통째로 안 넣었고, ERD 문서의 머리글과 전제 블록에도
+ *    "동작 44건 · 훑기 8건" 이 그대로 남아 있었다. 검사는 초록불이었다.
+ *    **목록으로 검사하면 목록에서 빠진 것은 영원히 안 걸린다.**
+ *    그래서 낱말을 기준으로 **모든 등장 자리**를 센다. */
+const 낱말 = () => [
+  ["동작", 값.동작], ["대조", 값.대조], ["훑기", 값.훑기],
+];
+
 /** 지금은 사실이 아닌 문장 — 남아 있으면 문서가 스스로 모순된다 */
 const 금지문구 = [
   ["한 번도 실행해 보지", "PGlite 에 실제로 올려서 돌린다"],
@@ -121,18 +152,44 @@ const 금지문구 = [
   ["22개 표", "37개다"],
 ];
 
-console.log("\n[2] 지금은 사실이 아닌 문장이 남아 있지 않은가");
+/** 인용 블록(받은 지적을 그대로 옮긴 곳)은 두 검사 모두에서 뺀다.
+ *  인용문 안에는 옛날 숫자와 옛날 문장이 당연히 들어 있다 —
+ *  그것까지 잡으면 **지적을 정직하게 옮겨 적을수록 검사가 실패한다.** */
+const 본문 = (p) =>
+  fs.readFileSync(p, "utf-8").replace(/<div class="said">[\s\S]*?<\/div>/g, "");
+
+const 제출문서 = fs.existsSync(제출물)
+  ? fs.readdirSync(제출물).filter((f) => f.endsWith(".html")).map((f) => path.join(제출물, f))
+  : [];
+
+console.log("\n[2] 낱말 뒤에 붙은 숫자를 **전수로** 훑는다");
 {
-  const 파일들 = fs.existsSync(제출물)
-    ? fs.readdirSync(제출물).filter((f) => f.endsWith(".html")).map((f) => path.join(제출물, f))
-    : [];
-  파일들.push(path.join(__dirname, "schema_v2.dbml"));
+  const bad = [];
+  let 자리 = 0;
+  for (const p of 제출문서) {
+    const t = 본문(p);
+    for (const [말, want] of 낱말()) {
+      for (const m of t.matchAll(new RegExp(말 + "\\s*(\\d+)", "g"))) {
+        자리++;
+        if (Number(m[1]) !== want)
+          bad.push(`${path.relative(뿌리, p)} : "${m[0]}" → ${want} 이어야 한다`);
+      }
+    }
+  }
+  /* ★ 0자리를 훑고 통과하는 것이 제일 위험하다. 경로가 틀리면 여기서 걸린다. */
+  자리 === 0
+    ? no("훑은 자리가 0개다", ["경로가 틀렸거나 문서가 비었다"])
+    : bad.length === 0
+      ? ok("어긋난 숫자 없음", `문서 ${제출문서.length}개 · 낱말 자리 ${자리}곳`)
+      : no("낡은 숫자 (손으로 적은 목록에 없던 자리)", bad);
+}
+
+console.log("\n[3] 지금은 사실이 아닌 문장이 남아 있지 않은가");
+{
+  const 파일들 = [...제출문서, path.join(__dirname, "schema_v2.dbml")];
   const bad = [];
   for (const p of 파일들) {
-    /* ★ 받은 지적을 **그대로 인용한** 블록은 빼고 본다.
-       인용문 안에는 "실행한 적이 없다고 적혀 있습니다" 같은 말이 당연히 들어 있다.
-       그것까지 금지어로 잡으면, 지적을 정직하게 옮겨 적을수록 검사가 실패한다. */
-    const s = fs.readFileSync(p, "utf-8").replace(/<div class="said">[\s\S]*?<\/div>/g, "");
+    const s = 본문(p);
     for (const [문구, 이유] of 금지문구)
       if (s.includes(문구))
         bad.push(`${path.relative(뿌리, p)} : "${문구}" 가 남아 있다 — ${이유}`);

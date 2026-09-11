@@ -129,7 +129,7 @@ tr.r3 td{background:var(--acc-bg)}
   <div class="meta">
     <span><b>표</b> 37개</span>
     <span><b>반영</b> 1차 5건 · 2차 2건 · 자체 4건</span>
-    <span class="okmeta"><b>검증</b> PostgreSQL 18 · 동작 44건 + 대조 27건 + 훑기 8건 · 실패 0</span>
+    <span class="okmeta"><b>검증</b> PostgreSQL 18 · 동작 55건 + 대조 27건 + 훑기 11건 + 그림 2건 · 실패 0</span>
     <span><b>명령문</b> <code>db/schema_v2.sql</code></span>
     <span><b>2026-09-11</b></span>
   </div>
@@ -144,10 +144,10 @@ tr.r3 td{background:var(--acc-bg)}
   </p>
   <p>
     <b>✅ 이 설계는 실제 PostgreSQL 18 에 올려서 두 가지로 확인했다.</b>
-    <b>① 동작</b>(<code>node db/verify.js</code> · 44건) — 막아야 할 것을 실제로 넣어 보고 거부되는지 본다.
+    <b>① 동작</b>(<code>node db/verify.js</code> · 55건) — 막아야 할 것을 실제로 넣어 보고 거부되는지 본다.
     <b>② 대조</b>(<code>node db/audit.js</code> · 27건) — 심사 지적 한 줄마다 그것을 막는 제약이
     실제로 있는지 1:1 로 맞추고, <b>그림(DBML)과 명령문(SQL)이 갈리지 않았는지</b> 확인한다.
-    <b>③ 훑기</b>(<code>node db/sweep.js</code> · 8건) — 규칙을 하나 정하면
+    <b>③ 훑기</b>(<code>node db/sweep.js</code> · 11건) — 규칙을 하나 정하면
     <b>그 규칙이 적용돼야 할 자리를 전부 세어서</b> 빠진 곳을 찾는다.
     "지적받은 자리만 고치고 나머지를 안 보는" 실수를 구조적으로 막는 장치다.
     셋 다 <b>데이터베이스 설치 없이</b> 누구나 다시 돌릴 수 있다.

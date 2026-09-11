@@ -296,7 +296,7 @@ flowchart TB
   └ backup.ts           <i>내보내기. ★ CSV 는 BOM 필수 + 수식 주입 차단</i>
 
 <b>data/seed.json</b>        지금은 이 파일이 DB. <i>앱이 절대 쓰지 않는다</i>
-<b>db/</b>                   Supabase 목표 스키마 + 검사 3종
+<b>db/</b>                   Supabase 목표 스키마 + 검사 6종
 <b>tests/</b>                30파일. <i>lib 전부 + 시드 숫자 + 빌드 산출물</i>
 <b>presentation/</b>         시연용 단일 HTML. <i>외부 요청 0건</i>
 </pre>
@@ -352,9 +352,11 @@ sequenceDiagram
         <tr><td><code>typecheck</code></td><td>타입</td><td class="ok">오류 0</td></tr>
         <tr><td><code>build</code></td><td>프로덕션 빌드 + 정적/동적 갈림</td><td class="ok">통과</td></tr>
         <tr><td><code>test</code></td><td>계산 · 시드 숫자 · 두 앱 일치 · <b>빌드된 HTML</b> · <b>문서↔코드</b></td><td class="ok">543</td></tr>
-        <tr><td><code>verify:db</code></td><td>스키마를 <b>진짜 PostgreSQL 에 올려</b> 막히는지</td><td class="ok">44</td></tr>
+        <tr><td><code>verify:db</code></td><td>스키마를 <b>진짜 PostgreSQL 에 올려</b> 막히는지</td><td class="ok">55</td></tr>
         <tr><td><code>audit:db</code></td><td>심사 지적 한 줄당 제약 1:1 + 그림↔SQL</td><td class="ok">27</td></tr>
-        <tr><td><code>sweep:db</code></td><td><b>규칙마다 적용돼야 할 자리를 전부</b></td><td class="ok">8</td></tr>
+        <tr><td><code>sweep:db</code></td><td><b>규칙마다 적용돼야 할 자리를 전부</b></td><td class="ok">11</td></tr>
+        <tr><td><code>dbml:db</code></td><td>dbdiagram 이 경고할 관계가 있는가</td><td class="ok">2</td></tr>
+        <tr><td><code>docs:db</code></td><td><b>이 문서의 숫자가 지금 값과 같은가</b> + 사실 아닌 문장</td><td class="ok">3</td></tr>
       </tbody>
     </table>
   </div>
@@ -400,7 +402,8 @@ sequenceDiagram
   <p>
     숫자는 저장소에서 직접 센 값이다 —
     화면 18 + API 4, 정적 11 / 동적 7, 코드 13,927줄, 테스트 7,184줄.
-    <b>개수는 커밋마다 바뀐다. 현재 값은 <code>npm run check</code> 가 말한다.</b>
+    <b>개수는 커밋마다 바뀐다. 현재 값은 <code>npm run check</code> 가 말한다</b> —
+    그리고 <b>이 문서의 숫자가 어긋나면 그 검사가 실패한다</b> (<code>db/docs.js</code>).
   </p>
 </footer>
 
