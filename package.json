@@ -28,6 +28,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@dbml/core": "^10.1.1",
     "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",

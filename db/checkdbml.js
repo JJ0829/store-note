@@ -13,11 +13,18 @@
  *         "논리적으로 유일" 은 안 통한다. 선언돼 있어야 한다.
  *
  *  실행:  node db/checkdbml.js
+ *
+ *  ★ 2026-09-11 — 이 검사가 생긴 날부터 한 번도 안 돌았다.
+ *    @dbml/core 를 db/node_modules 에서 직접 찾게 해놓고 package.json 에는
+ *    안 적어서, 새로 받은 곳에선 무조건 MODULE_NOT_FOUND 로 죽었다.
+ *    pglite 가 띄운 것과 **같은 실수이다** — 선언 안 된 의존성.
+ *    그래서 devDependency 로 올리고 보통의 require 로 바꿈.
+ *    (이게 안 돌면 counts 에 「그림」 값이 안 써져서 docs:db 까지 같이 죽는다)
  * ======================================================================== */
 
 const fs = require("fs");
 const path = require("path");
-const { Parser } = require(path.join(__dirname, "node_modules/@dbml/core"));
+const { Parser } = require("@dbml/core");
 
 const FILE = path.join(__dirname, "schema_v2.dbml");
 const SRC = fs.readFileSync(FILE, "utf-8");
