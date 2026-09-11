@@ -13,6 +13,10 @@
 //    5. 추천 근거가 안 남는 문제 → 실행 기록 + 입력값 스냅샷
 //    A. 재료를 이름으로 잇던 문제 → items 가 재료 원본 명단
 //    B. g 과 ml 이 섞이던 문제 → units 의 계열을 참조에 끼워 넣어 DB 가 막는다
+//
+//  2026-09-11 2차 피드백
+//    C. 같은 매장은 보지만 같은 대상은 안 보던 관계 6곳 → 세 칸 외래키로
+//    D. 단위 계열 검증이 빠진 곳 3곳 (규격 · 산출량 · 제조 수량)
 // ===========================================================================
 
 Project "매장수첩" {
@@ -30,7 +34,7 @@ Project "매장수첩" {
 
   ## 주의
   - 1차 DDL 원문 없이 재구성했다. **표·칸 이름은 1차와 대조가 필요하다.**
-  - 실제 DB 에서 아직 실행해 본 적 없다.
+  - **실제 PostgreSQL 18 에서 29개 검사 전부 통과했다** (db/verify.js).
   '''
 }
 
@@ -170,6 +174,7 @@ Table item_versions {
 
   Indexes {
     (id, store_id) [unique]
+    (id, store_id, item_id) [unique, name: 'uq_item_versions_id_store_item']
     (item_id, validity)
   }
   Note: '''
@@ -234,6 +239,7 @@ Table menu_recipe_versions {
 
   Indexes {
     (id, store_id) [unique]
+    (id, store_id, menu_id) [unique, name: 'uq_mrv_id_store_menu']
     (menu_id, version) [unique]
   }
   Note: '''
@@ -281,6 +287,7 @@ Table make_recipe_versions {
 
   Indexes {
     (id, store_id) [unique]
+    (id, store_id, item_id) [unique, name: 'uq_krv_id_store_item']
     (item_id, version) [unique]
   }
   Note: '''
@@ -329,7 +336,10 @@ Table order_plans {
   cancelled_at timestamptz
   created_at   timestamptz [not null, default: `now()`]
 
-  Indexes { (id, store_id) [unique] }
+  Indexes {
+    (id, store_id) [unique]
+    (id, store_id, item_id) [unique, name: 'uq_order_plans_id_store_item']
+  }
   Note: '1차는 "확정일" 한 칸이었다. 주문한 날과 도착할 날이 따로 있어야 "금요일에 주말치까지 몰아서" 가 표현된다.'
 }
 
@@ -346,7 +356,10 @@ Table bake_plans {
   cancelled_at           timestamptz
   created_at             timestamptz [not null, default: `now()`]
 
-  Indexes { (id, store_id) [unique] }
+  Indexes {
+    (id, store_id) [unique]
+    (id, store_id, item_id) [unique, name: 'uq_bake_plans_id_store_item']
+  }
 }
 
 
@@ -417,7 +430,8 @@ Table baked_lines {
   ready_at               timestamptz [note: '★ 쓸 수 있게 되는 시각']
   batches                numeric [not null]
   qty                    numeric
-  unit                   text
+  unit                   text [not null]
+  unit_family            unit_family [not null, note: '★ 2차 피드백 2 — 이 칸이 없었다']
   memo                   text
   created_at             timestamptz [not null, default: `now()`]
 }
@@ -522,13 +536,16 @@ Ref: make_recipe_lines.(unit, unit_family)   > units.(code, family)
 
 // 거래처 · 품목 — ★ 지적 1
 Ref: items.(supplier_id, store_id)         > suppliers.(id, store_id)
-Ref: item_versions.(item_id, store_id)     > items.(id, store_id)
+// ★ 2차 피드백 2 — 규격 단위 계열이 품목 기준 계열과 같아야 한다
+Ref: item_versions.(item_id, store_id, pack_family) > items.(id, store_id, base_family)
 
 // 메뉴 · 레시피
 Ref: menu_prices.(menu_id, store_id)                 > menus.(id, store_id)
 Ref: menu_recipe_versions.(menu_id, store_id)        > menus.(id, store_id)
 Ref: menu_recipe_lines.(version_id, store_id)        > menu_recipe_versions.(id, store_id)
-Ref: make_recipe_versions.(item_id, store_id)        > items.(id, store_id)
+// ★ 2차 피드백 2 — 산출 단위 계열도 품목 기준 계열과 같아야 한다
+Ref: make_recipe_versions.(item_id, store_id, yield_family) > items.(id, store_id, base_family)
+Ref: make_recipe_versions.(yield_unit, yield_family)        > units.(code, family)
 Ref: make_recipe_lines.(version_id, store_id)        > make_recipe_versions.(id, store_id)
 
 // ★ 레시피 줄 → 품목: 매장과 계열까지 세 칸으로 맞춘다 (지적 1 + B 를 한 번에)
@@ -539,23 +556,29 @@ Ref: make_recipe_lines.(ingredient_item_id, store_id, unit_family) > items.(id, 
 Ref: order_plans.(item_id, store_id, unit_family)   > items.(id, store_id, base_family)
 Ref: order_plans.(supplier_id, store_id)            > suppliers.(id, store_id)
 Ref: bake_plans.(item_id, store_id)                 > items.(id, store_id)
-Ref: bake_plans.(make_recipe_version_id, store_id)  > make_recipe_versions.(id, store_id)
+// ★ 2차 피드백 1 — 제조 계획의 레시피가 그 품목의 레시피여야 한다
+Ref: bake_plans.(make_recipe_version_id, store_id, item_id) > make_recipe_versions.(id, store_id, item_id)
 
 // 원장
 Ref: sales_lines.(daily_sales_id, store_id)          > daily_sales.(id, store_id)
 Ref: sales_lines.(menu_id, store_id)                 > menus.(id, store_id)
-Ref: sales_lines.(menu_recipe_version_id, store_id)  > menu_recipe_versions.(id, store_id)
+// ★ 2차 피드백 1 — 아메리카노 판매에 라떼 레시피를 못 붙인다
+Ref: sales_lines.(menu_recipe_version_id, store_id, menu_id) > menu_recipe_versions.(id, store_id, menu_id)
 Ref: received_lines.(item_id, store_id, unit_family) > items.(id, store_id, base_family)
 Ref: received_lines.(supplier_id, store_id)          > suppliers.(id, store_id)
-Ref: received_lines.(item_version_id, store_id)      > item_versions.(id, store_id)
-Ref: baked_lines.(item_id, store_id)                 > items.(id, store_id)
-Ref: baked_lines.(make_recipe_version_id, store_id)  > make_recipe_versions.(id, store_id)
+// ★ 2차 피드백 1 — 다른 품목의 규격을 못 붙인다
+Ref: received_lines.(item_version_id, store_id, item_id) > item_versions.(id, store_id, item_id)
+// ★ 2차 피드백 2 — 생산 수량의 단위 계열 검증
+Ref: baked_lines.(item_id, store_id, unit_family)    > items.(id, store_id, base_family)
+Ref: baked_lines.(unit, unit_family)                 > units.(code, family)
+Ref: baked_lines.(make_recipe_version_id, store_id, item_id) > make_recipe_versions.(id, store_id, item_id)
 Ref: waste_lines.(item_id, store_id, unit_family)    > items.(id, store_id, base_family)
 Ref: stock_counts.(item_id, store_id, unit_family)   > items.(id, store_id, base_family)
 
 // ★ 지적 3 — 실행이 계획을 가리킨다
-Ref: received_lines.(order_plan_id, store_id) > order_plans.(id, store_id)
-Ref: baked_lines.(bake_plan_id, store_id)     > bake_plans.(id, store_id)
+// ★ 2차 피드백 1 — 우유 입고에 원두 발주 계획을 못 붙인다
+Ref: received_lines.(order_plan_id, store_id, item_id) > order_plans.(id, store_id, item_id)
+Ref: baked_lines.(bake_plan_id, store_id, item_id)     > bake_plans.(id, store_id, item_id)
 
 // ★ 지적 5 — 계획이 추천을 가리킨다
 Ref: recommendation_runs.store_id                      > stores.id
@@ -563,7 +586,8 @@ Ref: order_plans.(run_id, store_id)                    > recommendation_runs.(id
 Ref: bake_plans.(run_id, store_id)                     > recommendation_runs.(id, store_id)
 Ref: recommendation_inputs.(run_id, store_id)          > recommendation_runs.(id, store_id)
 Ref: recommendation_inputs.(item_id, store_id)         > items.(id, store_id)
-Ref: recommendation_inputs.(item_version_id, store_id) > item_versions.(id, store_id)
+// ★ 2차 피드백 1 — 추천 대상 품목의 규격이어야 한다
+Ref: recommendation_inputs.(item_version_id, store_id, item_id) > item_versions.(id, store_id, item_id)
 
 
 // ===========================================================================

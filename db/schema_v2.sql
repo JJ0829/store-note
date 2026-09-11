@@ -3,7 +3,7 @@
 --  PostgreSQL 15+ / Supabase
 --  2026-09-11
 --
---  v1 에 대한 심사 지적 5건을 전부 반영한 2차 버전이다.
+--  v1 에 대한 심사 지적 5건 + 2차 피드백 2건을 전부 반영한 버전이다.
 --
 --    1. 매장 간 데이터가 이어지는 문제   → 전 참조를 복합 외래키 (id, store_id) 로
 --    2. 원가 이력이 매입가에만 있는 문제 → 규격 전체를 기간 이력으로 + 레시피 버전
@@ -16,6 +16,15 @@
 --
 --    A. 재료를 이름 문자열로 잇지 않는다  → items 가 재료 마스터가 된다
 --    B. g 과 ml 을 절대 안 바꾼다          → 단위 계열을 외래키로 강제한다
+--
+--  2026-09-11 2차 피드백 (심사)
+--    C. 같은 매장인지는 보지만 **같은 대상인지**는 안 보던 관계 6곳
+--       → (번호, 매장, **대상**) 세 칸 외래키로 바꿨다
+--       · 판매 ↔ 메뉴 레시피판     · 입고 ↔ 발주 계획 · 품목 규격
+--       · 제조 ↔ 제조 계획 · 레시피 · 추천 ↔ 그때 규격
+--    D. 단위 계열 검증이 빠진 곳 3곳
+--       → item_versions.pack_family · make_recipe_versions.yield_family
+--         · baked_lines.unit_family(칸 자체가 없었다)
 --
 --  ⚠ 실행 순서대로 쓰여 있다. 위에서부터 그대로 돌린다.
 --  ⚠ 운영 DB 에 바로 돌리지 말 것. Supabase 브랜치에서 먼저 돌린다.
@@ -201,10 +210,16 @@ create table item_versions (
   created_by uuid,
 
   constraint uq_item_versions_id_store unique (id, store_id),
-  constraint fk_item_versions_item_same_store
-    foreign key (item_id, store_id) references items (id, store_id),
+  -- ★ 2차 피드백 1 — 이 규격이 "어느 품목의 것인지" 까지 잠근다.
+  --   입고·추천이 (규격, 매장, 품목) 세 칸으로 가리킬 수 있게 하는 열쇠다.
+  constraint uq_item_versions_id_store_item unique (id, store_id, item_id),
   constraint fk_item_versions_unit_family
     foreign key (pack_unit, pack_family) references units (code, family),
+  -- ★ 2차 피드백 2 — 규격의 단위 계열이 품목 기준 계열과 같아야 한다.
+  --   이게 없으면 무게 품목(밀가루)에 1,000ml 규격을 등록할 수 있었다.
+  constraint fk_item_versions_item_same_store_and_family
+    foreign key (item_id, store_id, pack_family)
+    references items (id, store_id, base_family),
 
   -- ★ 같은 품목의 적용 구간이 겹치는 상태를 아예 만들 수 없게 한다
   constraint ex_item_versions_no_overlap
@@ -280,6 +295,8 @@ create table menu_recipe_versions (
   created_at timestamptz not null default now(),
 
   constraint uq_mrv_id_store unique (id, store_id),
+  -- ★ 2차 피드백 1 — 판매 기록이 (레시피판, 매장, 메뉴) 로 가리키게 하는 열쇠
+  constraint uq_mrv_id_store_menu unique (id, store_id, menu_id),
   constraint uq_mrv_no       unique (menu_id, version),
   constraint fk_mrv_menu_same_store
     foreign key (menu_id, store_id) references menus (id, store_id),
@@ -335,9 +352,14 @@ create table make_recipe_versions (
   created_at timestamptz not null default now(),
 
   constraint uq_krv_id_store unique (id, store_id),
+  -- ★ 2차 피드백 1 — 제조 기록·계획이 (레시피판, 매장, 품목) 으로 가리키게 한다
+  constraint uq_krv_id_store_item unique (id, store_id, item_id),
   constraint uq_krv_no       unique (item_id, version),
-  constraint fk_krv_item_same_store
-    foreign key (item_id, store_id) references items (id, store_id),
+  -- ★ 2차 피드백 2 — 산출 단위 계열이 그 품목의 기준 계열과 같아야 한다.
+  --   개수로 나오는 식빵에 산출량을 ml 로 적을 수 없다.
+  constraint fk_krv_item_same_store_and_family
+    foreign key (item_id, store_id, yield_family)
+    references items (id, store_id, base_family),
   constraint fk_krv_yield_family
     foreign key (yield_unit, yield_family) references units (code, family),
   constraint ck_krv_range check (valid_to is null or valid_to > valid_from)
@@ -393,6 +415,8 @@ create table order_plans (
   created_by uuid,
 
   constraint uq_order_plans_id_store unique (id, store_id),
+  -- ★ 2차 피드백 1 — 입고가 (계획, 매장, 품목) 으로 가리키게 하는 열쇠
+  constraint uq_order_plans_id_store_item unique (id, store_id, item_id),
   constraint fk_op_item_same_store_and_family
     foreign key (item_id, store_id, unit_family)
     references items (id, store_id, base_family),
@@ -419,11 +443,15 @@ create table bake_plans (
   created_by uuid,
 
   constraint uq_bake_plans_id_store unique (id, store_id),
+  -- ★ 2차 피드백 1 — 제조 기록이 (계획, 매장, 품목) 으로 가리키게 하는 열쇠
+  constraint uq_bake_plans_id_store_item unique (id, store_id, item_id),
   constraint fk_bp_item_same_store
     foreign key (item_id, store_id) references items (id, store_id),
-  constraint fk_bp_version_same_store
-    foreign key (make_recipe_version_id, store_id)
-    references make_recipe_versions (id, store_id)
+  -- ★ 2차 피드백 1 — 제조 계획에 붙는 레시피가 그 품목의 레시피여야 한다.
+  --   전에는 같은 매장이기만 하면 르방 계획에 식빵 레시피가 붙었다.
+  constraint fk_bp_version_same_item
+    foreign key (make_recipe_version_id, store_id, item_id)
+    references make_recipe_versions (id, store_id, item_id)
 );
 
 
@@ -461,9 +489,11 @@ create table sales_lines (
   -- ★ 지적 1 — A매장 하루 기록에 B매장 메뉴를 못 붙인다
   constraint fk_sl_menu_same_store
     foreign key (menu_id, store_id) references menus (id, store_id),
-  constraint fk_sl_recipe_same_store
-    foreign key (menu_recipe_version_id, store_id)
-    references menu_recipe_versions (id, store_id)
+  -- ★ 2차 피드백 1 — 아메리카노 판매에 라테 레시피를 못 붙인다.
+  --   전에는 같은 매장이기만 하면 통과했다.
+  constraint fk_sl_recipe_same_menu
+    foreign key (menu_recipe_version_id, store_id, menu_id)
+    references menu_recipe_versions (id, store_id, menu_id)
 );
 create index ix_sales_lines_header on sales_lines(daily_sales_id);
 
@@ -492,10 +522,14 @@ create table received_lines (
     references items (id, store_id, base_family),
   constraint fk_rl_supplier_same_store
     foreign key (supplier_id, store_id) references suppliers (id, store_id),
-  constraint fk_rl_plan_same_store
-    foreign key (order_plan_id, store_id) references order_plans (id, store_id),
-  constraint fk_rl_version_same_store
-    foreign key (item_version_id, store_id) references item_versions (id, store_id),
+  -- ★ 2차 피드백 1 — 우유 입고에 원두 발주 계획을 못 붙인다
+  constraint fk_rl_plan_same_item
+    foreign key (order_plan_id, store_id, item_id)
+    references order_plans (id, store_id, item_id),
+  -- ★ 2차 피드백 1 — 다른 품목의 규격을 못 붙인다
+  constraint fk_rl_version_same_item
+    foreign key (item_version_id, store_id, item_id)
+    references item_versions (id, store_id, item_id),
   constraint fk_rl_unit_family
     foreign key (unit, unit_family) references units (code, family)
 );
@@ -514,17 +548,25 @@ create table baked_lines (
   ready_at    timestamptz,                 -- 사용 가능해지는 시각
   batches     numeric(14,4) not null check (batches > 0),
   qty         numeric(14,4),               -- 실제 산출량
-  unit        text references units(code),
+  unit        text not null references units(code),
+  unit_family text not null,               -- ★ 2차 피드백 2 — 전에는 이 칸이 없었다
   memo        text,
   created_at  timestamptz not null default now(),
 
-  constraint fk_bl_item_same_store
-    foreign key (item_id, store_id) references items (id, store_id),
-  constraint fk_bl_plan_same_store
-    foreign key (bake_plan_id, store_id) references bake_plans (id, store_id),
-  constraint fk_bl_version_same_store
-    foreign key (make_recipe_version_id, store_id)
-    references make_recipe_versions (id, store_id)
+  constraint fk_bl_unit_family
+    foreign key (unit, unit_family) references units (code, family),
+  -- ★ 2차 피드백 2 — 생산 수량의 단위 계열이 품목 기준 계열과 같아야 한다
+  constraint fk_bl_item_same_store_and_family
+    foreign key (item_id, store_id, unit_family)
+    references items (id, store_id, base_family),
+  -- ★ 2차 피드백 1 — 우유 제조 기록에 원두 제조 계획을 못 붙인다
+  constraint fk_bl_plan_same_item
+    foreign key (bake_plan_id, store_id, item_id)
+    references bake_plans (id, store_id, item_id),
+  -- ★ 2차 피드백 1 — 그 품목의 레시피여야 한다
+  constraint fk_bl_version_same_item
+    foreign key (make_recipe_version_id, store_id, item_id)
+    references make_recipe_versions (id, store_id, item_id)
 );
 create index ix_baked_by_plan on baked_lines(bake_plan_id);
 
@@ -619,8 +661,10 @@ create table recommendation_inputs (
     foreign key (run_id, store_id)  references recommendation_runs (id, store_id),
   constraint fk_ri_item_same_store
     foreign key (item_id, store_id) references items (id, store_id),
-  constraint fk_ri_version_same_store
-    foreign key (item_version_id, store_id) references item_versions (id, store_id)
+  -- ★ 2차 피드백 1 — 추천 대상 품목의 규격이어야 한다
+  constraint fk_ri_version_same_item
+    foreign key (item_version_id, store_id, item_id)
+    references item_versions (id, store_id, item_id)
 );
 
 -- 계획이 어느 실행에서 나왔는지 (위에서 컬럼만 만들어 뒀다)
@@ -794,6 +838,12 @@ create policy stores_read_own on public.stores
 
 -- units 는 공용 참조표다. 읽기만 연다.
 alter table public.units enable row level security;
+-- ★ 2차 검증에서 잡힌 것 — 여기만 force 가 빠져 있었다.
+--   units 는 매장 소유가 아니라 공용 참조표지만, 그래도 표 주인까지 막아야
+--   "RLS 가 안 걸린 표가 하나도 없다" 를 증명할 수 있다.
+--   쓰기 정책이 아예 없으므로 읽기만 되고 수정은 전부 거부된다.
+--   (단위를 새로 넣는 것은 마이그레이션 작업이다 — RLS 를 켜기 전에 한다)
+alter table public.units force  row level security;
 create policy units_read_all on public.units for select to authenticated using (true);
 
 
