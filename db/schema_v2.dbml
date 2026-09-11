@@ -502,10 +502,10 @@ Table recommendation_inputs {
   item_version_id uuid
   lead_days       int
   safety_days     numeric
-  demand_avg             numeric [note: '기간 하루 평균 (예: 11.6)']
+  demand_avg             numeric [note: '기간 하루 평균 (예: 우유 1,200ml/일)']
   stockout_days_excluded int     [note: '품절이라 평균에서 뺀 날 수']
-  weekday_adjust         numeric [note: '요일 보정 (예: 주말 +3.0)']
-  round_unit             numeric [note: '반올림 단위 (예: 12개 들이)']
+  weekday_adjust         numeric [note: '요일 보정 (예: 금요일에 주말치까지)']
+  round_unit             numeric [note: '반올림 단위 (예: 우유 1,000ml 팩)']
   recommended_qty numeric [not null]
   reason          text [note: '★ 사람이 읽는 한 줄']
 
@@ -514,7 +514,7 @@ Table recommendation_inputs {
   **★ reason 한 칸이 나머지 전부보다 실전에서 쓸모 있다.**
 
   점주가 보는 것은 숫자 열 개가 아니라 문장 하나다.
-  `최근 14일 하루 평균 3.2개 · 현재고 2개 · 리드타임 2일 · 안전재고 1일 → 12개`
+  `최근 14일 하루 평균 1,200ml · 현재고 800ml · 리드타임 1일 · 안전재고 1일 → 3팩`
   처럼 **계산 결과가 아니라 계산 과정**을 문장으로 남긴다.
 
   나머지 칸은 개발자가 보는 것이고, 이 한 줄은

@@ -668,16 +668,16 @@ create table recommendation_inputs (
   --     평균 → 품절일 제외 → 요일 보정 → 납품일 반영 → 재고 차감 → 단위 반올림
   --   단계를 안 남기면 "왜 24개인가" 에 답할 때 다시 계산해야 하고,
   --   그 사이 원장이 바뀌었으면 같은 숫자가 안 나온다.
-  demand_avg             numeric(14,4),  -- 기간 하루 평균 (예: 11.6)
+  demand_avg             numeric(14,4),  -- 기간 하루 평균 (예: 우유 1,200ml/일)
   stockout_days_excluded int,            -- 품절이라 평균에서 뺀 날 수
-  weekday_adjust         numeric(14,4),  -- 요일 보정 (예: 주말 +3.0)
-  round_unit             numeric(14,4),  -- 반올림 단위 (예: 12개 들이)
+  weekday_adjust         numeric(14,4),  -- 요일 보정 (예: 금요일에 주말치까지)
+  round_unit             numeric(14,4),  -- 반올림 단위 (예: 우유 1,000ml 팩)
 
   recommended_qty numeric(14,4) not null,
 
   -- ★ 이 한 줄이 나머지 전부보다 실전에서 쓸모 있다.
   --   점주가 보는 것은 숫자 열 개가 아니라 문장 하나다.
-  --   '최근 14일 하루 평균 3.2개 · 현재고 2개 · 리드타임 2일 · 안전재고 1일 → 12개'
+  --   '최근 14일 하루 평균 1,200ml · 현재고 800ml · 리드타임 1일 · 안전재고 1일 → 3팩'
   reason text,
 
   primary key (run_id, item_id),
