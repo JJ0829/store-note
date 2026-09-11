@@ -271,6 +271,92 @@ async function mustAccept(db, name, sql) {
     else no(`${st} 판정`, `나온 값: 상태=${r["상태"]} 입고=${r.qty}`);
   }
 
+  // ── 6-A. 3차에서 더한 운영 13표 ─────────────────────────────────────
+  log("\n[6-A] 3차 추가 — 프렙·체크리스트·근무·근태·계약이 규칙을 지키는가");
+  await db.exec(`
+    insert into positions (id, store_id, share_slug, name) values
+      ('c1000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','cafe-open','오픈조');
+    insert into prep_lists (id, store_id, slug, name) values
+      ('c2000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','afternoon','오후 프렙');
+    insert into shifts (id, store_id, name, start_at, end_at) values
+      ('c3000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','마감조','14:30','22:30');
+    insert into staff (id, store_id, name) values
+      ('c4000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','김알바');
+    -- 부모가 될 프렙 항목 (되돌릴 수 없는 것)
+    insert into prep_tasks (id, store_id, list_id, title, kind, trigger_type, trigger_at,
+                            lead_time_hours, recoverable, consequence) values
+      ('c5000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111',
+       'c2000000-0000-0000-0000-000000000001','내일용 반죽','time','daily','14:00',
+       14, false, '내일 아침 빵이 없다');
+  `);
+
+  await mustAccept(db, "옵션 한 겹은 통과한다 (르방 → 반죽)",
+    `insert into prep_tasks (id, store_id, list_id, title, kind, trigger_type, trigger_at,
+                             lead_time_hours, recoverable, consequence, option_of, optional)
+     values ('c5000000-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111',
+             'c2000000-0000-0000-0000-000000000001','르방 갱신','time','daily','14:00',
+             12, false, '복구에 2~3일 걸린다','c5000000-0000-0000-0000-000000000001', true);`);
+
+  await mustReject(db, "★ 옵션의 옵션은 못 만든다 (한 겹만)",
+    `insert into prep_tasks (store_id, list_id, title, kind, trigger_type, trigger_at,
+                             recoverable, consequence, option_of, optional)
+     values ('11111111-1111-1111-1111-111111111111','c2000000-0000-0000-0000-000000000001',
+             '르방의 옵션','routine','daily','14:00', true, '', 'c5000000-0000-0000-0000-000000000002', true);`,
+    "fk_prep_option_one_level");
+
+  await mustReject(db, "routine 에 리드타임을 적을 수 없다 (없는 약속을 만든다)",
+    `insert into prep_tasks (store_id, list_id, title, kind, trigger_type, trigger_at,
+                             lead_time_hours, recoverable, consequence)
+     values ('11111111-1111-1111-1111-111111111111','c2000000-0000-0000-0000-000000000001',
+             '홀 정리','routine','daily','19:00', 3, true, '');`,
+    "ck_prep_routine");
+
+  await mustReject(db, "되돌릴 수 없는데 이유를 안 적을 수 없다",
+    `insert into prep_tasks (store_id, list_id, title, kind, trigger_type, trigger_at,
+                             lead_time_hours, recoverable, consequence)
+     values ('11111111-1111-1111-1111-111111111111','c2000000-0000-0000-0000-000000000001',
+             '콜드브루','time','daily','15:00', 18, false, '   ');`,
+    "ck_prep_consequence");
+
+  await mustReject(db, "조건 발동인데 조건 문장이 없을 수 없다",
+    `insert into prep_tasks (store_id, list_id, title, kind, trigger_type, recoverable, consequence)
+     values ('11111111-1111-1111-1111-111111111111','c2000000-0000-0000-0000-000000000001',
+             '추출 테스트','routine','condition', true, '');`,
+    "ck_prep_trigger");
+
+  await mustReject(db, "섹션의 주인은 하나뿐이다 (포지션과 레시피 동시 금지)",
+    `insert into sections (store_id, position_id, menu_recipe_version_id, title)
+     values ('11111111-1111-1111-1111-111111111111','c1000000-0000-0000-0000-000000000001',
+             'a3000000-0000-0000-0000-000000000001','섞인 섹션');`,
+    "ck_sections_one_owner");
+
+  await mustReject(db, "B매장 직원의 출퇴근을 A매장에 못 넣는다",
+    `insert into staff (id, store_id, name) values
+       ('c4000000-0000-0000-0000-0000000000b1','22222222-2222-2222-2222-222222222222','B알바');
+     insert into punches (store_id, staff_id, business_date, in_at)
+     values ('11111111-1111-1111-1111-111111111111','c4000000-0000-0000-0000-0000000000b1','2026-03-01','09:00');`,
+    "fk_punch_staff_same_store");
+
+  await mustAccept(db, "자정을 넘는 마감조를 기록할 수 있다 (23:00 → 01:00)",
+    `insert into punches (store_id, staff_id, business_date, in_at, out_at, crosses_midnight)
+     values ('11111111-1111-1111-1111-111111111111','c4000000-0000-0000-0000-000000000001',
+             '2026-03-02','23:00','01:00', true);`);
+
+  await mustReject(db, "주기 점검의 주기를 0 으로 둘 수 없다 (늘 빨갛게 뜬다)",
+    `insert into prep_cycle_state (store_id, task_id, last_done, every_days)
+     values ('11111111-1111-1111-1111-111111111111','c5000000-0000-0000-0000-000000000001','2026-05-11', 0);`,
+    "every_days");
+
+  await mustAccept(db, "주기를 안 정하면 비워 둘 수 있다 (기록 없음으로 보여준다)",
+    `insert into prep_cycle_state (store_id, task_id, last_done, every_days)
+     values ('11111111-1111-1111-1111-111111111111','c5000000-0000-0000-0000-000000000002','2026-05-11', null);`);
+
+  await mustReject(db, "같은 날 같은 항목을 두 번 체크할 수 없다",
+    `insert into daily_checks (store_id, business_date, prep_task_id) values
+       ('11111111-1111-1111-1111-111111111111','2026-03-01','c5000000-0000-0000-0000-000000000001'),
+       ('11111111-1111-1111-1111-111111111111','2026-03-01','c5000000-0000-0000-0000-000000000001');`,
+    "uq_daily_checks_prep");
+
   // ── 7. RLS ──────────────────────────────────────────────────────────
   log("\n[7] 지적 4 — 다른 매장 데이터의 조회와 등록이 모두 차단되는가");
   await db.exec(`

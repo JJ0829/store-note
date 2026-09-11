@@ -795,6 +795,394 @@ $fn$;
 
 
 -- ============================================================================
+--  10-A. 매장 운영 — 3차에서 추가한 13개 (「나」)
+-- ============================================================================
+--
+--  2차까지의 22개는 심사 의견이 지목한 표 이름을 근거로 만들었고,
+--  그 목록은 원가·재고·발주 축이었다. 그래서 이 제품의 나머지 절반 —
+--  프렙 · 체크리스트 · 근무 · 근태 · 계약 · 설정 — 이 통째로 빠져 있었다.
+--
+--  빠진 것 중에 (1) 법정 3년 보존 대상(출퇴근·근로계약)과
+--  (2) 이 제품이 종이를 이긴다는 주장의 근거(프렙의 리드타임)가 있었다.
+--  여기서 채운다.
+--
+--  ★ 앞의 22개와 같은 규칙을 그대로 따른다 —
+--    모든 참조는 (번호, 매장) 복합키. 대상이 있으면 대상까지.
+-- ============================================================================
+
+
+-- ── 10-A-1. 포지션 · 섹션 · 단계 ────────────────────────────────────────
+--
+--  화면 셋(체크리스트 · 교육 모드 · 레시피의 만드는 순서)이 같은 모양을 쓴다.
+--  그래서 섹션/단계를 공통으로 두고 주인만 나눈다.
+
+create table positions (
+  id         uuid primary key default gen_random_uuid(),
+  store_id   uuid not null references stores(id),
+  share_slug text not null,               -- /p/{slug} · /t/{slug} 주소가 된다
+  name       text not null,
+  subtitle   text,
+  summary    text,
+  sort_order int  not null default 0,
+  is_active  boolean not null default true,
+  created_at timestamptz not null default now(),
+
+  constraint uq_positions_id_store unique (id, store_id),
+  constraint uq_positions_slug     unique (store_id, share_slug)
+);
+
+create table sections (
+  id       uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+
+  -- ★ 주인은 셋 중 하나뿐이다 (포지션 / 메뉴 레시피 / 제조 레시피)
+  position_id            uuid,
+  menu_recipe_version_id uuid,
+  make_recipe_version_id uuid,
+
+  title      text not null,
+  note       text,
+  sort_order int  not null default 0,
+
+  constraint uq_sections_id_store unique (id, store_id),
+  constraint ck_sections_one_owner check (
+    (position_id            is not null)::int
+  + (menu_recipe_version_id is not null)::int
+  + (make_recipe_version_id is not null)::int = 1),
+
+  constraint fk_sections_position_same_store
+    foreign key (position_id, store_id) references positions (id, store_id),
+  constraint fk_sections_menu_recipe_same_store
+    foreign key (menu_recipe_version_id, store_id)
+    references menu_recipe_versions (id, store_id),
+  constraint fk_sections_make_recipe_same_store
+    foreign key (make_recipe_version_id, store_id)
+    references make_recipe_versions (id, store_id)
+);
+
+create table steps (
+  id         uuid primary key default gen_random_uuid(),
+  store_id   uuid not null references stores(id),
+  section_id uuid not null,
+
+  title      text not null,
+  descr      text,                        -- desc 는 예약어라 descr
+  tip        text,                        -- 선배가 덧붙이는 한마디
+  critical   boolean not null default false,   -- 건너뛰면 안 되는 것 (위생·안전)
+
+  good_image text,                        -- 이렇게 되면 맞다
+  bad_image  text,                        -- ★ 기준이 안 맞는 항목일수록 이쪽이 중요하다
+  video_url  text,
+  sort_order int not null default 0,
+
+  constraint uq_steps_id_store unique (id, store_id),
+  constraint fk_steps_section_same_store
+    foreign key (section_id, store_id) references sections (id, store_id)
+);
+create index ix_steps_section on steps(section_id);
+
+
+-- ── 10-A-2. 프렙 — 이 제품이 종이를 이긴다고 주장하는 곳 ────────────────
+
+create table prep_lists (
+  id       uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  slug     text not null,                 -- afternoon · evening · cycle
+  name     text not null,
+  note     text,
+  sort_order int not null default 0,
+
+  constraint uq_prep_lists_id_store unique (id, store_id),
+  constraint uq_prep_lists_slug     unique (store_id, slug)
+);
+
+create table prep_tasks (
+  id       uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  list_id  uuid not null,
+
+  title text not null,
+  descr text,
+
+  -- 리드타임의 종류. routine 은 "리드타임이 없다" 를 거짓말 대신 이름으로 남긴 것.
+  kind text not null check (kind in ('time','order','cycle','routine')),
+
+  -- 언제 떠야 하는가 (4분기). 전부 시간표에 매달면 안 된다 —
+  -- 추출 테스트처럼 "원두를 새로 깠을 때" 발동하는 업무가 실제로 있다.
+  trigger_type text not null check (trigger_type in ('daily','weekday','condition','cycle')),
+  trigger_at   time,                      -- daily · weekday
+  trigger_days smallint[],                -- weekday (0=일 … 6=토)
+  trigger_when text,                      -- condition — 사람이 읽는 문장
+
+  lead_time_hours numeric(6,2),           -- 걸어놓고 몇 시간 뒤 (콜드브루 · 반죽)
+  lead_time_days  int,                    -- 주문하면 며칠 뒤
+
+  -- ★ 이 프로젝트에서 가장 중요한 한 칸.
+  --   false = 어떤 방법으로도 못 되돌린다. 시간을 되돌려야 하니까.
+  --   false 인 항목만이 이 제품이 종이를 확실히 이기는 지점이다.
+  --   전부 빨간 불로 띄우면 사람은 무시한다. 이 칸으로 경고 세기를 나눈다.
+  recoverable boolean not null default true,
+
+  -- 안 하면 무슨 일이 생기는지. 리드타임 줄이 있으면 화면에 안 띄운다
+  -- ("지금 걸면 → 내일 07:43" 이 이미 그 말을 한다).
+  consequence text not null default '',
+
+  quantity_varies boolean not null default false,  -- 매일 수량이 달라짐 = 종이로 못 하는 이유
+  critical        boolean not null default false,
+
+  good_image text,
+  bad_image  text,
+  video_url  text,
+
+  -- 이 프렙이 특정 레시피를 따라가야 하면 그것
+  menu_id           uuid,
+  make_recipe_item  uuid,                 -- 만드는 부재료(items.kind='made')
+
+  -- ★ 다른 항목에 딸린 추가 옵션이면 그 부모. 옵션의 옵션은 없다(아래 제약).
+  option_of uuid,
+  -- ★ optionOf 와 optional 은 다른 것이다. 하나는 배치, 하나는 셈이다.
+  --   optionOf : 어느 카드 안에 들어가는가
+  --   optional : 진행률 분모에 들어가는가
+  optional  boolean not null default false,
+
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+
+  -- ★ 한 겹만 허용하는 장치.
+  --   is_option 은 계산되는 칸이고, option_parent_is_root 는 항상 false 다.
+  --   그래서 아래 외래키가 "부모는 옵션이 아니어야 한다" 를 강제한다.
+  is_option             boolean generated always as (option_of is not null) stored,
+  option_parent_is_root boolean generated always as (false) stored,
+
+  constraint uq_prep_tasks_id_store unique (id, store_id),
+  constraint uq_prep_tasks_id_store_opt unique (id, store_id, is_option),
+
+  constraint fk_prep_list_same_store
+    foreign key (list_id, store_id) references prep_lists (id, store_id),
+  constraint fk_prep_menu_same_store
+    foreign key (menu_id, store_id) references menus (id, store_id),
+  constraint fk_prep_make_item_same_store
+    foreign key (make_recipe_item, store_id) references items (id, store_id),
+
+  -- ★ 옵션의 옵션 금지 — 부모의 is_option 이 false 여야만 통과한다
+  constraint fk_prep_option_one_level
+    foreign key (option_of, store_id, option_parent_is_root)
+    references prep_tasks (id, store_id, is_option),
+
+  -- ★ routine 은 리드타임이 없다. 있으면 화면이 없는 약속을 만든다.
+  constraint ck_prep_routine check (
+    kind <> 'routine' or (lead_time_hours is null and lead_time_days is null)),
+
+  -- ★ 되돌릴 수 없는 것은 이유를 말해야 한다
+  constraint ck_prep_consequence check (
+    recoverable or length(btrim(consequence)) > 0),
+
+  -- 발동 조건의 모양이 종류와 맞는가
+  constraint ck_prep_trigger check (
+       (trigger_type = 'daily'     and trigger_at is not null and trigger_days is null and trigger_when is null)
+    or (trigger_type = 'weekday'   and trigger_at is not null and trigger_days is not null and trigger_when is null)
+    or (trigger_type = 'condition' and trigger_when is not null and trigger_at is null and trigger_days is null)
+    or (trigger_type = 'cycle'     and trigger_at is null and trigger_days is null and trigger_when is null))
+);
+create index ix_prep_tasks_list on prep_tasks(list_id);
+
+-- 주기 점검 — "그날 체크" 가 아니라 "마지막으로 한 날" 을 남긴다.
+--
+--  ★ 날짜별 키에 넣으면 다음 날 지워져서 주기를 아예 못 센다.
+--    "4개월마다" 라고 적어놓고 앱이 그 4개월을 세지 않으면 그 화면은 읽을 거리다.
+--  ★ every_days 는 시드에 없다. 쓰는 곳마다 다르기 때문이다 —
+--    제빙기를 매일 닦는 매장에 "1개월마다" 를 띄우면 처음부터 틀린 말이다.
+--    비어 있으면 기한을 판단하지 않고 "마지막 5/11 · 121일 전" 만 보여준다.
+create table prep_cycle_state (
+  store_id   uuid not null references stores(id),
+  task_id    uuid not null,
+  last_done  date,                        -- null = 기록 없음. 0 이나 큰 수로 채우지 않는다
+  every_days int check (every_days is null or every_days > 0),
+  updated_at timestamptz not null default now(),
+
+  primary key (store_id, task_id),
+  constraint fk_cycle_task_same_store
+    foreign key (task_id, store_id) references prep_tasks (id, store_id)
+);
+
+
+-- ── 10-A-3. 근무조 ──────────────────────────────────────────────────────
+--
+--  부가 기능이 아니다. 태블릿을 켰을 때 어느 화면을 먼저 띄울지 고르는 기준이다.
+
+create table shifts (
+  id       uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  name     text not null,                 -- 제빵 · 오픈조 · 미들 · 마감조
+  -- ★ 자정을 넘을 수 있다 (마감조 예외 01:00). end < start 를 허용한다 —
+  --   `cur >= start and cur < end` 로 판정하면 마감조가 영영 안 뜬다.
+  start_at time not null,
+  end_at   time not null,
+  note     text,
+  sort_order int not null default 0,
+
+  constraint uq_shifts_id_store unique (id, store_id)
+);
+
+create table shift_focus (
+  id       uuid primary key default gen_random_uuid(),
+  store_id uuid not null,
+  shift_id uuid not null,
+  kind     text not null check (kind in ('training','checklist','prep','recipes')),
+  position_id  uuid,                      -- training · checklist
+  prep_list_id uuid,                      -- prep
+  label    text not null,
+  sort_order int not null default 0,      -- 첫 번째가 대표
+
+  constraint fk_focus_shift_same_store
+    foreign key (shift_id, store_id) references shifts (id, store_id),
+  constraint fk_focus_position_same_store
+    foreign key (position_id, store_id) references positions (id, store_id),
+  constraint fk_focus_prep_same_store
+    foreign key (prep_list_id, store_id) references prep_lists (id, store_id),
+  constraint ck_focus_target check (
+       (kind in ('training','checklist') and position_id is not null and prep_list_id is null)
+    or (kind = 'prep'    and prep_list_id is not null and position_id is null)
+    or (kind = 'recipes' and position_id is null and prep_list_id is null))
+);
+
+
+-- ── 10-A-4. 직원 · 근무표 ───────────────────────────────────────────────
+--
+--  ★ users 는 로그인 계정이라 직원과 다르다. 알바는 대부분 로그인하지 않는다.
+
+create table staff (
+  id       uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  name     text not null,
+  section  text,                          -- 제빵 · 바 · 홀 · 주방
+  email    text,                          -- 근무표를 보낼 주소. 없으면 발송 대상에서 빠진다
+  phone    text,
+  user_id  uuid references users(id),     -- 로그인도 하는 직원이면 연결 (선택)
+  is_active  boolean not null default true,
+  created_at timestamptz not null default now(),
+
+  constraint uq_staff_id_store unique (id, store_id)
+);
+
+create table shift_assignments (
+  store_id      uuid not null,
+  staff_id      uuid not null,
+  business_date date not null,
+  shift_id      uuid,                     -- null = 휴무
+  memo          text,
+
+  primary key (store_id, staff_id, business_date),
+  constraint fk_assign_staff_same_store
+    foreign key (staff_id, store_id) references staff (id, store_id),
+  constraint fk_assign_shift_same_store
+    foreign key (shift_id, store_id) references shifts (id, store_id)
+);
+
+
+-- ── 10-A-5. 출퇴근 · 근로계약 — ★ 근로기준법 제42조 3년 보존 ────────────
+
+create table punches (
+  id       uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  staff_id uuid not null,
+  business_date date not null,            -- ★ 달력 날짜가 아니라 영업일
+
+  in_at  time,                            -- 비어 있으면 아직 출근 안 찍음
+  out_at time,                            -- 비어 있으면 근무 중
+  -- ★ 자정을 넘기는 마감조. 23:00 → 01:00 을 그냥 빼면 −22시간이고 인건비가 깎인다.
+  --   넘긴 것을 표시해 두고 계산에서 +24h 한다.
+  crosses_midnight boolean not null default false,
+  break_min int not null default 0,       -- 근로시간에서 뺀다
+  note text,
+  created_at timestamptz not null default now(),
+
+  constraint uq_punch_once unique (store_id, staff_id, business_date),
+  constraint fk_punch_staff_same_store
+    foreign key (staff_id, store_id) references staff (id, store_id)
+);
+create index ix_punches_date on punches(store_id, business_date);
+
+create table contracts (
+  id       uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  staff_id uuid not null,
+
+  start_date date not null,
+  end_date   date,                        -- 비면 기간의 정함이 없는 근로계약
+  hourly_wage numeric(12,2) not null,
+  weekly_hours numeric(6,2),              -- 주휴수당 계산에 쓰는 1주 소정근로시간
+  work_days   smallint[],                 -- 0=일 … 6=토
+  work_start  time,
+  work_end    time,
+  memo text,
+  created_at timestamptz not null default now(),
+
+  -- ★ 주민등록번호 칸을 만들지 않는다.
+  --   개인정보보호법 제24조의2 가 암호화를 요구한다. 계약서 원본은 앱 밖에 둔다.
+  --   이 표는 "계산에 필요한 조건" 만 담는다.
+
+  constraint uq_contracts_id_store unique (id, store_id),
+  constraint fk_contract_staff_same_store
+    foreign key (staff_id, store_id) references staff (id, store_id),
+  constraint ck_contract_range check (end_date is null or end_date >= start_date)
+);
+
+
+-- ── 10-A-6. 매장 설정 ───────────────────────────────────────────────────
+--
+--  해마다 바뀌는 숫자를 코드에 안 박는다. 박아두면 내년에 조용히 틀린 경고를 준다.
+
+create table store_settings (
+  store_id uuid primary key references stores(id),
+  min_wage numeric(12,2) not null default 10320,   -- 2026년 고시액
+  -- ★ 5인 미만은 연장 가산수당이 없다 (근로기준법 제11조). 개인 카페 기본값.
+  five_or_more boolean not null default false,
+  target_cost_rate numeric(5,2) not null default 30,
+  updated_at timestamptz not null default now()
+);
+
+-- 원가에서 빼는 재료. "추출량" 이 여기 해당한다 —
+-- 아메리카노에 "원두 18g" 과 "추출량 36g" 이 둘 다 있는데 추출량은 결과다.
+create table cost_excluded_items (
+  store_id uuid not null,
+  item_id  uuid not null,
+  reason   text,
+  primary key (store_id, item_id),
+  constraint fk_excluded_item_same_store
+    foreign key (item_id, store_id) references items (id, store_id)
+);
+
+
+-- ── 10-A-7. 그날 체크 ───────────────────────────────────────────────────
+--
+--  지금 앱은 이것을 영업일이 바뀌면 버린다(브라우저에만 있어서).
+--  서버로 오면 남길 수 있고, 남겨야 한다 — "기록" 이 이 제품의 세 가치 중 하나다.
+--  ★ 다만 교육 모드는 여기 안 쌓는다. 공용 태블릿이라 앞사람 진도가
+--    다음 신입에게 보이면 안 된다 (지금도 sessionStorage 를 쓰는 이유).
+
+create table daily_checks (
+  store_id      uuid not null references stores(id),
+  business_date date not null,            -- ★ 새벽 4시 경계
+  step_id       uuid,                     -- 체크리스트
+  prep_task_id  uuid,                     -- 프렙
+  checked_at    timestamptz not null default now(),
+  checked_by    uuid,
+
+  constraint ck_daily_checks_one check (
+    (step_id is not null)::int + (prep_task_id is not null)::int = 1),
+  constraint fk_check_step_same_store
+    foreign key (step_id, store_id) references steps (id, store_id),
+  constraint fk_check_prep_same_store
+    foreign key (prep_task_id, store_id) references prep_tasks (id, store_id)
+);
+create unique index uq_daily_checks_step
+  on daily_checks (store_id, business_date, step_id) where step_id is not null;
+create unique index uq_daily_checks_prep
+  on daily_checks (store_id, business_date, prep_task_id) where prep_task_id is not null;
+
+
+-- ============================================================================
 --  11. RLS — 지적 4. 반드시 앱 코드 수정과 같이 배포한다
 -- ============================================================================
 
