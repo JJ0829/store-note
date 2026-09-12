@@ -388,8 +388,8 @@ footer code{background:none}
         <tr><td>9.3</td><td>DB 아키텍처 · WBS 문서</td><td>이 문서 · <code>storenote_db_architecture</code></td><td>9/11</td><td class="brw">진행</td></tr>
 
         <tr><td>10.1</td><td class="own">main 머지 + Vercel 배포 · 환경변수</td><td>배포 주소 · <code>docs/배포.md</code></td><td>9/12~</td><td>대기</td></tr>
-        <tr><td>10.2</td><td>배포 후 — PIN 을 진짜 접근통제로</td><td><code>serverGate</code> + 로그인</td><td>배포 후</td><td>대기</td></tr>
-        <tr><td>10.3</td><td>Supabase 이관 (<code>repo.ts</code> 만)</td><td><code>src/lib/repo.ts</code></td><td>배포 후</td><td>대기</td></tr>
+        <tr><td>10.2</td><td>배포 후 — <b>로그인 + 역할 3종</b>(사장님 · 매장 관리자 · 직원)<br><span class="sub">지금의 번호 두 개는 사람을 구분하지 않는다</span></td><td>Auth · 줄 단위 접근통제 정책</td><td>배포 후</td><td>대기</td></tr>
+        <tr><td>10.3</td><td>서버 DB 이관 — 브라우저 저장소 → 표 37개<br><span class="sub">촬영 파일은 Storage 버킷으로, 지표는 표 insert 로</span></td><td><code>src/lib/repo.ts</code> + 각 lib 의 <code>load/save</code></td><td>배포 후</td><td>대기</td></tr>
 
         <tr><td>11.1</td><td class="own">촬영 4개</td><td><code>public/photos/</code></td><td>9/12~9/15</td><td>대기</td></tr>
         <tr><td>11.2</td><td class="own">레시피 수치 검수</td><td><code>data/seed.json</code></td><td>9/12~9/15</td><td>대기</td></tr>

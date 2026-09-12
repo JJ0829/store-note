@@ -295,7 +295,8 @@ flowchart TB
   ├ rateLimit.ts        <i>AI 호출 횟수. 사람당 20/시간 · 전체 60/시간</i>
   └ backup.ts           <i>내보내기. ★ CSV 는 BOM 필수 + 수식 주입 차단</i>
 
-<b>data/seed.json</b>        지금은 이 파일이 DB. <i>앱이 절대 쓰지 않는다</i>
+<b>data/seed.json</b>        <i>읽기 전용 원본 — 레시피 · 프렙 · 포지션.</i>
+                      <i>★ 앱이 <b>한 번도 쓰지 않는다.</b> 운영 데이터의 정본이 아니다</i>
 <b>db/</b>                   Supabase 목표 스키마 + 검사 6종
 <b>tests/</b>                30파일. <i>lib 전부 + 시드 숫자 + 빌드 산출물</i>
 <b>presentation/</b>         시연용 단일 HTML. <i>외부 요청 0건</i>
