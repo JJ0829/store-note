@@ -176,3 +176,28 @@ export function minutesToCutoff(vendor: Vendor, now: Date): number {
   if (!Number.isFinite(h)) return 0;
   return (h || 0) * 60 + (m || 0) - (now.getHours() * 60 + now.getMinutes());
 }
+
+/**
+ * 오늘 주문 마감 목록의 순서 — **지금 누를 수 있는 것이 먼저다.**
+ *
+ * ★ 2026-09-12 고침. 예전에는 `minutesToCutoff` 오름차순으로 그냥 정렬했다.
+ *   마감을 지나면 그 값이 **음수**라서 **이미 늦은 거래처가 목록 맨 위**에 서고,
+ *   30분 남은 거래처가 그 아래로 밀렸다.
+ *
+ *   아침에 이 화면을 여는 이유는 «지금 주문하면 되는 것»을 보려는 것이다.
+ *   마감이 지난 거래처는 오늘 할 수 있는 일이 없는데 가장 눈에 띄는 자리를
+ *   차지하고 있었다 — 정렬이 화면의 목적과 반대였다.
+ *
+ * 규칙 —
+ *   1. 아직 안 지난 것이 먼저. 그중에서는 **남은 시간이 적은 것**부터
+ *   2. 지난 것은 뒤로. 그중에서는 **방금 지난 것**부터
+ *      (아침에 막 놓친 것은 전화로 넣어볼 여지가 있고, 어제치는 아니다)
+ */
+export function cutoffOrder(a: Vendor, b: Vendor, now: Date): number {
+  const la = minutesToCutoff(a, now);
+  const lb = minutesToCutoff(b, now);
+  const pastA = la < 0;
+  const pastB = lb < 0;
+  if (pastA !== pastB) return pastA ? 1 : -1;
+  return pastA ? lb - la : la - lb;
+}

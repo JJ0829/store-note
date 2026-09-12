@@ -9,6 +9,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   arrivalOf,
+  cutoffOrder,
   minutesToCutoff,
   unitPrice,
   findItemByName,
@@ -123,4 +124,41 @@ test("주 5일만 배송하는 곳에 금요일 마감 뒤 주문하면 월요�
 test("minutesToCutoff: 남은 시간, 지났으면 음수", () => {
   assert.equal(minutesToCutoff(vendor(), FRI_AM), 300); // 10:00 → 15:00
   assert.equal(minutesToCutoff(vendor(), FRI_PM), -60);
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 마감 순서 — 화면의 목적과 정렬이 반대였던 것 (2026-09-12)
+ * ------------------------------------------------------------------ */
+
+test("★ 마감이 지난 거래처가 맨 위에 서지 않는다", () => {
+  /* 10:00 기준.
+       지남      09:00 마감 → -60
+       임박      10:30 마감 → +30
+       여유      15:00 마감 → +300
+     예전 정렬(남은 시간 오름차순)은 -60 이 제일 작아서 **지난 것이 1등**이었다. */
+  const 지남 = vendor({ id: "v-past", cutoff: "09:00" });
+  const 임박 = vendor({ id: "v-soon", cutoff: "10:30" });
+  const 여유 = vendor({ id: "v-later", cutoff: "15:00" });
+
+  const 정렬 = [지남, 여유, 임박].sort((a, b) => cutoffOrder(a, b, FRI_AM));
+  assert.deepEqual(
+    정렬.map((v) => v.id),
+    ["v-soon", "v-later", "v-past"],
+    "아침에 지금 주문할 수 있는 것이 먼저 와야 한다",
+  );
+});
+
+test("지난 것끼리는 방금 지난 것이 먼저다", () => {
+  /* 아침에 막 놓친 것은 전화로 넣어볼 여지가 있다. 어제치는 아니다. */
+  const 방금 = vendor({ id: "v-just", cutoff: "09:50" }); // -10
+  const 한참 = vendor({ id: "v-long", cutoff: "06:00" }); // -240
+  const 정렬 = [한참, 방금].sort((a, b) => cutoffOrder(a, b, FRI_AM));
+  assert.deepEqual(정렬.map((v) => v.id), ["v-just", "v-long"]);
+});
+
+test("안 지난 것끼리는 급한 것이 먼저다", () => {
+  const 급함 = vendor({ id: "v-a", cutoff: "10:05" });
+  const 나중 = vendor({ id: "v-b", cutoff: "23:00" });
+  const 정렬 = [나중, 급함].sort((a, b) => cutoffOrder(a, b, FRI_AM));
+  assert.deepEqual(정렬.map((v) => v.id), ["v-a", "v-b"]);
 });

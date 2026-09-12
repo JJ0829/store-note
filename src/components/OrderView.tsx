@@ -20,7 +20,13 @@ import {
   type OrderLinks,
   type OrderLog,
 } from "@/lib/orders";
-import { arrivalOf, loadVendors, minutesToCutoff, type VendorData } from "@/lib/vendors";
+import {
+  arrivalOf,
+  cutoffOrder,
+  loadVendors,
+  minutesToCutoff,
+  type VendorData,
+} from "@/lib/vendors";
 import type { PrepList, PrepTask } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -145,6 +151,10 @@ export default function OrderView({
 
   const hasVendors = vendors.vendors.length > 0;
 
+  // 오늘 몇 개를 넣었는가. "들어옴" 은 "주문함" 을 포함한다 (들어왔으면 주문한 것이다)
+  const orderedCount = tasks.filter(({ task }) => stateOf(log, today, task.id).ordered).length;
+  const receivedCount = tasks.filter(({ task }) => stateOf(log, today, task.id).received).length;
+
   return (
     <Screen
       title="발주"
@@ -207,14 +217,24 @@ export default function OrderView({
           note="마감을 넘기면 그 주문은 다음 배송일로 밀립니다."
         >
           <ul className="mt-2 flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
+            {/* ★ 남은 시간 오름차순으로 그냥 정렬하면 **마감이 지난 거래처가
+                맨 위**에 선다(지나면 음수라서). 아침에 이 화면을 여는 이유는
+                «지금 주문하면 되는 것»을 보려는 것이다 — `cutoffOrder` 참고. */}
             {[...vendors.vendors]
-              .sort((a, b) => minutesToCutoff(a, now) - minutesToCutoff(b, now))
+              .sort((a, b) => cutoffOrder(a, b, now))
               .map((v) => {
                 const left = minutesToCutoff(v, now);
                 const arrive = arrivalOf(v, now);
                 const soon = left >= 0 && left <= 60;
                 return (
-                  <li key={v.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <li
+                    key={v.id}
+                    className={[
+                      "flex items-center justify-between gap-3 py-2.5",
+                      // 지난 것은 오늘 할 일이 없다. 자리는 두되 눈은 안 끌게
+                      left < 0 ? "opacity-55" : "",
+                    ].join(" ")}
+                  >
                     <span className="min-w-0">
                       <span className="block truncate text-[14px] font-semibold">
                         {v.name}
@@ -257,9 +277,17 @@ export default function OrderView({
       )}
 
       {/* ---------- 3. 오늘 주문할 것 ---------- */}
+      {/* ★ 제목에 진행을 적는다. 이 화면은 **매일 아침 여는 다섯 중 하나**인데,
+          «오늘 것을 다 넣었는가» 를 보려면 카드를 하나씩 눈으로 훑어야 했다.
+          프렙·체크리스트는 진작 진행률을 머리에 달고 있다. */}
       <Card
         className="mt-4"
-        title="주문할 것"
+        title={
+          tasks.length === 0
+            ? "주문할 것"
+            : `주문할 것 ${orderedCount}/${tasks.length}` +
+              (receivedCount ? ` · 들어옴 ${receivedCount}` : "")
+        }
         note="프렙 목록의 발주 항목을 그대로 가져옵니다. 여기서 체크하면 프렙과 따로 관리하지 않아도 됩니다."
       >
         {tasks.length === 0 ? (
