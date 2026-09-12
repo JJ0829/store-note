@@ -79,7 +79,8 @@ GitHub 비공개 저장소는 백업용이고 배포가 아니다.
 | 프렙 (리드타임) | `/prep/[slug]` | 동작 · 🔑 |
 | **프렙 목록 + 레시피 찾기** | `/prep` | 동작 · 🔑 |
 | 레시피 (배수 계산) | `/r`, `/r/[slug]` | 동작 · 🔑 |
-| 근무표 (계획) | `/roster` | 동작 |
+| 레시피 추가 · 내가 추가한 것 | `/r/new`, `/r/my` | 동작 · 🔑 |
+| 근무표 (계획) | `/roster` | 동작 · 🔒 |
 | 촬영 진행 | `/shoot` | 동작 · 🔑 |
 | **출퇴근·근태** (실제) | `/attendance` | 동작 · 인건비만 잠김 |
 | **내보내기·되돌리기** | `/backup` | 동작 · 🔒 |
@@ -89,7 +90,7 @@ GitHub 비공개 저장소는 백업용이고 배포가 아니다.
 | **발주 체크** | `/order` | 동작 |
 | **거래처·단가** | `/vendors` | 동작 · 🔒 |
 | **촬영 목록 만들기 (AI)** | `/shoot` 안 · `POST /api/shoot-plan` | 동작 · 키 필요 |
-| 지표 수집 | `/api/log` | 동작 (로컬 파일) |
+| 지표 수집 | `/api/log` | 동작 · **서버 DB** (2026-09-12) |
 
 **2026-09-04에 운영 기능 7종을 붙였다** (원가·근태·출퇴근·매출·발주·거래처·근로계약서).
 7개를 따로 만들지 않고 **이미 있는 데이터에 붙였다**는 게 핵심이다.
@@ -334,7 +335,8 @@ src/components/OwnerGate.tsx← 화면 전체 잠금 + InlineUnlock(부분 가�
 src/components/StoreGate.tsx← 레시피 가림막(폴백) + StoreLockButton
 src/components/ServerStoreGate.tsx ← ★ 잠겼으면 children 을 아예 안 그린다
 src/components/BackupView.tsx← 내보내기·되돌리기
-tests/                      ← 425개. lib 전부 + 시드 숫자 정본 + 단일 파일 구문 검사 (2026-09-10)
+tests/                      ← lib 전부 + 시드 숫자 정본 + 단일 파일 구문 검사 + 빌드 산출물
+                              (개수는 안 적는다 — 낡는다. 지금 값은 docs/00_PROJECT_CURRENT.md)
 ```
 
 ### 운영 기능에서 조심할 것 (테스트로 못 박아둠)

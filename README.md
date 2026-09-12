@@ -29,7 +29,7 @@ npm run dev
 슬러그는 `data/seed.json` 의 `shareSlug` — `cafe-open` · `cafe-close` · `bakery-morning`.
 
 ```bash
-npm test          # node --test · 425개
+npm test          # node --test (개수는 npm run check 가 말한다)
 npm run typecheck # tsc --noEmit · dev 서버를 안 죽인다
 npm run build     # ⚠️ dev 서버를 끄고 돌릴 것 (.next 가 덮어써진다)
 ```
@@ -80,7 +80,7 @@ src/lib/cycleDone.ts        ← ★ 주기 점검의 마지막으로 한 날 + �
 src/lib/shootPlan.ts        ← ★ AI 응답 거르기. 프롬프트보다 여기가 위험하다
 src/app/api/shoot-plan/     ← ★ 유일한 AI 호출. 키는 서버에만
 presentation/매장수첩.html   ← 오프라인 단일 파일 시연본 (외부 요청 0건)
-tests/                      ← 425개
+tests/                      ← 개수는 docs/00_PROJECT_CURRENT.md 에만 적는다
 ```
 
 전체 목록과 각 파일에서 조심할 것은 [CLAUDE.md](CLAUDE.md) 「구조」 절에 있다.

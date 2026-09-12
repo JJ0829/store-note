@@ -115,7 +115,7 @@ npm run dev
 ### 검사기 6종 — `npm run check` 가 전부 돈다
 
 ```bash
-npm run check     # 타입 + 빌드 + 테스트 543 + DB 검사 6종
+npm run check     # 타입 + 빌드 + 테스트 전부 + DB 검사 6종 (개수는 이게 말한다)
 ```
 
 | 스크립트 | 답하는 질문 | 건수 |
