@@ -63,7 +63,7 @@ export default function ContractView({ storeName }: { storeName: string }) {
 
   if (!roster || !settings) {
     return (
-      <Screen title="근로계약서" storeName={storeName}>
+      <Screen title="근로계약서" storeName={storeName} wide>
         <div className="mt-5 h-40 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
       </Screen>
     );

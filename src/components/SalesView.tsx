@@ -92,7 +92,7 @@ export default function SalesView({
 
   if (!today || !roster || !settings) {
     return (
-      <Screen title="매출" storeName={storeName}>
+      <Screen title="매출" storeName={storeName} wide>
         <div className="mt-5 h-40 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
       </Screen>
     );

@@ -78,7 +78,7 @@ export default function OrderView({
 
   if (!now || !vendors) {
     return (
-      <Screen title="발주" storeName={storeName}>
+      <Screen title="발주" storeName={storeName} wide>
         <div className="mt-5 h-40 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
       </Screen>
     );

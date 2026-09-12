@@ -80,7 +80,7 @@ export default function AttendanceView({
 
   if (!now || !roster || !settings || !monday) {
     return (
-      <Screen title="출퇴근" storeName={storeName}>
+      <Screen title="출퇴근 · 근태" storeName={storeName} wide>
         <div className="mt-5 h-40 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
       </Screen>
     );
@@ -88,7 +88,7 @@ export default function AttendanceView({
 
   if (roster.staff.length === 0) {
     return (
-      <Screen title="출퇴근" storeName={storeName}>
+      <Screen title="출퇴근 · 근태" storeName={storeName} wide>
         <div className="mt-5">
           <Empty>
             직원이 아직 없습니다.

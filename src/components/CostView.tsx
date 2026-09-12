@@ -73,7 +73,7 @@ export default function CostView({
 
   if (!items || !settings) {
     return (
-      <Screen title="원가" storeName={storeName}>
+      <Screen title="원가" storeName={storeName} wide>
         <div className="mt-5 h-40 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
       </Screen>
     );
@@ -81,7 +81,7 @@ export default function CostView({
 
   if (items.items.length === 0) {
     return (
-      <Screen title="원가" storeName={storeName}>
+      <Screen title="원가" storeName={storeName} wide>
         <div className="mt-5">
           <Empty>
             거래처에 <b>품목 단가</b>가 아직 없습니다.
