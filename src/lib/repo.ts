@@ -58,6 +58,21 @@ export function countTasks(position: Position): number {
  * → `src/lib/types.ts` 의 `optionOf` / `optional` 주석
  */
 export function countedTasks(list: PrepList): number {
+  const heads = headerIds(list);
+  return list.tasks.filter((t) => (t.optionOf ? !t.optional : !heads.has(t.id))).length;
+}
+
+/**
+ * 「묶음 머리」의 id 들 — 할 일이 아니라 **이름표**인 카드.
+ *
+ * 자식 옵션 중 하나라도 `optional: false` 면 그 부모가 묶음 머리다
+ * (주기 점검의 `기계 · 설비 점검` 같은 것). 누를 수 없고 어디서도 안 센다.
+ *
+ * ★ 규칙이 두 군데로 갈라지지 않게 여기 한 곳에 둔다. 예전에 `countedTasks`
+ *   안에만 있어서 `/shoot` 이 같은 규칙을 못 쓰고 이름표 3개를
+ *   **찍을 것으로 셌다** (`HANDOFF` §3-① #3).
+ */
+function headerIds(list: PrepList): Set<string> {
   const kids = new Map<string, PrepTask[]>();
   for (const t of list.tasks) {
     if (!t.optionOf) continue;
@@ -65,8 +80,31 @@ export function countedTasks(list: PrepList): number {
     if (cur) cur.push(t);
     else kids.set(t.optionOf, [t]);
   }
-  const isHeader = (id: string) => (kids.get(id) ?? []).some((k) => !k.optional);
-  return list.tasks.filter((t) => (t.optionOf ? !t.optional : !isHeader(t.id))).length;
+  const out = new Set<string>();
+  for (const [id, ks] of kids) if (ks.some((k) => !k.optional)) out.add(id);
+  return out;
+}
+
+/**
+ * **찍을 수 있는** 프렙 항목.
+ *
+ * ★ 진행률(`countedTasks`)과 **분모가 다르다. 일부러다.**
+ *
+ * | | 옵션(`optional`) | 묶음 머리 |
+ * |---|---|---|
+ * | 진행률 `countedTasks` | ⛔ 뺀다 | ⛔ 뺀다 |
+ * | 촬영 `filmableTasks` | ✅ **센다** | ⛔ 뺀다 |
+ *
+ * 옵션을 세는 이유 — **르방 갱신은 실제로 찍을 수 있는 일**이고, 르방을 쓰는
+ * 매장에서는 오히려 **기준이 가장 안 맞는 항목**이다(`day-flow` 의 1순위 4개 중 하나).
+ * 진행률에서 뺐던 건 "안 하는 매장에서 분모가 안 채워지는 것" 때문이지
+ * 찍을 값어치가 없어서가 아니다.
+ *
+ * 묶음 머리를 빼는 이유 — `기계 · 설비 점검` 은 이름표라 **찍을 장면이 없다.**
+ */
+export function filmableTasks(list: PrepList): PrepTask[] {
+  const heads = headerIds(list);
+  return list.tasks.filter((t) => !heads.has(t.id));
 }
 
 export function countCritical(position: Position): number {
