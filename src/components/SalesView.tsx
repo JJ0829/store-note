@@ -33,16 +33,16 @@ import type { Shift } from "@/lib/types";
  * 매출만 보여주는 화면은 만들 이유가 없다 — 포스기가 이미 안다.
  * 이 화면의 존재 이유는 **빼기** 하나다.
  *
- *      매출 − 재료비 − 인건비 = 순수익
+ *      매출 − 재료비 − 인건비 = 순익
  *
  * 인건비는 안 물어본다. 출퇴근 기록과 계약서 시급에서 그냥 나온다.
  * 사장님이 마감할 때 넣는 건 매출·건수·재료비 셋뿐이다.
  * 그 이상 요구하면 셋째 날부터 안 쓴다.
  *
- * ★ 2026-09-12 — **고정비를 넣으면 진짜 순수익이 된다.**
+ * ★ 2026-09-12 — **고정비를 넣으면 진짜 순익이 된다.**
  *   설정의 `monthlyFixed` 를 영업일수로 나눠 매일 뺀다.
- *   ⚠ 안 넣었으면 화면이 「순수익」이라고 **부르지 않는다** — 「재료비·인건비
- *   뺀 것」이라고 쓴다. 0 을 «고정비 없음» 으로 읽고 순수익이라 부르면
+ *   ⚠ 안 넣었으면 제목에 **「(고정비 전)」** 을 붙인다. 0 을 «고정비 없음» 으로
+ *   읽고 그냥 「하루 순익」이라고 부르면
  *   그 숫자로 가격을 정하는 사람이 손해를 본다.
  *   ⚠ 세금·감가상각은 여전히 빠져 있다. 매출에 따라 달라져서 일할로 못 나눈다.
  * ------------------------------------------------------------------ */
@@ -129,7 +129,7 @@ export default function SalesView({
      *   아직 0 이다. 한 건에 몰아 담으면 "재료비까지 넣었나" 가 항상
      *   거짓으로 찍힌다. 칸마다 남기면 하루 최대 3건이고, **며칠 중
      *   며칠에 재료비까지 넣었나** 를 셀 수 있다 — 재료비를 빠뜨리면
-     *   `순수익` 이 조용히 낙관적으로 나온다.
+     *   `순익` 이 조용히 낙관적으로 나온다.
      *
      * 금액은 담지 않는다. 영업 정보이고 "채워졌는가" 를 세는 데 필요 없다.
      */
@@ -156,7 +156,7 @@ export default function SalesView({
     { ...weekSum, date: weekDates[0], note: "" },
     weekLabor,
     /* ★ 주간은 고정비를 **영업한 날 수만큼** 뺀다. 7 을 곱하면 쉬는 날에도
-       고정비를 문 것이 되고, 반대로 하루치만 빼면 주간 순수익이 부풀려진다.
+       고정비를 문 것이 되고, 반대로 하루치만 빼면 주간 순익이 부풀려진다.
        매출이 0 인 날은 안 연 날로 본다 */
     fixedDay * weekDates.filter((d) => (sales[d]?.total ?? 0) > 0).length,
   );
@@ -272,11 +272,15 @@ export default function SalesView({
             ].join(" ")}
           >
             <h2 className="text-[15px] font-bold">
-              {label(new Date(pick + "T00:00:00"))}{" "}
-              {/* ★ 고정비를 안 넣었으면 「순수익」이라고 부르지 않는다.
-                  0 은 «고정비 없음» 이 아니라 «아직 안 넣음» 이다 —
-                  그 값으로 가격을 정하면 실제보다 낙관적이다 */}
-              {p.fixedMissing ? "재료비·인건비 뺀 것" : "순수익"}
+              {label(new Date(pick + "T00:00:00"))} 하루 순익
+              {/* ★ 고정비를 안 넣었으면 그 사실을 **괄호 한 마디로** 붙인다.
+                  0 은 «고정비 없음» 이 아니라 «아직 안 넣음» 이라 그냥 「순익」
+                  이라고 부르면 안 되는데, 문장으로 늘어놓으면 화면이 무거워진다 */}
+              {p.fixedMissing && (
+                <span className="ml-1 text-[12px] font-normal text-zinc-500 dark:text-zinc-400">
+                  (고정비 전)
+                </span>
+              )}
             </h2>
             <p className="mt-1 font-mono text-[32px] font-bold tabular-nums">
               {won(p.left)}
@@ -322,33 +326,47 @@ export default function SalesView({
           {labor.noWage.length > 0 && (
             <Caveat>
               시급이 없는 직원(<b>{labor.noWage.join(", ")}</b>)이 근무한 날입니다.
-              그만큼 인건비가 실제보다 적고, 순수익은 실제보다 많게 보입니다.{" "}
+              그만큼 인건비가 실제보다 적고, 하루 순익이 실제보다 많게 보입니다.{" "}
               <Link href="/contracts" className="underline">
                 시급 넣기
               </Link>
             </Caveat>
           )}
 
-          {/* ★ 고정비 — 「순수익」이 진짜 순수익이 되는 조건 (2026-09-12).
-              매달 거의 안 바뀌므로 **한 번 넣으면 끝**이다. 그래서 매출 칸
-              바로 아래에 두지 않고 이 자리에 둔다 — 마감할 때마다 볼 것이 아니다 */}
-          <Card
-            className="mt-4"
-            title={p.fixedMissing ? "고정비를 아직 안 넣었습니다" : "월 고정비"}
-            note={
-              p.fixedMissing
-                ? "임대료·공과금·카드수수료·보험·통신을 합쳐 한 번만 넣으면, 위 숫자가 재료비·인건비만 뺀 값에서 진짜 순수익으로 바뀝니다."
-                : "매달 거의 안 바뀝니다. 바뀐 달에만 고치세요."
-            }
-          >
-            <div className="mt-3 grid grid-cols-2 gap-3">
+          {/* ★ 고정비 — 매달 거의 안 바뀌므로 **한 번 넣으면 끝**이다.
+              그래서 접어 둔다. 안 넣었을 때만 한 줄로 권한다 —
+              마감할 때마다 보라고 카드로 펴 두면 화면만 무거워진다 */}
+          <details className="group mt-3 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-[13px] [&::-webkit-details-marker]:hidden">
+              <span>
+                {p.fixedMissing ? (
+                  <>
+                    <b>고정비를 넣으면 «고정비 전»이 없어집니다</b>
+                    <span className="ml-1 text-zinc-500 dark:text-zinc-400">
+                      임대료·공과금 등, 한 번만
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    월 고정비 <b>{won(settings.monthlyFixed)}원</b>
+                    <span className="ml-1 text-zinc-500 dark:text-zinc-400">
+                      · 하루 {won(fixedDay)}원
+                    </span>
+                  </>
+                )}
+              </span>
+              <span aria-hidden className="text-[11px] text-zinc-400 transition-transform group-open:rotate-180">
+                ▼
+              </span>
+            </summary>
+            <div className="grid grid-cols-2 gap-3 border-t border-zinc-100 px-3 pb-3 pt-3 dark:border-zinc-800">
               <label>
                 <span className="block text-[12px] text-zinc-500 dark:text-zinc-400">
-                  한 달 고정비 합계
+                  한 달 고정비
                 </span>
                 <div className="mt-1">
                   <NumField
-                    label="한 달 고정비 합계"
+                    label="한 달 고정비"
                     value={settings.monthlyFixed}
                     onChange={(v) => {
                       const next = { ...settings, monthlyFixed: v };
@@ -379,17 +397,7 @@ export default function SalesView({
                 </div>
               </label>
             </div>
-            {!p.fixedMissing && (
-              <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
-                하루치 <b>{won(fixedDay)}원</b>씩 빠집니다.
-              </p>
-            )}
-            <p className="mt-2 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              ⚠️ 세금(부가세·소득세)과 감가상각은 여기 안 넣습니다 — 매출에 따라
-              달라져서 하루에 얼마로 나눌 수가 없습니다. <b>그만큼은 여전히 빠져
-              있습니다.</b>
-            </p>
-          </Card>
+          </details>
 
           {labor.minutes === 0 && day.total > 0 && (
             <Caveat>
@@ -432,7 +440,7 @@ export default function SalesView({
                 />
               )}
               <Row
-                label={weekProfit.fixedMissing ? "재료비·인건비 뺀 것" : "순수익"}
+                label={weekProfit.fixedMissing ? "순익 (고정비 전)" : "순익"}
                 value={`${won(weekProfit.left)}원`}
                 strong
               />
@@ -450,7 +458,7 @@ export default function SalesView({
                   <th scope="col" className="px-3 py-2.5 text-right font-semibold">매출</th>
                   <th scope="col" className="px-3 py-2.5 text-right font-semibold">재료비</th>
                   <th scope="col" className="px-3 py-2.5 text-right font-semibold">인건비</th>
-                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">순수익</th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">순익</th>
                 </tr>
               </thead>
               <tbody>
@@ -498,24 +506,16 @@ export default function SalesView({
         </div>
       )}
 
+      {/* ★ 한 줄로 줄였다 (2026-09-12). 빠진 것을 말하는 건 그대로 하되,
+          문단으로 늘어놓으면 매일 여는 화면이 무거워져서 아무도 안 읽는다 */}
       <Caveat>
-        {p.fixedMissing ? (
-          <>
-            <b>고정비를 안 넣어서 아직 순수익이 아닙니다.</b> 지금 숫자는 재료비·
-            인건비만 뺀 것이라, 이걸로 가격을 정하면 <b>실제보다 낙관적입니다.</b>{" "}
-          </>
-        ) : (
-          <>
-            <b>세금(부가세·소득세)과 감가상각은 여전히 빠져 있습니다.</b> 매출에
-            따라 달라져서 하루에 얼마로 나눌 수가 없습니다.{" "}
-          </>
-        )}
-        재료비도 그날 발주 금액이라 실제로 쓴 양과는 다릅니다(로스·재고 변동).
-        메뉴별 재료비는{" "}
+        {p.fixedMissing
+          ? "고정비 전이라 실제보다 높게 나옵니다. "
+          : "세금·감가상각은 아직 빠져 있습니다. "}
+        재료비는 그날 발주 금액입니다.{" "}
         <Link href="/cost" className="underline">
           원가 화면
         </Link>
-        에서 봅니다.
       </Caveat>
     </Screen>
   );
