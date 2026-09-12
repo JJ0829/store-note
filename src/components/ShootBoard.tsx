@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
 import ShootPlanner from "@/components/ShootPlanner";
-import { expectedNames, probeAll, type Found } from "@/lib/mediaProbe";
+import { expectedNames, forget, probeAll, type Found } from "@/lib/mediaProbe";
+
+type Slot = "good" | "bad" | "video";
 
 /* ------------------------------------------------------------------ *
  * 촬영 진행 화면.
@@ -24,29 +26,138 @@ export type ShootItem = {
   priority?: string;
 };
 
-function Row({ item, found }: { item: ShootItem; found?: Found }) {
+function Row({
+  item,
+  found,
+  onChanged,
+}: {
+  item: ShootItem;
+  found?: Found;
+  /** 넣거나 지운 뒤 목록을 다시 읽게 한다 */
+  onChanged: () => void;
+}) {
   const names = expectedNames(item.id);
+  const [busy, setBusy] = useState<Slot | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
-  const copy = (name: string) => {
-    void copyText(name, "이 이름으로 저장하세요");
+  async function upload(slot: Slot, file: File) {
+    setBusy(slot);
+    setErr(null);
+    const fd = new FormData();
+    fd.set("file", file);
+    fd.set("base", item.id);
+    fd.set("slot", slot);
+    try {
+      const r = await fetch("/api/media", { method: "POST", body: fd });
+      const j = (await r.json()) as { ok?: boolean; reason?: string };
+      /* ★ 실패를 삼키지 않는다. 넣은 줄 알고 넘어가면 발표장에서 회색 네모를 본다 */
+      if (!j.ok) setErr(j.reason ?? "넣지 못했습니다");
+      else onChanged();
+    } catch {
+      setErr("서버에 닿지 못했습니다");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function remove(url: string) {
+    const name = url.split("/").pop() ?? "";
+    if (!window.confirm(`${name} 을(를) 지웁니다. 되돌릴 수 없습니다.`)) return;
+    setErr(null);
+    try {
+      const r = await fetch(`/api/media?name=${encodeURIComponent(name)}`, {
+        method: "DELETE",
+      });
+      const j = (await r.json()) as { ok?: boolean; reason?: string };
+      if (!j.ok) setErr(j.reason ?? "지우지 못했습니다");
+      else onChanged();
+    } catch {
+      setErr("서버에 닿지 못했습니다");
+    }
+  }
+
+  /**
+   * 한 자리.
+   *
+   * ★ 비어 있으면 **폰 카메라가 바로 열리는 버튼**이다
+   *   (`capture="environment"` — 뒷면 카메라). 전에는 파일명만 복사해 주고
+   *   폴더에 직접 넣으라고 했는데, 주방에서 폰을 들고 그걸 할 사람은 없다.
+   * ★ 들어와 있으면 **미리보기 + [바꾸기] + [지우기]** 다.
+   */
+  const cell = (label: string, slot: Slot, want: string, url?: string) => {
+    const video = slot === "video";
+    return (
+      <div className="flex min-w-0 flex-col gap-1">
+        {url ? (
+          <>
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="block overflow-hidden rounded-lg border border-emerald-300 dark:border-emerald-800"
+            >
+              {video ? (
+                <video
+                  src={url}
+                  className="h-16 w-full bg-black object-cover"
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt={`${item.title} ${label}`} className="h-16 w-full object-cover" />
+              )}
+            </a>
+            <div className="flex gap-1">
+              <label className="flex-1 cursor-pointer rounded-md border border-zinc-300 py-1 text-center text-[10px] font-semibold dark:border-zinc-700">
+                바꾸기
+                <input
+                  type="file"
+                  className="hidden"
+                  accept={video ? "video/*" : "image/*"}
+                  capture="environment"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) void upload(slot, f);
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void remove(url)}
+                className="rounded-md border border-red-300 px-1.5 py-1 text-[10px] font-semibold text-red-600 dark:border-red-900 dark:text-red-400"
+              >
+                지우기
+              </button>
+            </div>
+          </>
+        ) : (
+          <label
+            title={`${want} — 눌러서 찍거나 고르기`}
+            className="flex h-[74px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-300 text-[11px] text-zinc-500 active:bg-zinc-50 dark:border-zinc-700 dark:active:bg-zinc-800"
+          >
+            <span aria-hidden className="text-[17px] leading-none">
+              {busy === slot ? "…" : video ? "🎬" : "📷"}
+            </span>
+            <span>{busy === slot ? "넣는 중" : label}</span>
+            <input
+              type="file"
+              className="hidden"
+              accept={video ? "video/*" : "image/*"}
+              capture="environment"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void upload(slot, f);
+              }}
+            />
+          </label>
+        )}
+      </div>
+    );
   };
-
-  const cell = (label: string, name: string, url?: string) => (
-    <button
-      type="button"
-      onClick={() => copy(name)}
-      title={url ? `${name} — 들어와 있음` : `${name} — 눌러서 파일명 복사`}
-      className={[
-        "flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-left font-mono text-[11px] transition-colors",
-        url
-          ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
-          : "border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 dark:border-zinc-700",
-      ].join(" ")}
-    >
-      <span aria-hidden>{url ? "✓" : "＋"}</span>
-      <span className="truncate">{label}</span>
-    </button>
-  );
 
   return (
     <li className="flex flex-col gap-2 border-b border-zinc-200 py-3 last:border-0 sm:flex-row sm:items-center dark:border-zinc-800">
@@ -64,12 +175,24 @@ function Row({ item, found }: { item: ShootItem; found?: Found }) {
             </span>
           )}
         </p>
-        <p className="mt-0.5 font-mono text-[11px] text-zinc-400">{item.id}</p>
+        <button
+          type="button"
+          onClick={() => void copyText(item.id, "이 이름으로 저장하세요")}
+          title="파일명 앞부분 복사 — 컴퓨터에서 직접 넣을 때 씁니다"
+          className="mt-0.5 font-mono text-[11px] text-zinc-400 underline decoration-dotted"
+        >
+          {item.id}
+        </button>
+        {err && (
+          <p role="alert" className="mt-1 text-[11px] font-semibold text-red-600 dark:text-red-400">
+            {err}
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-3 gap-1.5 sm:w-[300px]">
-        {cell("좋은 예", names.good, found?.good)}
-        {cell("나쁜 예", names.bad, found?.bad)}
-        {cell("영상", names.video, found?.video)}
+        {cell("좋은 예", "good", names.good, found?.good)}
+        {cell("나쁜 예", "bad", names.bad, found?.bad)}
+        {cell("영상", "video", names.video, found?.video)}
       </div>
     </li>
   );
@@ -91,6 +214,13 @@ export default function ShootBoard({
     return () => {
       alive = false;
     };
+  }, [items]);
+
+  /* 넣거나 지운 뒤 — 목록은 한 번만 받아 캐시해 두므로 **버리고 다시 받아야** 한다.
+     안 그러면 방금 넣은 것이 화면에 안 붙고 사람은 실패한 줄 안다 */
+  const reload = useCallback(() => {
+    forget();
+    void probeAll(items.map((i) => i.id)).then(setMedia);
   }, [items]);
 
   // 진행률은 "좋은 예 또는 영상"이 들어온 항목 기준.
@@ -133,20 +263,38 @@ export default function ShootBoard({
       </div>
 
       <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4 text-[13px] leading-relaxed dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="font-bold">넣는 방법</p>
+        <p className="font-bold">넣는 방법 — 이 화면에서 바로 찍습니다</p>
         <ol className="mt-1.5 list-decimal pl-5 text-zinc-600 dark:text-zinc-300">
-          <li>폰으로 찍습니다. 영상은 30초면 충분하고 편집 안 해도 됩니다</li>
           <li>
-            아래에서 파일명을 눌러 복사하고, 그 이름으로 저장합니다
-            <span className="ml-1 font-mono text-[11px] text-zinc-400">
-              (jpg·png·mp4·mov 다 됩니다)
-            </span>
+            빈 자리(<b>📷 좋은 예 · 나쁜 예 · 🎬 영상</b>)를 누르면{" "}
+            <b>폰 카메라가 바로 열립니다.</b> 찍으면 그 자리에 붙습니다 —
+            파일명을 맞출 필요도, 새로고침할 필요도 없습니다
           </li>
           <li>
+            영상은 <b>30초면 충분하고 편집 안 해도 됩니다.</b> 좋은 예 하나만
+            있어도 되고, 나쁜 예는 없으면 안 보입니다
+          </li>
+          <li>
+            잘못 찍었으면 <b>[바꾸기]</b> 또는 <b>[지우기]</b>. 컴퓨터에서 직접
+            넣고 싶으면 항목 아래 <b>파일명을 눌러 복사</b>해서{" "}
             <code className="font-mono text-[12px]">public/media/</code> 폴더에
-            넣고 이 화면을 새로고침합니다
+            그 이름으로 두면 됩니다
           </li>
         </ol>
+        {/* ★ 저장되는 곳을 화면이 말해야 한다 (사장님 질문 2026-09-12:
+            "여기에 저장되는 폴더 어디 있는데"). 코드 주석에만 있으면
+            쓰는 사람은 영영 모른다 */}
+        <p className="mt-2 rounded-lg bg-white px-2.5 py-2 text-[11px] leading-relaxed text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+          <b>어디에 저장되나</b> — 이 앱을 띄운 컴퓨터의{" "}
+          <code className="font-mono">store-note/public/media/</code> 폴더입니다.
+          파일 이름은 <code className="font-mono">항목id-good.jpg</code> ·{" "}
+          <code className="font-mono">항목id-bad.jpg</code> ·{" "}
+          <code className="font-mono">항목id.mp4</code> 형태로 저장됩니다.
+          <br />
+          ⚠️ <b>배포본(Vercel)에서는 저장이 안 됩니다</b> — 그쪽은 폴더가 읽기
+          전용입니다. 넣는 것은 <b>매장 컴퓨터에서 띄운 앱</b>으로 하세요.
+          실패하면 화면이 빨간 글씨로 알려줍니다.
+        </p>
         <p className="mt-2 text-zinc-500 dark:text-zinc-400">
           좋은 예 하나만 있어도 화면에 붙습니다. 나쁜 예는 없으면 안 보이고,
           그래도 됩니다.
@@ -161,7 +309,7 @@ export default function ShootBoard({
           </p>
           <ul className="mt-2 rounded-2xl border border-orange-200 bg-orange-50/60 px-4 dark:border-orange-900/60 dark:bg-orange-950/20">
             {priority.map((i) => (
-              <Row key={i.id} item={i} found={media.get(i.id)} />
+              <Row key={i.id} item={i} found={media.get(i.id)} onChanged={reload} />
             ))}
           </ul>
         </section>
@@ -172,7 +320,7 @@ export default function ShootBoard({
           <h2 className="text-[15px] font-bold">{group}</h2>
           <ul className="mt-2 rounded-2xl border border-zinc-200 bg-white px-4 dark:border-zinc-800 dark:bg-zinc-900">
             {list.map((i) => (
-              <Row key={i.id} item={i} found={media.get(i.id)} />
+              <Row key={i.id} item={i} found={media.get(i.id)} onChanged={reload} />
             ))}
           </ul>
         </section>

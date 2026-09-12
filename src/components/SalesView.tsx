@@ -25,13 +25,13 @@ import type { Shift } from "@/lib/types";
  * 매출만 보여주는 화면은 만들 이유가 없다 — 포스기가 이미 안다.
  * 이 화면의 존재 이유는 **빼기** 하나다.
  *
- *      매출 − 재료비 − 인건비 = 남은 돈
+ *      매출 − 재료비 − 인건비 = 순수익
  *
  * 인건비는 안 물어본다. 출퇴근 기록과 계약서 시급에서 그냥 나온다.
  * 사장님이 마감할 때 넣는 건 매출·건수·재료비 셋뿐이다.
  * 그 이상 요구하면 셋째 날부터 안 쓴다.
  *
- * ⚠ "남은 돈"은 순이익이 아니다. 임대료·공과금·카드수수료·세금이
+ * ⚠ 여기서 말하는 "순수익"은 재료비·인건비만 뺀 것이다. 임대료·공과금·카드수수료·세금이
  *   빠져 있다. 그래서 화면에서도 순이익이라고 쓰지 않는다.
  * ------------------------------------------------------------------ */
 
@@ -117,7 +117,7 @@ export default function SalesView({
      *   아직 0 이다. 한 건에 몰아 담으면 "재료비까지 넣었나" 가 항상
      *   거짓으로 찍힌다. 칸마다 남기면 하루 최대 3건이고, **며칠 중
      *   며칠에 재료비까지 넣었나** 를 셀 수 있다 — 재료비를 빠뜨리면
-     *   `남은 돈` 이 조용히 낙관적으로 나온다.
+     *   `순수익` 이 조용히 낙관적으로 나온다.
      *
      * 금액은 담지 않는다. 영업 정보이고 "채워졌는가" 를 세는 데 필요 없다.
      */
@@ -252,7 +252,7 @@ export default function SalesView({
                 : "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30",
             ].join(" ")}
           >
-            <h2 className="text-[15px] font-bold">{label(new Date(pick + "T00:00:00"))} 남은 돈</h2>
+            <h2 className="text-[15px] font-bold">{label(new Date(pick + "T00:00:00"))} 순수익</h2>
             <p className="mt-1 font-mono text-[32px] font-bold tabular-nums">
               {won(p.left)}
               <span className="ml-1 text-[16px]">원</span>
@@ -284,7 +284,7 @@ export default function SalesView({
           {labor.noWage.length > 0 && (
             <Caveat>
               시급이 없는 직원(<b>{labor.noWage.join(", ")}</b>)이 근무한 날입니다.
-              그만큼 인건비가 실제보다 적고, 남은 돈은 실제보다 많게 보입니다.{" "}
+              그만큼 인건비가 실제보다 적고, 순수익은 실제보다 많게 보입니다.{" "}
               <Link href="/contracts" className="underline">
                 시급 넣기
               </Link>
@@ -325,7 +325,7 @@ export default function SalesView({
                 label={`인건비 (${pct(weekProfit.labor, weekProfit.sales)}%)`}
                 value={`− ${won(weekProfit.labor)}원`}
               />
-              <Row label="남은 돈" value={`${won(weekProfit.left)}원`} strong />
+              <Row label="순수익" value={`${won(weekProfit.left)}원`} strong />
               {weekProfit.perCustomer !== null && (
                 <Row label="객단가" value={`${won(weekProfit.perCustomer)}원`} />
               )}
@@ -340,7 +340,7 @@ export default function SalesView({
                   <th scope="col" className="px-3 py-2.5 text-right font-semibold">매출</th>
                   <th scope="col" className="px-3 py-2.5 text-right font-semibold">재료비</th>
                   <th scope="col" className="px-3 py-2.5 text-right font-semibold">인건비</th>
-                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">남은 돈</th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-semibold">순수익</th>
                 </tr>
               </thead>
               <tbody>
@@ -387,7 +387,7 @@ export default function SalesView({
       )}
 
       <Caveat>
-        <b>&quot;남은 돈&quot;은 순이익이 아닙니다.</b> 임대료·공과금·카드
+        <b>여기서 말하는 &quot;순수익&quot;은 재료비·인건비만 뺀 것입니다.</b> 임대료·공과금·카드
         수수료·세금·감가상각이 빠져 있습니다. 재료비도 그날 발주 금액이라
         실제로 쓴 양과는 다릅니다(로스·재고 변동). 메뉴별 재료비는{" "}
         <Link href="/cost" className="underline">

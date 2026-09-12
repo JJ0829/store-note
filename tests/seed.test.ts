@@ -464,11 +464,12 @@ const 정본 = "docs/deliverables/21_화면명세.md §1-b 를 같이 고칠 것
 
 test("★ 숫자 정본 — 프렙 목록의 개수", () => {
   const want: Record<string, { all: number; counted: number; irreversible: number }> = {
+    midday: { all: 6, counted: 6, irreversible: 0 },
     afternoon: { all: 11, counted: 5, irreversible: 7 },
     evening: { all: 3, counted: 3, irreversible: 0 },
     cycle: { all: 16, counted: 13, irreversible: 1 },
   };
-  assert.equal(listPrepLists().length, 3, `프렙 목록 수가 바뀌었다 — ${정본}`);
+  assert.equal(listPrepLists().length, 4, `프렙 목록 수가 바뀌었다 — ${정본}`);
   for (const list of listPrepLists()) {
     const w = want[list.slug];
     assert.ok(w, `모르는 프렙 목록 ${list.slug} — ${정본}`);
@@ -498,7 +499,7 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   assert.equal(recipeSteps, 32, `레시피 스텝 합계 — ${정본}`);
 
   const prepTasks = listPrepLists().reduce((n, l) => n + l.tasks.length, 0);
-  assert.equal(prepTasks, 30, `프렙 항목 합계 — ${정본}`);
+  assert.equal(prepTasks, 36, `프렙 항목 합계 — ${정본}`);
 
   /* ★ 촬영 대상은 프렙 **전체(30)가 아니라 묶을 머리를 뺀 27** 이다 (2026-09-12).
    *
@@ -525,7 +526,7 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   assert.equal(filmable, prepTasks - heads.length, "filmableTasks 가 묶음 머리만 뺀다");
 
   // /shoot 이 실제로 만드는 목록과 같은 셈법이다 (src/app/shoot/page.tsx)
-  assert.equal(positionSteps + recipeSteps + filmable, 85, `촬영 대상 합계 — ${정본}`);
+  assert.equal(positionSteps + recipeSteps + filmable, 91, `촬영 대상 합계 — ${정본}`);
 });
 
 test("★ 숫자 정본 — 레시피가 붙은 프렙 · 수량이 바뀌는 프렙", () => {

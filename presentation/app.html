@@ -465,8 +465,8 @@ const DATA = {
        «오픈조가 오후 프렙 담당» 으로 읽힌다 — 그건 마감조 일이다. */
     { id:"sh-open",   name:"오픈조", start:"07:30", end:"15:30", note:"오픈 준비 → 오전 영업",
       focus:[{kind:"checklist", slug:"cafe-open", label:"오픈 체크리스트"}] },
-    { id:"sh-middle", name:"미들",   start:"11:00", end:"19:00", note:"피크 커버",
-      focus:[{kind:"recipes", label:"레시피 찾기"}] },
+    { id:"sh-middle", name:"미들",   start:"11:00", end:"19:00", note:"피크 커버 → 13시 중간 점검",
+      focus:[{kind:"prep", slug:"midday", label:"중간 점검"},{kind:"recipes", label:"레시피 찾기"}] },
     { id:"sh-close",  name:"마감조", start:"14:30", end:"22:30", note:"오후 영업 → 19시부터 마감 준비 → 22시 영업 종료 → 22:30 마감 완료",
       focus:[{kind:"prep", slug:"afternoon", label:"오후 프렙 (내일 것 걸기)"},{kind:"prep", slug:"evening", label:"마감 준비 (19시부터)"},{kind:"checklist", slug:"cafe-close", label:"마감 체크리스트"}] }
   ],
@@ -658,6 +658,26 @@ const DATA = {
   ],
 
   prepLists: [
+    { slug:"midday", name:"중간 점검", note:"13:00~14:00. 점심 피크가 끝나고 오후 손님이 들기 전 한 바퀴 돕니다. 여기서 잡으면 마감이 짧아집니다.", tasks:[
+      { id:"m1", title:"휴지통 비우기", desc:"홀·화장실·바 세 곳. 점심에 가장 빨리 찹니다.",
+        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
+        group:null, option:null, optional:false, conseq:"오후에 넘치면 손님이 먼저 봅니다.", recipe:null },
+      { id:"m2", title:"화장실 점검 · 청소", desc:"변기·세면대·바닥, 휴지·비누·손 건조기 확인. 손님이 있는 시간이라 문 앞에 표시를 걸고 합니다.",
+        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:true, varies:false,
+        group:null, option:null, optional:false, conseq:"오후 손님이 먼저 봅니다. 매장 평이 여기서 갈립니다.", recipe:null },
+      { id:"m3", title:"홀 테이블 · 의자 정리", desc:"점심에 흐트러진 것을 한 번에 맞춥니다. 바닥에 떨어진 것도 같이.",
+        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
+        group:null, option:null, optional:false, conseq:"오후 손님이 앉을 자리가 지저분합니다.", recipe:null },
+      { id:"m4", title:"쇼케이스 채우기 · 남은 것 확인", desc:"빈 자리를 채우고, 오늘 안 나갈 것 같은 품목은 이 시간에 정합니다 — 잔여 할인은 늦게 걸수록 안 나갑니다.",
+        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
+        group:null, option:null, optional:false, conseq:"오후에 팔 것이 없거나, 마감에 폐기가 늘어납니다.", recipe:null },
+      { id:"m5", title:"바 정리 · 스팀피처 · 행주 교체", desc:"피크에 쓴 행주는 이 시간에 전부 바꿉니다. 스팀완드도 한 번 닦습니다.",
+        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:true, varies:false,
+        group:null, option:null, optional:false, conseq:"위생 문제가 되고, 오후 우유 맛이 달라집니다.", recipe:null },
+      { id:"m6", title:"재고 한 바퀴 — 오후 프렙에 넘길 것", desc:"우유·원두·부재료 잔량을 봅니다. 여기서 본 것이 오후 프렙 배수와 발주 수량이 됩니다.",
+        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
+        group:null, option:null, optional:false, conseq:"오후 프렙에서 얼마나 만들지 감으로 정하게 됩니다.", recipe:null }
+    ]},
     { slug:"afternoon", name:"오후 프렙", note:"14:00~15:30. 점심 손님이 빠진 뒤 한꺼번에 확인하고 만듭니다. 대부분 내일을 위한 일입니다.", tasks:[
       { id:"p1", title:"내일용 콜드브루 걸기", desc:"원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.",
         trigger:"매일 14:00", cycle:false, hours:16, days:null, recoverable:false, critical:true, varies:true,
@@ -1282,7 +1302,7 @@ function checkContract(c, minWage, today) {
 }
 
 /* ---------- 매출 ----------
-   ⚠ "남은 돈"은 순이익이 아니다. 임대료·공과금·카드수수료·세금이 없다 */
+   ⚠ 여기서 말하는 "순수익"은 재료비·인건비만 뺀 것이다. 임대료·공과금·카드수수료·세금이 없다 */
 const loadSales = () => store.get("sales", {}) || {};
 const saveSales = d => store.set("sales", d);
 const emptyDay = date => ({ date, total:0, count:0, material:0, note:"" });
@@ -2705,7 +2725,7 @@ function renderOps() {
           <span class="flow-op">−</span>
           <span class="flow-box flow-hit">인건비</span>
           <span class="flow-op">=</span>
-          <span class="flow-box flow-out">오늘 남은 돈</span>
+          <span class="flow-box flow-out">오늘 순수익</span>
         </div>
       </div>
       <p class="flow-side">곁가지 — <b>프렙</b>의 발주 항목이 그대로 <b>발주 체크</b>로 갑니다.
@@ -3618,7 +3638,7 @@ function renderSales() {
         const p = profitOf(d2, lb.cost);
         const box = el(`<div style="border:2px solid ${p.left >= 0 ? "var(--ok-b)" : "var(--danger-b)"};
           background:${p.left >= 0 ? "var(--ok-w)" : "var(--danger-w)"};border-radius:var(--r);padding:16px;margin-top:14px">
-          <b style="font-size:15px">${esc(dayLabel(new Date(pick + "T00:00:00")))} 남은 돈</b>
+          <b style="font-size:15px">${esc(dayLabel(new Date(pick + "T00:00:00")))} 순수익</b>
           <p style="margin:5px 0 0;font-family:var(--mono);font-size:31px;font-weight:700;
             font-variant-numeric:tabular-nums">${won(p.left)}<span style="font-size:16px">원</span></p>
           <div style="margin-top:11px;border-top:1px solid rgba(0,0,0,.08);padding-top:5px"></div></div>`);
@@ -3632,7 +3652,7 @@ function renderSales() {
 
         if (lb.noWage.length) {
           const c = caveat(`시급이 없는 직원(<b>${esc(lb.noWage.join(", "))}</b>)이 근무한 날입니다.
-            그만큼 인건비가 실제보다 적고, 남은 돈은 실제보다 많게 보입니다.
+            그만큼 인건비가 실제보다 적고, 순수익은 실제보다 많게 보입니다.
             <button type="button" id="tc" style="padding:0;background:none;border:0;color:inherit;
             text-decoration:underline;font-size:12px;font-weight:600">시급 넣기</button>`);
           c.querySelector("#tc").onclick = () => go("#/contracts");
@@ -3669,14 +3689,14 @@ function renderSales() {
       bd.appendChild(moneyRow("매출", `${won(wp.sales)}원`));
       bd.appendChild(moneyRow(`재료비 (${pct(wp.material, wp.sales)}%)`, `− ${won(wp.material)}원`));
       bd.appendChild(moneyRow(`인건비 (${pct(wp.labor, wp.sales)}%)`, `− ${won(wp.labor)}원`));
-      bd.appendChild(moneyRow("남은 돈", `${won(wp.left)}원`, { strong: true }));
+      bd.appendChild(moneyRow("순수익", `${won(wp.left)}원`, { strong: true }));
       if (wp.perCustomer !== null) bd.appendChild(moneyRow("객단가", `${won(wp.perCustomer)}원`));
       v.appendChild(card);
 
       const tw = el(`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr>
         <th style="text-align:left" scope="col">날짜</th><th style="text-align:right" scope="col">매출</th>
         <th style="text-align:right" scope="col">재료비</th><th style="text-align:right" scope="col">인건비</th>
-        <th style="text-align:right" scope="col">남은 돈</th></tr></thead><tbody></tbody></table></div>`);
+        <th style="text-align:right" scope="col">순수익</th></tr></thead><tbody></tbody></table></div>`);
       const tb = tw.querySelector("tbody");
       for (const d of week) {
         const date = dk(d);
@@ -3697,7 +3717,7 @@ function renderSales() {
       v.appendChild(tw);
     }
 
-    const c = caveat(`<b>"남은 돈"은 순이익이 아닙니다.</b> 임대료·공과금·카드수수료·세금·감가상각이
+    const c = caveat(`<b>여기서 말하는 "순수익"은 재료비·인건비만 뺀 것입니다.</b> 임대료·공과금·카드수수료·세금·감가상각이
       빠져 있습니다. 재료비도 그날 발주 금액이라 실제로 쓴 양과는 다릅니다(로스·재고 변동).
       메뉴별 재료비는 <button type="button" id="tk" style="padding:0;background:none;border:0;color:inherit;
       text-decoration:underline;font-size:12px;font-weight:600">원가 화면</button>에서 봅니다.`);

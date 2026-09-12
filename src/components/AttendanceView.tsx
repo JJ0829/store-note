@@ -66,7 +66,8 @@ export default function AttendanceView({
     setPunches(loadPunches());
     setContracts(loadContracts());
     setSettings(loadSettings());
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    // ★ 1초마다. 「지금 15:22」 가 30초 늦게 바뀌면 찍은 시각을 의심하게 된다
+    const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 

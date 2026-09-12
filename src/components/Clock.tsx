@@ -18,9 +18,10 @@ export default function Clock() {
 
   useEffect(() => {
     setNow(new Date());
-    /* 분이 바뀔 때만 다시 그린다. 초까지 두면 1초마다 화면이 흔들리고,
-       주방에서 초 단위가 필요한 화면이 아니다. */
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    /* ★ 1초마다 본다. 표시는 분까지지만, 30초마다 보면 **분이 최대 30초 늦게
+       바뀐다** — 사장님이 "실시간 맞냐" 고 물은 지점이 정확히 그것이다.
+       그릴 글자가 같으면 리액트가 DOM 을 안 건드리므로 화면은 안 흔들린다. */
+    const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 

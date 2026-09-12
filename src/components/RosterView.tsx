@@ -370,8 +370,8 @@ export default function RosterView({
                     {label(d)}
                   </th>
                 ))}
-                <th scope="col" className="w-10">
-                  <span className="sr-only">지우기</span>
+                <th scope="col" className="w-12 px-2 py-2.5 text-[11px] font-semibold text-zinc-400">
+                  지우기
                 </th>
               </tr>
             </thead>

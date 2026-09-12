@@ -366,7 +366,27 @@ export default function OrderView({
                       )}
                     </span>
                     <span className="flex shrink-0 gap-1.5">
-                      <Chip on={st.ordered} onClick={() => patch(task.id, { ordered: !st.ordered })}>
+                      <Chip
+                        on={st.ordered}
+                        onClick={() => {
+                          const turningOn = !st.ordered;
+                          patch(task.id, { ordered: turningOn });
+                          if (!turningOn) return;
+                          /* ★ 「주문함」이 곧 «주문하는 순간»이다 (사장님 지적 2026-09-12).
+                             전에는 체크만 켜지고 아무 일도 안 일어나서, 문자를 보내려면
+                             옆 버튼을 따로 찾아야 했다. 이제 누르는 그 자리에서 이어진다 —
+                             거래처가 있으면 문자 앱이 열리고, 없으면 만드는 칸이 열린다. */
+                          const v = vendors!.vendors.find((x) => x.id === links[task.id]);
+                          if (v?.phone) {
+                            window.location.href = smsHref(
+                              v.phone,
+                              textForTask(task.id, v.name),
+                            );
+                            return;
+                          }
+                          if (!v) setQuick({ taskId: task.id, name: "", phone: "" });
+                        }}
+                      >
                         주문함
                       </Chip>
                       <Chip
