@@ -352,9 +352,12 @@ test("★ /api/log 가 저장 여부를 사실대로 돌려준다", () => {
     path.join(process.cwd(), "src", "app", "api", "log", "route.ts"),
     "utf-8",
   );
+  /* 2026-09-12 — 쌓는 곳이 둘이 되면서(서버 DB / 로컬 파일) 응답에 `sink` 가
+     붙었다. 이 검사의 뜻은 그대로다 — **저장 여부를 덮지 않는다.**
+     어디에 쌓였는지까지 보는 검사는 `tests/logSink.test.ts` 에 있다. */
   assert.match(
     route,
-    /return Response\.json\(\{ ok: true, stored \}\)/,
+    /return Response\.json\(\{ ok: true, stored: sink !== "none", sink \}\)/,
     "저장 실패를 ok:true 로 덮고 있다 — 배포하면 지표 0건인 것을 모른다",
   );
   assert.doesNotMatch(

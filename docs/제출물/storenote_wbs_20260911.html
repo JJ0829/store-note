@@ -387,6 +387,7 @@ footer code{background:none}
         <tr><td>9.2</td><td>표지 · 링크로 내기</td><td><code>docs/제출물/index.html</code></td><td>9/11</td><td class="ok">완료</td></tr>
         <tr><td>9.3</td><td>DB 아키텍처 · WBS 문서</td><td>이 문서 · <code>storenote_db_architecture</code></td><td>9/11</td><td class="brw">진행</td></tr>
 
+        <tr><td>10.0</td><td><b>지표를 서버 DB 로</b> — D-002 예외(검증 인프라 복구)<br><span class="sub">events 표 · 쌓기만 · 이름/금액 없음 · SDK 없이 REST</span></td><td><code>db/migrations/0001_events.sql</code> · <code>api/log</code></td><td>9/12</td><td class="ok">완료</td></tr>
         <tr><td>10.1</td><td class="own">main 머지 + Vercel 배포 · 환경변수</td><td>배포 주소 · <code>docs/배포.md</code></td><td>9/12~</td><td>대기</td></tr>
         <tr><td>10.2</td><td>배포 후 — <b>로그인 + 역할 3종</b>(사장님 · 매장 관리자 · 직원)<br><span class="sub">지금의 번호 두 개는 사람을 구분하지 않는다</span></td><td>Auth · 줄 단위 접근통제 정책</td><td>배포 후</td><td>대기</td></tr>
         <tr><td>10.3</td><td>서버 DB 이관 — 브라우저 저장소 → 표 37개<br><span class="sub">촬영 파일은 Storage 버킷으로, 지표는 표 insert 로</span></td><td><code>src/lib/repo.ts</code> + 각 lib 의 <code>load/save</code></td><td>배포 후</td><td>대기</td></tr>
@@ -498,8 +499,9 @@ footer code{background:none}
             <td>운영 기능이 점주가 보는 숫자(원가율·인건비율·남은 돈)를 화면에 올린 것은 맞다.
                 <b>그런데 그건 화면을 만든 것이지 지불 의사의 근거가 아니다.</b>
                 주방장은 예산 집행자가 아니었다 — 경력이 길다는 사실이 이것을 풀지 않는다</td></tr>
-        <tr><td>14.3</td><td>지표를 실제로 쌓기</td><td>대기</td>
-            <td><code>/api/log</code> 가 파일 append 라 배포본에서 0건이다. 10.3(Supabase) 뒤에 붙는다</td></tr>
+        <tr><td>14.3</td><td>지표를 실제로 쌓기</td><td class="ok">길은 뚫림</td>
+            <td>9/12 에 <b>표와 코드가 준비됐다</b>(10.0). 남은 것은 배포처에 환경변수 두 개를 넣는 일뿐이고,
+                그때부터 실제로 쌓인다</td></tr>
         <tr><td>14.4</td><td>결정 3건</td><td>대기</td>
             <td>이용기록 보유기간 · PIN 분실 처리 정책 · 법정 점검 주기 — <b>매장 사정을 아는 사람만</b> 정할 수 있다</td></tr>
       </tbody>
