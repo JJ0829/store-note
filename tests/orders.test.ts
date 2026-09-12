@@ -17,6 +17,8 @@ import {
   putState,
   stateOf,
   type OrderLog,
+  smsHref,
+  telDigits,
 } from "../src/lib/orders.ts";
 
 /* ---------- 상태 읽기 ---------- */
@@ -187,4 +189,35 @@ test("항목이 하나도 없어도 문구가 깨지지 않는다", () => {
   const t = buildOrderText("○○ 카페", "우유상회", []);
   assert.ok(t.includes("발주 요청"));
   assert.ok(t.includes("확인 후 회신"));
+});
+
+/* ---------- 문자로 바로 보내기 (2026-09-12) ---------- */
+
+test("전화번호에서 숫자와 + 만 남긴다", () => {
+  assert.equal(telDigits("010-1234-5678"), "01012345678");
+  assert.equal(telDigits("+82 10 1234 5678"), "+821012345678");
+  assert.equal(telDigits(""), "");
+});
+
+test("★ sms: 주소가 `?&body=` 를 쓴다 (기기마다 구분자가 달라서)", () => {
+  /* iOS 는 `&`, 안드로이드는 `?` 를 쓴다. `?&` 로 쓰면 양쪽이 다 받는다.
+     틀리면 문자 앱이 **본문 없이** 열리는데 사람은 모르고 그냥 보낸다. */
+  const href = smsHref("010-1234-5678", "안녕하세요");
+  assert.ok(href.startsWith("sms:01012345678?&body="), href);
+  assert.equal(decodeURIComponent(href.split("body=")[1]), "안녕하세요");
+});
+
+test("본문의 줄바꿈·특수문자가 그대로 살아난다", () => {
+  const text = buildOrderText("○○ 베이커리", "△△유통", [
+    { name: "우유", memo: "12팩" },
+    { name: "생크림", memo: "" },
+  ]);
+  const back = decodeURIComponent(smsHref("", text).split("body=")[1]);
+  assert.equal(back, text);
+  assert.ok(back.includes("- 우유 : 12팩"));
+});
+
+test("번호가 없으면 받는 사람 없이 연다 (본문은 살아 있다)", () => {
+  const href = smsHref("", "본문");
+  assert.ok(href.startsWith("sms:?&body="), href);
 });

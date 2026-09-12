@@ -16,6 +16,7 @@ import {
   putState,
   saveOrderLinks,
   saveOrderLog,
+  smsHref,
   stateOf,
   type OrderLinks,
   type OrderLog,
@@ -25,6 +26,8 @@ import {
   cutoffOrder,
   loadVendors,
   minutesToCutoff,
+  newVendor,
+  saveVendors,
   type VendorData,
 } from "@/lib/vendors";
 import type { PrepList, PrepTask } from "@/lib/types";
@@ -59,6 +62,8 @@ export default function OrderView({
   const [vendors, setVendors] = useState<VendorData | null>(null);
   const [log, setLog] = useState<OrderLog>({});
   const [links, setLinks] = useState<OrderLinks>({});
+  /* 「거래처 만들고 바로 문자」 — 어느 항목에서 열었는지와 입력값 */
+  const [quick, setQuick] = useState<{ taskId: string; name: string; phone: string } | null>(null);
   const save = useSaveState();
 
   useEffect(() => {
@@ -129,6 +134,41 @@ export default function OrderView({
     save.report("거래처 연결", saveOrderLinks(next), () =>
       save.report("거래처 연결", saveOrderLinks(next)),
     );
+  }
+
+  /**
+   * 이 항목 한 건만 담은 발주 문구. 거래처별 발주서(`sendFor`)와 다르다 —
+   * 문자는 **그 자리에서 그 항목**을 보내는 것이라 한 줄이면 된다.
+   */
+  function textForTask(taskId: string, vendorName: string) {
+    const t = taskById.get(taskId);
+    return buildOrderText(storeName, vendorName, [
+      { name: t?.title ?? taskId, memo: stateOf(log, today, taskId).memo },
+    ]);
+  }
+
+  /**
+   * 거래처를 그 자리에서 만들고 바로 문자 앱을 연다.
+   *
+   * ★ 왜 여기서 만드나 — 아침에 발주를 넣다가 «이 집은 아직 안 넣었네» 를
+   *   만나면, 거래처 화면으로 갔다가 돌아오는 동안 하던 일을 놓친다.
+   *   이름과 번호 둘만 받는다. 마감 시각·배송 요일은 나중에 채워도
+   *   **문자 보내는 데는 필요 없다.**
+   */
+  function createAndText(taskId: string, name: string, phone: string) {
+    const v = { ...newVendor(), name: name.trim() || "새 거래처", phone: phone.trim(), how: "문자" };
+    const nextVendors: VendorData = { ...vendors!, vendors: [...vendors!.vendors, v] };
+    setVendors(nextVendors);
+    save.report("거래처", saveVendors(nextVendors));
+
+    const nextLinks = { ...links, [taskId]: v.id };
+    setLinks(nextLinks);
+    save.report("거래처 연결", saveOrderLinks(nextLinks));
+
+    setQuick(null);
+    // 문자를 보냈으면 주문한 것이다. 두 번 누르게 하지 않는다
+    patch(taskId, { ordered: true });
+    window.location.href = smsHref(v.phone, textForTask(taskId, v.name));
   }
 
   /* ---------- 거래처별로 모아 발주서를 만든다 ---------- */
@@ -367,7 +407,85 @@ export default function OrderView({
                         ))}
                       </select>
                     )}
+
+                    {/* ★ 문자로 바로 보내기 (사장님 요청 2026-09-12).
+                        전에는 발주 문구를 복사해서 다른 앱에 붙여넣어야 했다.
+                        아침에 한 손으로 하는 일인데 앱을 오가야 하면
+                        결국 전화로 돌아간다. */}
+                    {(() => {
+                      const v = vendors.vendors.find((x) => x.id === links[task.id]);
+                      if (v?.phone)
+                        return (
+                          <a
+                            href={smsHref(v.phone, textForTask(task.id, v.name))}
+                            className={BTN}
+                            onClick={() => patch(task.id, { ordered: true })}
+                          >
+                            문자
+                          </a>
+                        );
+                      if (v)
+                        return (
+                          <span className="text-[11px] text-zinc-400">
+                            {v.name}에 번호가 없습니다
+                          </span>
+                        );
+                      return (
+                        <button
+                          type="button"
+                          className={BTN}
+                          onClick={() =>
+                            setQuick({ taskId: task.id, name: "", phone: "" })
+                          }
+                        >
+                          거래처 만들고 문자
+                        </button>
+                      );
+                    })()}
                   </div>
+
+                  {/* 그 자리에서 거래처 만들기 — 이름과 번호 둘만 받는다.
+                      마감 시각·배송 요일은 문자 보내는 데 필요 없다 */}
+                  {quick?.taskId === task.id && (
+                    <div className="mt-2 flex flex-wrap items-end gap-2 rounded-xl border-2 border-dashed border-zinc-300 p-2.5 dark:border-zinc-700">
+                      <input
+                        autoFocus
+                        value={quick.name}
+                        onChange={(e) => setQuick({ ...quick, name: e.target.value })}
+                        placeholder="거래처 이름"
+                        aria-label="새 거래처 이름"
+                        className={`${INPUT} max-w-[150px]`}
+                      />
+                      <input
+                        value={quick.phone}
+                        onChange={(e) => setQuick({ ...quick, phone: e.target.value })}
+                        placeholder="전화번호"
+                        inputMode="tel"
+                        aria-label="새 거래처 전화번호"
+                        className={`${INPUT} max-w-[150px]`}
+                      />
+                      <button
+                        type="button"
+                        className={BTN}
+                        onClick={() =>
+                          createAndText(task.id, quick.name, quick.phone)
+                        }
+                      >
+                        만들고 문자 열기
+                      </button>
+                      <button
+                        type="button"
+                        className="px-2 text-[12px] text-zinc-500"
+                        onClick={() => setQuick(null)}
+                      >
+                        그만두기
+                      </button>
+                      <p className="basis-full text-[11px] text-zinc-500 dark:text-zinc-400">
+                        마감 시각·배송 요일은 나중에 <b>거래처</b> 화면에서 채우면
+                        «언제 오는지»까지 나옵니다.
+                      </p>
+                    </div>
+                  )}
                 </li>
               );
             })}
