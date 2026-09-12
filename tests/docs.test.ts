@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 /* ------------------------------------------------------------------ *
  * 문서가 코드에 대해 하는 말이 아직 사실인가.
@@ -148,6 +149,27 @@ const 보고 = (bad: Map<string, Set<string>>) =>
     .map(([k, v]) => `\n  ${k}\n      ← ${[...v].join(", ")}`)
     .join("");
 
+/** git 이 추적하는 파일 전부. git 을 못 쓰면 null.
+ *
+ *  ★ 낡음 판정에 fs.existsSync 를 쓰면 안 된다.
+ *    data/events.jsonl 처럼 **런타임에 생기고 .gitignore 로 빠지는** 파일은
+ *    앱을 한 번 돌린 기기에는 있고 갓 클론한 기기에는 없다.
+ *    그러면 같은 커밋이 기기에 따라 통과하기도 실패하기도 한다.
+ *    "예외가 거짓말이 됐다" 는 **저장소에 들어왔을 때** 성립하는 말이므로
+ *    저장소가 아는 것(git ls-files)만 본다. */
+function 추적중_파일(): Set<string> | null {
+  try {
+    const out = execFileSync("git", ["ls-files", "-z"], {
+      cwd: ROOT,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return new Set(out.split("\0").filter(Boolean));
+  } catch {
+    return null; // git 이 없는 환경에서는 낡음 판정을 파일 존재로 되돌린다
+  }
+}
+
 // ── 검사 ─────────────────────────────────────────────────────────────
 
 test("문서가 가리키는 소스 파일이 실제로 있다", () => {
@@ -199,8 +221,9 @@ test("★ 예외 목록 자체가 낡지 않았다", () => {
   /* 예외로 빼둔 것이 나중에 실제로 만들어지면, 예외는 거짓말이 된다.
      그러면 그 파일이 지워졌을 때 아무도 못 잡는다. 그래서 지우라고 말한다. */
   const 쓸모없는: string[] = [];
+  const 추적 = 추적중_파일();
   for (const f of Object.keys(파일_예외))
-    if (fs.existsSync(path.join(ROOT, f)))
+    if (추적 ? 추적.has(f) : fs.existsSync(path.join(ROOT, f)))
       쓸모없는.push(`파일_예외 "${f}" — 이제 실제로 있다`);
 
   const 주소 = 실제_주소();
