@@ -74,9 +74,19 @@ export function onDutyNow<T extends ShiftTime>(shifts: T[], cur: number): T[] {
     // 자정을 넘는 조이고 지금이 새벽이면, 그 조는 "어제" 시작했다
     return crossesMidnight(s) && cur < a ? a - 1440 : a;
   };
+  /* ★ 2026-09-12 뒤집었다 — **일찍 시작한 조가 위**다 (사장님 지시).
+   *
+   *   전에는 «방금 시작한 조를 위에» 였다. 막 출근한 사람 화면이 위로 오게
+   *   하려던 것이었는데, 실제로는 **하루의 순서와 반대로 서는 게 더 헷갈렸다.**
+   *   매장 사람은 «오픈 → 미들 → 마감» 순서를 몸으로 알고 있어서, 화면이
+   *   그 반대로 서면 자기 조를 찾는 게 아니라 목록을 다시 읽게 된다.
+   *
+   *   ⚠️ 대신 잃은 것이 있다 — 07:30 에 막 출근한 오픈조가 제빵(05:00) 아래
+   *   두 번째 칸에 선다. 그래서 **첫 칸만 주황으로 강조하지 않고**, 화면이
+   *   «지금 근무 중» 을 조마다 적게 뒀다(`NowPanel`). */
   return shifts
     .filter((s) => isOnDuty(s, cur))
-    .sort((x, y) => startedAt(y) - startedAt(x));
+    .sort((x, y) => startedAt(x) - startedAt(y));
 }
 
 /**

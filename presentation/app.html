@@ -383,6 +383,44 @@ td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* 접었다 펴는 묶음 (2026-09-12) */
+details.fold{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  margin:12px 0 0;overflow:hidden}
+details.fold>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 16px;cursor:pointer;list-style:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary b{font-size:15px}
+details.fold .fold-n{margin-left:8px;font-size:12px;font-weight:400;color:var(--ink-3)}
+details.fold .fold-a{flex:none;font-size:12px;color:var(--ink-3);transition:transform .15s}
+details.fold[open] .fold-a{transform:rotate(180deg)}
+details.fold .fold-body{border-top:1px solid var(--line);padding:12px 16px 16px}
+details.fold .fold-body .rows{display:flex;flex-direction:column;gap:8px}
+/* 제목 옆 날짜·시각 */
+#top h1 .clock{margin-left:9px;font-family:var(--mono);font-size:13px;font-weight:400;
+  color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+/* 운영 흐름도 (2026-09-12 다시 그림)
+   ★ 전에는 <pre> 안에 괘선문자로 그렸다. 한글은 글자 폭이 영문의 두 배라
+     고정폭 글꼴에서도 칸이 안 맞고, 기기마다 다르게 어그러졌다.
+     게다가 그림이 틀린 말을 하고 있었다 — 계약서가 근태 쪽에 붙어 있어서
+     «근무표 + 계약서 → 출퇴근» 으로 읽혔다. 근태는 근무표와 출퇴근의
+     **차이**이고, 계약서 시급은 그 뒤에 곱하는 것이다. */
+.flow-row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+.flow-row:first-of-type{border-top:0;padding-top:0}
+.flow-n{flex:none;width:18px;height:18px;border-radius:50%;background:var(--surface-2);
+  color:var(--ink-3);font-family:var(--mono);font-size:10px;line-height:18px;text-align:center;margin-top:3px}
+.flow-line{display:flex;flex-wrap:wrap;align-items:center;gap:5px 6px;min-width:0}
+.flow-pair{display:inline-flex;align-items:baseline;gap:4px;border:1px solid var(--line);
+  border-radius:8px;padding:4px 8px;background:var(--surface)}
+.flow-pair b{font-size:12.5px}
+.flow-pair i{font-style:normal;font-size:10.5px;color:var(--ink-3)}
+.flow-op{color:var(--ink-3);font-size:12px}
+.flow-box{border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12.5px;
+  background:var(--surface-2)}
+.flow-hit{border-color:var(--accent-b,var(--line));background:var(--accent-w,var(--surface-2));font-weight:600}
+.flow-out{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}
+.flow-side{margin:10px 0 0;font-size:12px;color:var(--ink-3);line-height:1.6}
 </style>
 
 <header class="top">
@@ -417,8 +455,10 @@ const DATA = {
        교육 모드 표지("시작하기")가 떠서 매일 쓰는 사람이 첫날 화면을 다시 본다. */
     { id:"sh-bakery", name:"제빵",   start:"05:00", end:"13:00", note:"어제 걸어둔 것 받고, 내일 것 다시 걸어두기",
       focus:[{kind:"training", slug:"bakery-morning", label:"제빵 순서 보기"},{kind:"recipes", label:"레시피 찾기"}] },
-    { id:"sh-open",   name:"오픈조", start:"07:30", end:"15:30", note:"오픈 준비 → 오전 영업 → 오후 프렙",
-      focus:[{kind:"checklist", slug:"cafe-open", label:"오픈 체크리스트"},{kind:"prep", slug:"afternoon", label:"오후 프렙"}] },
+    /* ★ 오후 프렙을 뺐다 (사장님 지시 2026-09-12). 오픈조 카드에 있으면
+       «오픈조가 오후 프렙 담당» 으로 읽힌다 — 그건 마감조 일이다. */
+    { id:"sh-open",   name:"오픈조", start:"07:30", end:"15:30", note:"오픈 준비 → 오전 영업",
+      focus:[{kind:"checklist", slug:"cafe-open", label:"오픈 체크리스트"}] },
     { id:"sh-middle", name:"미들",   start:"11:00", end:"19:00", note:"피크 커버",
       focus:[{kind:"recipes", label:"레시피 찾기"}] },
     { id:"sh-close",  name:"마감조", start:"14:30", end:"22:30", note:"오후 영업 → 19시부터 마감 준비 → 22시 영업 종료 → 22:30 마감 완료",
@@ -1443,8 +1483,51 @@ function renderTabs(active) {
 /* ------------------------------------------------------------------ *
    오늘
  * ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ *
+   접었다 펴는 묶음 (▼) — 2026-09-12
+
+   ★ 사장님 지적: "자잘한 게 너무 많다". 첫 화면에 섹션이 넷인데 그중
+     **매일 여는 것은 프렙 하나**다. 나머지는 주 1회거나 신입이 올 때만
+     연다. 그래서 프렙만 펴 두고 나머지는 접는다.
+
+   `<details>` 를 쓴다 — 자바스크립트로 상태를 들고 있지 않아도 눌리면
+   열리고, 스크린리더가 「접힘/펼침」 을 그대로 읽는다.
+ * ------------------------------------------------------------------ */
+function fold({ title, note, count, open }) {
+  const d = el(`<details class="fold"${open ? " open" : ""}>
+    <summary>
+      <span><b>${esc(title)}</b>${count ? `<span class="fold-n">${esc(count)}</span>` : ""}</span>
+      <span class="fold-a" aria-hidden="true">▼</span>
+    </summary>
+    <div class="fold-body">${note ? `<p class="hint" style="margin:0 0 10px">${esc(note)}</p>` : ""}
+      <div class="rows"></div>
+    </div>
+  </details>`);
+  return { box: d, rows: d.querySelector(".rows") };
+}
+
 function renderHome() {
   topbar({ title: "오늘", sub: DATA.store.name });
+  /* ★ 제목 옆 날짜·시각 (사장님 요청 2026-09-12).
+     매장 태블릿은 하루 종일 켜져 있다 — 아침에 켠 화면을 저녁에 보는 일이
+     실제로 있어서, 지금 몇 시인지가 화면에 없으면 어제 것을 보고 있는지
+     오늘 것을 보고 있는지 알 방법이 없다. */
+  {
+    const h1 = document.querySelector("#top h1");
+    if (h1) {
+      const c = el(`<span class="clock"></span>`);
+      const tick = () => {
+        const d = new Date();
+        c.textContent = `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} `
+          + `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+      tick();
+      /* 화면을 다시 그리면 이 노드도 사라지므로 타이머를 정리한다 */
+      const id = setInterval(() => (c.isConnected ? tick() : clearInterval(id)), 30000);
+      h1.appendChild(c);
+    }
+  }
   const v = document.getElementById("view");
 
   /* 지금 근무 중인 조 */
@@ -1459,7 +1542,11 @@ function renderHome() {
        cur >= start && cur < end 로 하면 그런 조가 절대 안 잡힌다.
        Next 앱의 src/lib/shiftClock.ts 와 같은 규칙이어야 한다. */
     .filter(s => onDuty(s, cur))
-    .sort((a, b) => mins(b.start) - mins(a.start));
+    /* ★ 2026-09-12 뒤집었다 — **일찍 시작한 조가 위**다 (사장님 지시).
+       전에는 «방금 시작한 조를 위에» 였는데, 매장 사람은 «오픈 → 미들 → 마감»
+       순서를 몸으로 알고 있어서 화면이 그 반대로 서면 목록을 다시 읽게 된다.
+       Next 앱 `src/lib/shiftClock.ts` 의 `onDutyNow` 와 같은 규칙이어야 한다. */
+    .sort((a, b) => mins(a.start) - mins(b.start));
   const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
   const panel = el(`<div class="stack" style="margin-top:18px"></div>`);
@@ -1472,15 +1559,20 @@ function renderHome() {
       <p style="margin:4px 0 0;font-weight:700">다음은 ${esc(next.name)} · <span style="font-family:var(--mono)">${next.start}</span></p></div>`));
   } else {
     active.forEach((sh, i) => {
-      const card = el(`<div class="card" style="padding:16px;${i===0 ? "border-color:var(--accent-b);background:var(--accent-w)" : ""}">
-        <p class="eyebrow" style="margin:0">${i===0 ? `지금 ${clock} · 근무 중` : "같은 시간대"}</p>
+      /* ★ 첫 칸만 강조하지 않는다 (2026-09-12). 순서를 「하루의 순서」로 바꾸면서
+         첫 칸이 «지금 사람» 이 아니라 «가장 일찍 시작한 조» 가 됐다. 07:30 에
+         제빵(05:00)이 맨 위인데 그것만 주황이면, 막 출근한 오픈조가 자기 칸을
+         흐린 칸으로 본다. 셋 다 근무 중이다. 시각은 제목 옆 시계가 말한다. */
+      const card = el(`<div class="card" style="padding:16px;border-color:var(--accent-b);background:var(--accent-w)">
+        <p class="eyebrow" style="margin:0">근무 중</p>
         <p style="margin:2px 0 0;font-size:17px;font-weight:700">${esc(sh.name)}
           <span style="font-family:var(--mono);font-size:13px;font-weight:400;color:var(--ink-3)">${sh.start}–${sh.end}</span></p>
         <p style="margin:3px 0 0;font-size:13px;color:var(--ink-2)">${esc(sh.note)}</p>
         <div class="stack" style="margin-top:12px"></div></div>`);
       const box = card.querySelector(".stack");
       sh.focus.forEach((f, fi) => {
-        const primary = i === 0 && fi === 0;
+        // 조마다 첫 줄이 그 조의 주 동선이다
+        const primary = fi === 0;
         const b = el(`<button type="button" class="nav-row ${primary ? "btn-primary" : ""}">
           <b>${esc(f.label)}</b><span class="chev">›</span></button>`);
         // checklist 갈래가 없으면 [오픈 체크리스트]가 교육 모드 표지로 떨어진다.
@@ -1498,8 +1590,9 @@ function renderHome() {
   }
   v.appendChild(panel);
 
-  /* 프렙 */
-  const sec1 = el(`<section class="sec"><h2>프렙</h2><p class="hint">오늘 해야 내일 쓸 수 있는 것들입니다.</p><div class="rows"></div></section>`);
+  /* 프렙 — 매일 연다. 유일하게 펴 둔다 */
+  const f1 = fold({ title: "프렙", note: "오늘 해야 내일 쓸 수 있는 것들입니다.",
+    count: `${DATA.prepLists.length}개 목록`, open: true });
   DATA.prepLists.forEach(l => {
     /* ★ 프렙 화면과 같은 규칙으로 센다. `l.tasks.length` 를 그대로 쓰면
        홈은 "11개" 인데 들어가면 "0/5" 라 숫자가 어긋난다 (2026-09-10 수정) */
@@ -1509,31 +1602,34 @@ function renderHome() {
       <span class="meta">${n}개${keep ? ` · <b style="color:var(--danger)">까먹지 말 것 ${keep}개</b>` : ""}</span></span>
       <span class="chev">›</span></button>`);
     b.onclick = () => go(`#/prep/${l.slug}`);
-    sec1.querySelector(".rows").appendChild(b);
+    f1.rows.appendChild(b);
   });
-  v.appendChild(sec1);
+  v.appendChild(f1.box);
 
-  /* 레시피 · 근무표 */
-  const sec2 = el(`<section class="sec"><h2>바로 가기</h2><div class="rows"></div></section>`);
+  /* 바로 가기 — 접어 둔다.
+     ★ 「운영」 을 뺐다 (사장님 지시 2026-09-12): 아래 탭바의 톱니바퀴가
+       같은 곳으로 간다. 같은 문을 두 개 만들면 화면만 길어진다. */
+  const f2 = fold({ title: "바로 가기", count: "5개" });
   [
     { label: "레시피 찾기", meta: `${DATA.recipes.length}개 · 이름으로 찾고 배수 계산`, to: "#/prep" },
     { label: "이번 주 근무표", meta: "짜서 전 직원에게 메일 발송", to: "#/roster" },
     /* 근무표 바로 아래에 둔다 — 근무표가 계획이고 출퇴근이 실제라 짝이다 */
     { label: "출퇴근 · 근태", meta: "버튼 두 개로 찍고, 근무표와 비교해 지각·연장을 봅니다", to: "#/attend" },
     { label: "발주", meta: "주문 마감까지 남은 시간, 주문했는데 안 들어온 것", to: "#/order" },
-    { label: "운영 (원가 · 매출 · 거래처 · 계약서)", meta: "매출 − 재료비 − 인건비 = 오늘 남은 돈", to: "#/ops" },
     /* 촬영은 매일 여는 것이 아니라 맨 아래에 둔다. 다만 「사진·영상」이 핵심 가치
        셋 중 하나라, 화면이 아예 없으면 시연에서 그 주장을 보여줄 데가 없다 */
     { label: "촬영 진행", meta: "무엇을 찍어야 하는지 — 85개, 먼저 찍을 것 4개", to: "#/shoot" }
   ].forEach(x => {
     const b = el(`<button type="button" class="nav-row"><span><b>${esc(x.label)}</b><span class="meta">${esc(x.meta)}</span></span><span class="chev">›</span></button>`);
     b.onclick = () => go(x.to);
-    sec2.querySelector(".rows").appendChild(b);
+    f2.rows.appendChild(b);
   });
-  v.appendChild(sec2);
+  v.appendChild(f2.box);
 
-  /* 포지션 */
-  const sec3 = el(`<section class="sec"><h2>포지션별</h2><p class="hint">첫날은 교육 모드로 한 장씩, 그 뒤엔 체크리스트로.</p><div class="rows"></div></section>`);
+  /* 포지션 — 신입이 올 때만 연다. 접어 둔다 */
+  const f3 = fold({ title: "포지션별 체크리스트",
+    note: "첫날은 교육 모드로 한 장씩, 그 뒤엔 체크리스트로.",
+    count: `${DATA.positions.length}개` });
   DATA.positions.forEach(p => {
     const n = p.sections.reduce((a,s) => a + s.steps.length, 0);
     const c = p.sections.reduce((a,s) => a + s.steps.filter(x => x.critical).length, 0);
@@ -1547,9 +1643,9 @@ function renderHome() {
     const b = el(`<button type="button">체크리스트</button>`);
     b.onclick = () => go(`#/list/${p.slug}`);
     g.append(a, b);
-    sec3.querySelector(".rows").appendChild(card);
+    f3.rows.appendChild(card);
   });
-  v.appendChild(sec3);
+  v.appendChild(f3.box);
 }
 
 /* ------------------------------------------------------------------ *
@@ -2557,13 +2653,47 @@ function renderOps() {
   v.appendChild(el(`<section class="sec" style="margin-top:16px">
     <h2>이어져 있습니다</h2>
     <p class="hint">일곱 개를 따로 만들지 않았습니다. 이미 있는 데이터에 붙였습니다.</p>
-    <div class="card" style="padding:14px 16px">
-      <pre style="margin:0;font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--ink-2);overflow-x:auto">근무표(계획) ─┐
-              ├→ 출퇴근(실제) ─ 차이 = 근태 ─┐
-근로계약서(시급)┘                            ├→ 인건비 ─┐
-                                                        ├→ 매출 − 재료비 − 인건비
-거래처(단가) → 레시피 재료 → 원가 → 재료비 ────────────┘   = 오늘 남은 돈
-            └ 프렙의 발주 항목 → 발주 체크</pre>
+    <div class="card flow" style="padding:14px 16px">
+      <div class="flow-row">
+        <span class="flow-n">1</span>
+        <div class="flow-line">
+          <span class="flow-pair"><b>근무표</b><i>계획</i></span>
+          <span class="flow-op">−</span>
+          <span class="flow-pair"><b>출퇴근</b><i>실제</i></span>
+          <span class="flow-op">=</span>
+          <span class="flow-box">근태</span>
+          <span class="flow-op">×</span>
+          <span class="flow-pair"><b>계약서</b><i>시급</i></span>
+          <span class="flow-op">→</span>
+          <span class="flow-box flow-hit">인건비</span>
+        </div>
+      </div>
+      <div class="flow-row">
+        <span class="flow-n">2</span>
+        <div class="flow-line">
+          <span class="flow-pair"><b>거래처</b><i>단가</i></span>
+          <span class="flow-op">→</span>
+          <span class="flow-pair"><b>레시피</b><i>재료</i></span>
+          <span class="flow-op">→</span>
+          <span class="flow-box">원가</span>
+          <span class="flow-op">→</span>
+          <span class="flow-box flow-hit">재료비</span>
+        </div>
+      </div>
+      <div class="flow-row flow-sum">
+        <span class="flow-n">3</span>
+        <div class="flow-line">
+          <span class="flow-pair"><b>매출</b></span>
+          <span class="flow-op">−</span>
+          <span class="flow-box flow-hit">재료비</span>
+          <span class="flow-op">−</span>
+          <span class="flow-box flow-hit">인건비</span>
+          <span class="flow-op">=</span>
+          <span class="flow-box flow-out">오늘 남은 돈</span>
+        </div>
+      </div>
+      <p class="flow-side">곁가지 — <b>프렙</b>의 발주 항목이 그대로 <b>발주 체크</b>로 갑니다.
+        따로 적지 않습니다.</p>
     </div>
   </section>`));
 

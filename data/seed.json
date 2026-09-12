@@ -1783,17 +1783,12 @@
       "name": "오픈조",
       "start": "07:30",
       "end": "15:30",
-      "note": "오픈 준비 → 오전 영업 → 오후 프렙",
+      "note": "오픈 준비 → 오전 영업",
       "focus": [
         {
           "kind": "checklist",
           "slug": "cafe-open",
           "label": "오픈 체크리스트"
-        },
-        {
-          "kind": "prep",
-          "slug": "afternoon",
-          "label": "오후 프렙"
         }
       ]
     },

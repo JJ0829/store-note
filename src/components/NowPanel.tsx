@@ -44,7 +44,7 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
   }
 
   const cur = minutesOfDay(now);
-  // 겹치는 시간대에는 방금 시작한 조를 위에 둔다 (`onDutyNow`).
+  // ★ 2026-09-12 부터 **하루의 순서대로** 선다 — 오픈 → 미들 → 마감 (`onDutyNow`).
   // ★ 자정을 넘는 조(연장된 날의 마감조 14:30~01:00)를 직접 비교하면 안 된다 —
   //   `cur >= start && cur < end` 는 그런 조에서 절대 참이 안 된다.
   const active = onDutyNow(shifts, cur);
@@ -71,25 +71,17 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
 
   return (
     <div className="mt-5 flex flex-col gap-3">
-      {active.map((shift, i) => (
+      {active.map((shift) => (
         <div
           key={shift.id}
-          className={[
-            "rounded-2xl border p-4",
-            i === 0
-              ? "border-orange-300 bg-orange-50 dark:border-orange-900/60 dark:bg-orange-950/40"
-              : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900",
-          ].join(" ")}
+          /* ★ 첫 칸만 강조하지 않는다. 순서를 «하루의 순서» 로 바꾸면서
+             첫 칸이 «지금 사람» 이 아니라 «가장 일찍 시작한 조» 가 됐다.
+             07:30 에 제빵(05:00)이 맨 위인데 그것만 주황이면, 막 출근한
+             오픈조가 자기 칸을 흐린 칸으로 본다. 셋 다 근무 중이다. */
+          className="rounded-2xl border border-orange-300 bg-orange-50 p-4 dark:border-orange-900/60 dark:bg-orange-950/40"
         >
-          <p
-            className={[
-              "text-[13px]",
-              i === 0
-                ? "text-orange-900/70 dark:text-orange-100/70"
-                : "text-zinc-500 dark:text-zinc-400",
-            ].join(" ")}
-          >
-            {i === 0 ? `지금 ${clock} · 근무 중` : "같은 시간대"}
+          <p className="text-[13px] text-orange-900/70 dark:text-orange-100/70">
+            근무 중
           </p>
           <h2 className="mt-0.5 text-[17px] font-bold">
             {shift.name}
@@ -110,7 +102,8 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
                 href={focusHref(f)}
                 className={[
                   "flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-bold transition-colors",
-                  i === 0 && fi === 0
+                  // 조마다 첫 줄이 그 조의 주 동선이다
+                  fi === 0
                     ? "bg-orange-500 text-white active:bg-orange-600"
                     : "border border-zinc-300 bg-white text-zinc-700 active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:active:bg-zinc-800",
                 ].join(" ")}
