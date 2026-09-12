@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
+import MonthPicker from "@/components/MonthPicker";
 import { SaveFailed, useSaveState } from "@/components/ui";
 import {
   buildEmailBody,
@@ -46,6 +47,8 @@ export default function RosterView({
 }) {
   const [data, setData] = useState<RosterData>({ staff: [], assign: {} });
   const [monday, setMonday] = useState<Date | null>(null);
+  /* 달력은 접혀 있다가 날짜를 누르면 열린다 — 늘 펴 두면 근무표가 아래로 밀린다 */
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [section, setSection] = useState("");
@@ -175,25 +178,46 @@ export default function RosterView({
 
       <SaveFailed failures={save.failures} />
 
-      {/* ---------- 주 이동 ---------- */}
-      <div className="mt-5 flex items-center justify-between gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">
-        <button
-          type="button"
-          onClick={() => shiftWeek(-1)}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-[13px] font-semibold dark:border-zinc-700"
-        >
-          ‹ 지난주
-        </button>
-        <span className="text-[14px] font-bold">
-          {label(days[0])} ~ {label(days[6])}
-        </span>
-        <button
-          type="button"
-          onClick={() => shiftWeek(1)}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-[13px] font-semibold dark:border-zinc-700"
-        >
-          다음주 ›
-        </button>
+      {/* ---------- 주 이동 ----------
+          ★ 가운데 날짜를 누르면 달력이 열린다 (사장님 요청 2026-09-12).
+            [지난주][다음주] 두 버튼만 있으면 3주 뒤 근무표를 짜려고 세 번
+            눌러야 하고, 그동안 지금 어디인지는 글자로만 읽어야 했다. */}
+      <div className="mt-5 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => shiftWeek(-1)}
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-[13px] font-semibold dark:border-zinc-700"
+          >
+            ‹ 지난주
+          </button>
+          <button
+            type="button"
+            onClick={() => setPickerOpen((v) => !v)}
+            aria-expanded={pickerOpen}
+            className="rounded-lg px-2 py-1 text-[14px] font-bold active:bg-zinc-100 dark:active:bg-zinc-800"
+          >
+            {label(days[0])} ~ {label(days[6])}
+            <span aria-hidden className="ml-1.5 text-[11px] text-zinc-400">
+              달력 ▼
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => shiftWeek(1)}
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-[13px] font-semibold dark:border-zinc-700"
+          >
+            다음주 ›
+          </button>
+        </div>
+
+        {pickerOpen && (
+          <MonthPicker
+            value={monday}
+            onPick={setMonday}
+            onClose={() => setPickerOpen(false)}
+          />
+        )}
       </div>
 
       {/* ---------- 직원 추가 ---------- */}
