@@ -53,30 +53,52 @@ export type Profit = {
   sales: number;
   material: number;
   labor: number;
-  /** 매출 − 재료비 − 인건비. 임대료·공과금은 안 들어 있다 */
+  /** 하루치 고정비 (월 고정비 ÷ 월 영업일수). 안 넣었으면 0 */
+  fixed: number;
+  /**
+   * ★ **고정비를 아직 안 넣었는가.**
+   *
+   * 이 값이 `true` 면 `left` 는 순수익이 **아니다** — 재료비·인건비만 뺀 것이다.
+   * 화면은 이걸 보고 이름을 바꿔 불러야 한다. 0 을 «고정비 없음» 으로 읽고
+   * 그냥 «순수익» 이라고 부르면, 그 숫자로 가격을 정하는 사람이 손해를 본다.
+   * (못 구한 재료 단가를 0원으로 세지 않는 것과 같은 규칙이다)
+   */
+  fixedMissing: boolean;
+  /** 매출 − 재료비 − 인건비 − 고정비 */
   left: number;
   /** 객단가 */
   perCustomer: number | null;
 };
 
+/** 하루치 고정비. 월 영업일수로 나눈다 */
+export function dailyFixed(monthlyFixed: number, openDaysPerMonth: number): number {
+  const m = Math.max(0, monthlyFixed || 0);
+  const d = Math.max(1, openDaysPerMonth || 1);
+  return m === 0 ? 0 : Math.round(m / d);
+}
+
 /**
  * 하루 손익.
  *
- * ⚠ `left`는 순이익이 아니다. 임대료·공과금·카드수수료·세금이 빠져 있다.
- *   화면이 "재료비·인건비만 뺀 것" 이라고 같이 적는 이유다.
+ * ⚠ 고정비를 안 넣었으면 `fixedMissing: true` 다. 그때 `left` 는 순수익이
+ *   아니라 **재료비·인건비만 뺀 값**이고, 화면이 그렇게 말해야 한다.
  */
 export function profitOf(
   day: DaySales,
   laborCost: number,
+  fixedPerDay = 0,
 ): Profit {
   const sales = day.total || 0;
   const material = day.material || 0;
   const labor = Math.max(0, laborCost || 0);
+  const fixed = Math.max(0, fixedPerDay || 0);
   return {
     sales,
     material,
     labor,
-    left: sales - material - labor,
+    fixed,
+    fixedMissing: fixed === 0,
+    left: sales - material - labor - fixed,
     perCustomer: day.count > 0 ? sales / day.count : null,
   };
 }

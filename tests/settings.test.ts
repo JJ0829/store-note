@@ -157,6 +157,8 @@ test("saveSettings → loadSettings 왕복", () => {
     targetCostRate: 28,
     prices: { "r-1": 4500 },
     excluded: ["추출량"],
+    monthlyFixed: 3_500_000,
+    openDaysPerMonth: 26,
   };
   assert.equal(saveSettings(s), true);
   assert.deepEqual(loadSettings(), s);

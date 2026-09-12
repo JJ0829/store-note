@@ -15,8 +15,16 @@ import {
   type PunchData,
 } from "@/lib/attendance";
 import { contractOf, loadContracts, type Contract } from "@/lib/contracts";
-import { loadSettings, type Settings } from "@/lib/settings";
-import { getDay, loadSales, profitOf, saveSales, sumRange, type SalesData } from "@/lib/sales";
+import { loadSettings, saveSettings, type Settings } from "@/lib/settings";
+import {
+  dailyFixed,
+  getDay,
+  loadSales,
+  profitOf,
+  saveSales,
+  sumRange,
+  type SalesData,
+} from "@/lib/sales";
 import type { Shift } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -31,8 +39,12 @@ import type { Shift } from "@/lib/types";
  * 사장님이 마감할 때 넣는 건 매출·건수·재료비 셋뿐이다.
  * 그 이상 요구하면 셋째 날부터 안 쓴다.
  *
- * ⚠ 여기서 말하는 "순수익"은 재료비·인건비만 뺀 것이다. 임대료·공과금·카드수수료·세금이
- *   빠져 있다. 그래서 화면에서도 순이익이라고 쓰지 않는다.
+ * ★ 2026-09-12 — **고정비를 넣으면 진짜 순수익이 된다.**
+ *   설정의 `monthlyFixed` 를 영업일수로 나눠 매일 뺀다.
+ *   ⚠ 안 넣었으면 화면이 「순수익」이라고 **부르지 않는다** — 「재료비·인건비
+ *   뺀 것」이라고 쓴다. 0 을 «고정비 없음» 으로 읽고 순수익이라 부르면
+ *   그 숫자로 가격을 정하는 사람이 손해를 본다.
+ *   ⚠ 세금·감가상각은 여전히 빠져 있다. 매출에 따라 달라져서 일할로 못 나눈다.
  * ------------------------------------------------------------------ */
 
 export default function SalesView({
@@ -130,7 +142,10 @@ export default function SalesView({
 
   const day = getDay(sales, pick);
   const labor = laborOn(pick);
-  const p = profitOf(day, labor.cost);
+  /* 하루치 고정비 — 월 고정비 ÷ 월 영업일수. 안 넣었으면 0 이고,
+     그때 `p.fixedMissing` 이 true 라 화면이 이름을 바꿔 부른다 */
+  const fixedDay = dailyFixed(settings.monthlyFixed, settings.openDaysPerMonth);
+  const p = profitOf(day, labor.cost, fixedDay);
 
   const monday = mondayOf(new Date(pick + "T00:00:00"));
   const week = weekDays(monday);
@@ -140,6 +155,10 @@ export default function SalesView({
   const weekProfit = profitOf(
     { ...weekSum, date: weekDates[0], note: "" },
     weekLabor,
+    /* ★ 주간은 고정비를 **영업한 날 수만큼** 뺀다. 7 을 곱하면 쉬는 날에도
+       고정비를 문 것이 되고, 반대로 하루치만 빼면 주간 순수익이 부풀려진다.
+       매출이 0 인 날은 안 연 날로 본다 */
+    fixedDay * weekDates.filter((d) => (sales[d]?.total ?? 0) > 0).length,
   );
 
   return (
@@ -252,7 +271,13 @@ export default function SalesView({
                 : "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30",
             ].join(" ")}
           >
-            <h2 className="text-[15px] font-bold">{label(new Date(pick + "T00:00:00"))} 순수익</h2>
+            <h2 className="text-[15px] font-bold">
+              {label(new Date(pick + "T00:00:00"))}{" "}
+              {/* ★ 고정비를 안 넣었으면 「순수익」이라고 부르지 않는다.
+                  0 은 «고정비 없음» 이 아니라 «아직 안 넣음» 이다 —
+                  그 값으로 가격을 정하면 실제보다 낙관적이다 */}
+              {p.fixedMissing ? "재료비·인건비 뺀 것" : "순수익"}
+            </h2>
             <p className="mt-1 font-mono text-[32px] font-bold tabular-nums">
               {won(p.left)}
               <span className="ml-1 text-[16px]">원</span>
@@ -275,6 +300,19 @@ export default function SalesView({
                 }
                 value={`− ${won(p.labor)}원`}
               />
+              {!p.fixedMissing && (
+                <Row
+                  label={
+                    <>
+                      고정비 {day.total > 0 && `(${pct(p.fixed, p.sales)}%)`}
+                      <span className="ml-1 text-zinc-400">
+                        월 {won(settings.monthlyFixed)}원 ÷ {settings.openDaysPerMonth}일
+                      </span>
+                    </>
+                  }
+                  value={`− ${won(p.fixed)}원`}
+                />
+              )}
               {p.perCustomer !== null && (
                 <Row label="객단가" value={`${won(p.perCustomer)}원`} />
               )}
@@ -290,6 +328,68 @@ export default function SalesView({
               </Link>
             </Caveat>
           )}
+
+          {/* ★ 고정비 — 「순수익」이 진짜 순수익이 되는 조건 (2026-09-12).
+              매달 거의 안 바뀌므로 **한 번 넣으면 끝**이다. 그래서 매출 칸
+              바로 아래에 두지 않고 이 자리에 둔다 — 마감할 때마다 볼 것이 아니다 */}
+          <Card
+            className="mt-4"
+            title={p.fixedMissing ? "고정비를 아직 안 넣었습니다" : "월 고정비"}
+            note={
+              p.fixedMissing
+                ? "임대료·공과금·카드수수료·보험·통신을 합쳐 한 번만 넣으면, 위 숫자가 재료비·인건비만 뺀 값에서 진짜 순수익으로 바뀝니다."
+                : "매달 거의 안 바뀝니다. 바뀐 달에만 고치세요."
+            }
+          >
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <label>
+                <span className="block text-[12px] text-zinc-500 dark:text-zinc-400">
+                  한 달 고정비 합계
+                </span>
+                <div className="mt-1">
+                  <NumField
+                    label="한 달 고정비 합계"
+                    value={settings.monthlyFixed}
+                    onChange={(v) => {
+                      const next = { ...settings, monthlyFixed: v };
+                      setSettings(next);
+                      save.report("고정비", saveSettings(next));
+                    }}
+                    placeholder="3500000"
+                    suffix="원"
+                  />
+                </div>
+              </label>
+              <label>
+                <span className="block text-[12px] text-zinc-500 dark:text-zinc-400">
+                  한 달 영업일수
+                </span>
+                <div className="mt-1">
+                  <NumField
+                    label="한 달 영업일수"
+                    value={settings.openDaysPerMonth}
+                    onChange={(v) => {
+                      const next = { ...settings, openDaysPerMonth: v };
+                      setSettings(next);
+                      save.report("영업일수", saveSettings(next));
+                    }}
+                    placeholder="26"
+                    suffix="일"
+                  />
+                </div>
+              </label>
+            </div>
+            {!p.fixedMissing && (
+              <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
+                하루치 <b>{won(fixedDay)}원</b>씩 빠집니다.
+              </p>
+            )}
+            <p className="mt-2 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              ⚠️ 세금(부가세·소득세)과 감가상각은 여기 안 넣습니다 — 매출에 따라
+              달라져서 하루에 얼마로 나눌 수가 없습니다. <b>그만큼은 여전히 빠져
+              있습니다.</b>
+            </p>
+          </Card>
 
           {labor.minutes === 0 && day.total > 0 && (
             <Caveat>
@@ -325,7 +425,17 @@ export default function SalesView({
                 label={`인건비 (${pct(weekProfit.labor, weekProfit.sales)}%)`}
                 value={`− ${won(weekProfit.labor)}원`}
               />
-              <Row label="순수익" value={`${won(weekProfit.left)}원`} strong />
+              {!weekProfit.fixedMissing && (
+                <Row
+                  label={`고정비 (${pct(weekProfit.fixed, weekProfit.sales)}%)`}
+                  value={`− ${won(weekProfit.fixed)}원`}
+                />
+              )}
+              <Row
+                label={weekProfit.fixedMissing ? "재료비·인건비 뺀 것" : "순수익"}
+                value={`${won(weekProfit.left)}원`}
+                strong
+              />
               {weekProfit.perCustomer !== null && (
                 <Row label="객단가" value={`${won(weekProfit.perCustomer)}원`} />
               )}
@@ -348,7 +458,9 @@ export default function SalesView({
                   const date = ymd(d);
                   const row = getDay(sales, date);
                   const l = laborOn(date);
-                  const pr = profitOf(row, l.cost);
+                  /* 안 연 날(매출 0)에는 고정비를 안 뺀다 — 빼면 쉬는 날마다
+                     적자가 찍혀서 표가 읽을 수 없게 된다 */
+                  const pr = profitOf(row, l.cost, row.total > 0 ? fixedDay : 0);
                   const empty = row.total === 0 && l.cost === 0;
                   return (
                     <tr
@@ -387,9 +499,19 @@ export default function SalesView({
       )}
 
       <Caveat>
-        <b>여기서 말하는 &quot;순수익&quot;은 재료비·인건비만 뺀 것입니다.</b> 임대료·공과금·카드
-        수수료·세금·감가상각이 빠져 있습니다. 재료비도 그날 발주 금액이라
-        실제로 쓴 양과는 다릅니다(로스·재고 변동). 메뉴별 재료비는{" "}
+        {p.fixedMissing ? (
+          <>
+            <b>고정비를 안 넣어서 아직 순수익이 아닙니다.</b> 지금 숫자는 재료비·
+            인건비만 뺀 것이라, 이걸로 가격을 정하면 <b>실제보다 낙관적입니다.</b>{" "}
+          </>
+        ) : (
+          <>
+            <b>세금(부가세·소득세)과 감가상각은 여전히 빠져 있습니다.</b> 매출에
+            따라 달라져서 하루에 얼마로 나눌 수가 없습니다.{" "}
+          </>
+        )}
+        재료비도 그날 발주 금액이라 실제로 쓴 양과는 다릅니다(로스·재고 변동).
+        메뉴별 재료비는{" "}
         <Link href="/cost" className="underline">
           원가 화면
         </Link>

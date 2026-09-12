@@ -39,6 +39,24 @@ export type Settings = {
    * 못 구한 재료(missing)와 구분해야 한다 — 이쪽은 0원이 맞다.
    */
   excluded: string[];
+  /**
+   * 한 달 고정비 합계 — 임대료 · 공과금 · 카드수수료 · 보험 · 통신 등.
+   *
+   * ★ 이걸 넣어야 「순수익」이 **진짜 순수익**이 된다 (2026-09-12).
+   *   전에는 매출 − 재료비 − 인건비만 보고 「남은 돈」이라고 불렀는데,
+   *   그 값으로 가격을 정하면 실제보다 낙관적이다.
+   *
+   * ⚠️ **0 은 «없음» 이 아니라 «아직 안 넣음» 이다.** 0 으로 두고 빼면
+   *   화면이 조용히 옛날 값을 «순수익» 이라고 부르게 된다 —
+   *   못 구한 재료 단가를 0원으로 세지 않는 것과 같은 규칙이다.
+   *   그래서 `profitOf` 는 0 일 때 **안 뺀 것을 사실대로 말한다.**
+   */
+  monthlyFixed: number;
+  /**
+   * 한 달에 며칠 여는가. 고정비를 하루치로 나눌 때 쓴다.
+   * 주 6일이면 26, 연중무휴면 30. 기본값은 26.
+   */
+  openDaysPerMonth: number;
 };
 
 const KEY = "sop:settings";
@@ -49,6 +67,8 @@ export const DEFAULTS: Settings = {
   targetCostRate: 30,
   prices: {},
   excluded: [],
+  monthlyFixed: 0,
+  openDaysPerMonth: 26,
 };
 
 export function loadSettings(): Settings {
@@ -62,6 +82,12 @@ export function loadSettings(): Settings {
         : DEFAULTS.targetCostRate,
     prices: s.prices && typeof s.prices === "object" ? s.prices : {},
     excluded: Array.isArray(s.excluded) ? s.excluded : [],
+    monthlyFixed:
+      typeof s.monthlyFixed === "number" && s.monthlyFixed > 0 ? s.monthlyFixed : 0,
+    openDaysPerMonth:
+      typeof s.openDaysPerMonth === "number" && s.openDaysPerMonth > 0
+        ? s.openDaysPerMonth
+        : DEFAULTS.openDaysPerMonth,
   };
 }
 

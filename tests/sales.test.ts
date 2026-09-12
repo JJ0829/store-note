@@ -1,14 +1,22 @@
 /* ------------------------------------------------------------------ *
  * 매출 · 손익.
  *
- * `left`는 순이익이 아니다. 임대료·공과금·카드수수료·세금이 빠져 있다.
- * 화면에서 "남은 돈"이라고만 쓰기로 한 이유이고, 그걸 테스트로도
- * 못 박아둔다(이름이 바뀌면 이 테스트가 걸린다).
+ * ★ 2026-09-12 부터 **고정비를 넣으면 진짜 순수익이 된다.**
+ *   안 넣었으면 `fixedMissing: true` 이고, 그때 `left` 는 재료비·인건비만
+ *   뺀 값이다 — 화면이 그렇게 말해야 한다. 0 을 «고정비 없음» 으로 읽고
+ *   그냥 «순수익» 이라고 부르면 그 숫자로 가격을 정하는 사람이 손해를 본다.
  * ------------------------------------------------------------------ */
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { emptyDay, getDay, profitOf, sumRange, type SalesData } from "../src/lib/sales.ts";
+import {
+  dailyFixed,
+  emptyDay,
+  getDay,
+  profitOf,
+  sumRange,
+  type SalesData,
+} from "../src/lib/sales.ts";
 import { eul, eun, gwa, pct, ro, won } from "../src/lib/store.ts";
 
 test("매출 − 재료비 − 인건비", () => {
@@ -111,4 +119,51 @@ test("조사 함수는 앞뒤 공백을 무시하고 판단한다", () => {
   // 거래처 이름 끝에 공백이 들어오는 일이 실제로 있다
   assert.equal(ro("전화 "), "전화 로");
   assert.equal(eul("설탕 "), "설탕 을");
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 고정비 — 「순수익」이 진짜 순수익이 되는 조건 (2026-09-12)
+ * ------------------------------------------------------------------ */
+
+test("dailyFixed: 월 고정비를 영업일수로 나눈다", () => {
+  assert.equal(dailyFixed(3_120_000, 26), 120_000);
+  assert.equal(dailyFixed(3_000_000, 30), 100_000);
+});
+
+test("★ 고정비를 안 넣었으면 0 이고, 안 넣었다고 말한다", () => {
+  /* 0 은 «고정비 없음» 이 아니라 «아직 안 넣음» 이다. 이걸 구분 안 하면
+     화면이 재료비·인건비만 뺀 값을 조용히 «순수익» 이라고 부른다 —
+     그 숫자로 가격을 정하는 사람이 손해를 본다. */
+  assert.equal(dailyFixed(0, 26), 0);
+  const p = profitOf({ date: "2026-09-12", total: 500_000, count: 100, material: 150_000, note: "" }, 100_000);
+  assert.equal(p.fixed, 0);
+  assert.equal(p.fixedMissing, true, "안 넣은 것을 안 넣었다고 말해야 한다");
+  assert.equal(p.left, 250_000, "고정비 전 값은 그대로");
+});
+
+test("고정비를 넣으면 그만큼 빠지고 순수익이 된다", () => {
+  const fixed = dailyFixed(3_120_000, 26); // 120,000
+  const p = profitOf(
+    { date: "2026-09-12", total: 500_000, count: 100, material: 150_000, note: "" },
+    100_000,
+    fixed,
+  );
+  assert.equal(p.fixed, 120_000);
+  assert.equal(p.fixedMissing, false);
+  assert.equal(p.left, 130_000, "500,000 − 150,000 − 100,000 − 120,000");
+});
+
+test("고정비가 크면 순수익이 음수가 된다 (숨기지 않는다)", () => {
+  /* 적자를 0 으로 깎아 보여주면 «오늘은 본전» 으로 읽힌다. 사실대로 둔다 */
+  const p = profitOf(
+    { date: "2026-09-12", total: 200_000, count: 40, material: 80_000, note: "" },
+    90_000,
+    120_000,
+  );
+  assert.equal(p.left, -90_000);
+});
+
+test("영업일수가 0 이나 음수여도 안 죽는다", () => {
+  assert.equal(dailyFixed(2_600_000, 0), 2_600_000);
+  assert.equal(dailyFixed(2_600_000, -3), 2_600_000);
 });
