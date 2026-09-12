@@ -1,21 +1,21 @@
 {
-  "generatedFor": "2026-09-03",
-  "total": 45,
+  "generatedFor": "2026-09-11",
+  "total": 55,
   "riskCounts": {
-    "안전(허용형)": 41,
+    "안전(허용형)": 51,
+    "주의(파일 단위 카피레프트)": 2,
     "주의(약한 카피레프트)": 1,
-    "주의(저작자 표시)": 1,
-    "주의(파일 단위 카피레프트)": 2
+    "주의(저작자 표시)": 1
   },
   "licenseCounts": {
-    "MIT": 32,
-    "Apache-2.0 AND LGPL-3.0-or-later": 1,
-    "Apache-2.0": 4,
-    "CC-BY-4.0": 1,
+    "MIT": 38,
+    "Apache-2.0": 7,
     "ISC": 3,
+    "BSD-3-Clause": 2,
     "MPL-2.0": 2,
-    "BSD-3-Clause": 1,
-    "0BSD": 1
+    "0BSD": 1,
+    "Apache-2.0 AND LGPL-3.0-or-later": 1,
+    "CC-BY-4.0": 1
   },
   "packages": [
     {
@@ -26,6 +26,36 @@
       "repo": "sindresorhus/quick-lru",
       "homepage": "",
       "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
+      "name": "@dbml/core",
+      "version": "10.1.1",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSE",
+      "repo": "dbml/dbml",
+      "homepage": "",
+      "direct": true,
+      "risk": "안전(허용형)"
+    },
+    {
+      "name": "@dbml/parse",
+      "version": "10.1.1",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSE",
+      "repo": "dbml/dbml",
+      "homepage": "",
+      "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
+      "name": "@electric-sql/pglite",
+      "version": "0.5.8",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSE",
+      "repo": "electric-sql/pglite",
+      "homepage": "https://pglite.dev",
+      "direct": true,
       "risk": "안전(허용형)"
     },
     {
@@ -199,6 +229,16 @@
       "risk": "안전(허용형)"
     },
     {
+      "name": "antlr4",
+      "version": "4.13.2",
+      "license": "BSD-3-Clause",
+      "licenseFile": "LICENSE",
+      "repo": "antlr/antlr4",
+      "homepage": "",
+      "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
       "name": "caniuse-lite",
       "version": "1.0.30001810",
       "license": "CC-BY-4.0",
@@ -289,6 +329,36 @@
       "risk": "주의(파일 단위 카피레프트)"
     },
     {
+      "name": "lodash",
+      "version": "4.18.1",
+      "license": "MIT",
+      "licenseFile": "LICENSE",
+      "repo": "lodash/lodash",
+      "homepage": "",
+      "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
+      "name": "lodash-es",
+      "version": "4.18.1",
+      "license": "MIT",
+      "licenseFile": "LICENSE",
+      "repo": "lodash/lodash",
+      "homepage": "",
+      "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
+      "name": "luxon",
+      "version": "3.7.2",
+      "license": "MIT",
+      "licenseFile": "LICENSE",
+      "repo": "moment/luxon",
+      "homepage": "",
+      "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
       "name": "magic-string",
       "version": "0.30.21",
       "license": "MIT",
@@ -319,11 +389,41 @@
       "risk": "안전(허용형)"
     },
     {
+      "name": "parsimmon",
+      "version": "1.18.1",
+      "license": "MIT",
+      "licenseFile": "LICENSE",
+      "repo": "jneen/parsimmon",
+      "homepage": "",
+      "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
+      "name": "pathe",
+      "version": "2.0.3",
+      "license": "MIT",
+      "licenseFile": "LICENSE",
+      "repo": "unjs/pathe",
+      "homepage": "",
+      "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
       "name": "picocolors",
       "version": "1.1.1",
       "license": "ISC",
       "licenseFile": "LICENSE",
       "repo": "alexeyraspopov/picocolors",
+      "homepage": "",
+      "direct": false,
+      "risk": "안전(허용형)"
+    },
+    {
+      "name": "pluralize",
+      "version": "8.0.0",
+      "license": "MIT",
+      "licenseFile": "LICENSE",
+      "repo": "plurals/pluralize",
       "homepage": "",
       "direct": false,
       "risk": "안전(허용형)"
@@ -468,5 +568,6 @@
       "direct": false,
       "risk": "안전(허용형)"
     }
-  ]
+  ],
+  "note": "2026-09-03 전수 조사에 2026-09-11 의 변경 2건을 더했다 — @electric-sql/pglite (Apache-2.0, 전이 의존성 0개) 와 @dbml/core (Apache-2.0, 전이 의존성 8개). 둘 다 devDependency 라 배포 산출물(.next)에 안 들어간다. 카피레프트 신규 0건. 나머지 45개는 9/3 원본 그대로다."
 }
