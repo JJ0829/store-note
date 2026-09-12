@@ -168,7 +168,13 @@ for src, dst in 파일:
     else:
         s = s.replace('<div class="wrap">', '<div class="wrap">\n' + 목차, 1)
 
-    body = HEAD + f"<title>{title}</title>\n" + s.lstrip() + TAIL
+    # ★ 그림이 없는 문서에는 mermaid 를 안 붙인다 (2026-09-11).
+    #   WBS 처럼 그림을 인라인 SVG 로 그린 문서에는 **죽은 짐**이다.
+    #   그리고 이 문서들은 한 장씩 따로 제출되기도 하는데, 그럴 때
+    #   **필요 없는 외부 요청이 하나라도 적은 쪽이 안전하다** —
+    #   받는 쪽 네트워크가 CDN 을 막으면 스크립트만 조용히 실패한다.
+    꼬리 = TAIL if 'class="mermaid"' in s else NL + "</body>" + NL + "</html>" + NL
+    body = HEAD + f"<title>{title}</title>\n" + s.lstrip() + 꼬리
     body = body.replace('\n<div class="wrap">', '\n</head>\n<body>\n<div class="wrap">', 1)
 
     for o in OUTS:

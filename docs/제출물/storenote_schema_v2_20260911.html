@@ -1309,36 +1309,5 @@ alter table bake_plans
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<script>
-  (function () {
-    function 앵커로() {
-      if (location.hash) {
-        var el = document.querySelector(location.hash);
-        if (el) el.scrollIntoView();
-      }
-    }
-    if (!window.mermaid) {
-      // 인터넷이 없으면 그림 대신 안내를 띄운다 — 조용히 비어 있는 것보다 낫다
-      document.querySelectorAll("pre.mermaid").forEach(function (el) {
-        var p = document.createElement("p");
-        p.textContent = "※ 이 자리에 그림이 들어갑니다. 인터넷에 연결한 뒤 새로고침하세요.";
-        p.style.cssText = "font-size:13px;color:#8a959e;margin:0 0 8px";
-        el.parentNode.insertBefore(p, el);
-      });
-      앵커로();
-      return;
-    }
-    mermaid.initialize({
-      startOnLoad: true,
-      securityLevel: "loose",
-      flowchart: { htmlLabels: true, useMaxWidth: true },
-      er: { useMaxWidth: true },
-      sequence: { useMaxWidth: true },
-    });
-    // 그림이 그려지면 높이가 바뀌므로 앵커로 다시 간다
-    window.addEventListener("load", function () { setTimeout(앵커로, 400); });
-  })();
-</script>
 </body>
 </html>

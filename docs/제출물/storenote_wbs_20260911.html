@@ -44,9 +44,7 @@ pre.mermaid[data-processed="true"]{font-size:0}
 }
 </style>
 <title>매장수첩 WBS</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<!-- 글꼴은 이 컴퓨터에 있는 것만 쓴다 — 이 문서는 한 장으로 제출되므로 외부 요청 0건 -->
 
 <style>
 :root{
@@ -57,8 +55,10 @@ pre.mermaid[data-processed="true"]{font-size:0}
   --brw:#8f5510; --brw-bg:#faf1e5; --brw-line:#e5cba4;
   --fix:#1f6b56; --fix-bg:#e9f4f0; --fix-line:#b2d8cb;
   --hole:#a33636; --hole-bg:#fbecec; --hole-line:#e7bfbf;
-  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
-  --sans:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "Consolas", "SF Mono", Menlo,
+          "D2Coding", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI",
+          "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
@@ -630,36 +630,5 @@ footer code{background:none}
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<script>
-  (function () {
-    function 앵커로() {
-      if (location.hash) {
-        var el = document.querySelector(location.hash);
-        if (el) el.scrollIntoView();
-      }
-    }
-    if (!window.mermaid) {
-      // 인터넷이 없으면 그림 대신 안내를 띄운다 — 조용히 비어 있는 것보다 낫다
-      document.querySelectorAll("pre.mermaid").forEach(function (el) {
-        var p = document.createElement("p");
-        p.textContent = "※ 이 자리에 그림이 들어갑니다. 인터넷에 연결한 뒤 새로고침하세요.";
-        p.style.cssText = "font-size:13px;color:#8a959e;margin:0 0 8px";
-        el.parentNode.insertBefore(p, el);
-      });
-      앵커로();
-      return;
-    }
-    mermaid.initialize({
-      startOnLoad: true,
-      securityLevel: "loose",
-      flowchart: { htmlLabels: true, useMaxWidth: true },
-      er: { useMaxWidth: true },
-      sequence: { useMaxWidth: true },
-    });
-    // 그림이 그려지면 높이가 바뀌므로 앵커로 다시 간다
-    window.addEventListener("load", function () { setTimeout(앵커로, 400); });
-  })();
-</script>
 </body>
 </html>
