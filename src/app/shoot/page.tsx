@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import ShootBoard, { type ShootItem } from "@/components/ShootBoard";
 import ServerStoreGate from "@/components/ServerStoreGate";
-import { getStore, listPositions, listPrepLists, listRecipes } from "@/lib/repo";
+import {
+  filmableTasks,
+  getStore,
+  listPositions,
+  listPrepLists,
+  listRecipes,
+} from "@/lib/repo";
 
 export const metadata: Metadata = {
   title: "촬영 진행",
@@ -44,8 +50,12 @@ export default async function ShootPage() {
           priority: PRIORITY[st.id],
         });
 
+  /* ★ `l.tasks` 를 그대로 돌면 안 된다 — 「묶음 머리」 3개가 섞여 들어온다.
+   *   `기계 · 설비 점검` 같은 것은 **이름표라 찍을 장면이 없는데** 목록에 서고
+   *   촬영 대상 수를 부풀린다. 옵션은 반대로 **찍을 수 있으니 그대로 센다**
+   *   — 규칙과 그 이유는 `repo.filmableTasks()` 에 있다. */
   for (const l of listPrepLists())
-    for (const t of l.tasks)
+    for (const t of filmableTasks(l))
       items.push({
         id: t.id,
         title: t.title,

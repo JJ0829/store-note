@@ -14,6 +14,7 @@ import {
   countCritical,
   countTasks,
   countedTasks,
+  filmableTasks,
   getPositionBySlug,
   getPrepListBySlug,
   getRecipeBySlug,
@@ -499,8 +500,32 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   const prepTasks = listPrepLists().reduce((n, l) => n + l.tasks.length, 0);
   assert.equal(prepTasks, 30, `프렙 항목 합계 — ${정본}`);
 
+  /* ★ 촬영 대상은 프렙 **전체(30)가 아니라 묶을 머리를 뺀 27** 이다 (2026-09-12).
+   *
+   *   예전에는 `prepTasks` 를 그대로 더해 88 이라고 했는데, `/shoot` 도 `l.tasks` 를
+   *   그대로 돌고 있어서 **둘 다 같이 틀렸고 그래서 테스트가 안 걸렸다.**
+   *   「묶음 머리」는 `기계 · 설비 점검` 처럼 **이름표라 찍을 장면이 없다.**
+   *   옵션은 반대로 찍을 수 있으므로 그대로 센다 — `repo.filmableTasks()` 참고.
+   *
+   *   여기서 그 함수를 그대로 쓰지 않고 따로 세는 이유: 함수가 틀리면 테스트도
+   *   같이 틀려서 아무것도 못 잡는다. **시드에서 직접** 센다. */
+  const heads = listPrepLists().flatMap((l) => {
+    const kids = new Map<string, typeof l.tasks>();
+    for (const t of l.tasks) {
+      if (!t.optionOf) continue;
+      const cur = kids.get(t.optionOf);
+      if (cur) cur.push(t);
+      else kids.set(t.optionOf, [t]);
+    }
+    return [...kids].filter(([, ks]) => ks.some((k) => !k.optional)).map(([id]) => id);
+  });
+  assert.equal(heads.length, 3, `묶음 머리 수 — ${정본}`);
+
+  const filmable = listPrepLists().reduce((n, l) => n + filmableTasks(l).length, 0);
+  assert.equal(filmable, prepTasks - heads.length, "filmableTasks 가 묶음 머리만 뺀다");
+
   // /shoot 이 실제로 만드는 목록과 같은 셈법이다 (src/app/shoot/page.tsx)
-  assert.equal(positionSteps + recipeSteps + prepTasks, 88, `촬영 대상 합계 — ${정본}`);
+  assert.equal(positionSteps + recipeSteps + filmable, 85, `촬영 대상 합계 — ${정본}`);
 });
 
 test("★ 숫자 정본 — 레시피가 붙은 프렙 · 수량이 바뀌는 프렙", () => {
