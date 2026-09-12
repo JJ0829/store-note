@@ -150,7 +150,8 @@ footer code{background:none}
   <p class="thesis">
     이 표는 계획서가 아니라 <b>기록</b>이다 — 날짜와 상태는 저장소의 커밋에서 나왔고,
     산출물 칸은 실제 파일을 가리킨다. <b>12일 동안 커밋 118건</b>이 들어갔고
-    대공정 <b>9개가 끝났다.</b> 남은 넷 중 <b>셋은 내가 할 수 없는 일</b>이고,
+    대공정 <b>9개가 끝났다.</b> 남은 <b>22개 작업에는 전부 완료 기준</b>을 붙였고,
+    그중 <b>절반이 내가 할 수 없는 일</b>이며,
     그 셋이 <b>9월 18일의 임계경로</b>다.
   </p>
   <div class="meta">
@@ -213,13 +214,13 @@ footer code{background:none}
 <rect class="bar done" x="283" y="247" width="329" height="15" rx="2"/>
 <text class="nm" x="14" y="283">9 제출 자료 HTML · 링크</text>
 <rect class="bar now" x="579" y="272" width="33" height="15" rx="2"/>
-<text class="nm own" x="14" y="308">10 배포 (Vercel) · 사장님</text>
+<text class="nm own" x="14" y="308">10 배포 · 잠금 확인</text>
 <rect class="bar todo" x="616" y="297" width="70" height="15" rx="2"/>
-<text class="nm own" x="14" y="333">11 촬영 4개 · 검수 · 사장님</text>
+<text class="nm own" x="14" y="333">11 시연 데이터 · 촬영 · 검수</text>
 <rect class="bar todo" x="616" y="322" width="144" height="15" rx="2"/>
-<text class="nm" x="14" y="358">12 발표 자료 13분</text>
+<text class="nm" x="14" y="358">12 발표 자료 (5분 · 7분)</text>
 <rect class="bar todo" x="616" y="347" width="218" height="15" rx="2"/>
-<text class="nm" x="14" y="383">13 Demo Day 시연 + IR</text>
+<text class="nm" x="14" y="383">13 서류 9/17 · 데모데이 9/18</text>
 <rect class="bar ms" x="838" y="372" width="33" height="15" rx="2"/>
 
 <path class="today" d="M614,40 V400"/>
@@ -269,7 +270,7 @@ footer code{background:none}
         </tr>
         <tr>
           <td>3</td>
-          <td><b>발표 자료 13분</b><br><span class="sub">MVP 시연 + IR 피칭</span></td>
+          <td><b>발표 자료 두 벌</b><br><span class="sub">9/18 데모데이 5분(30%) · 9/22 선정평가 7분(70%)</span></td>
           <td>앞의 둘이 끝나야 <b>넣을 화면과 주소가 생긴다.</b> 지금 착수하면 두 번 만들게 된다</td>
           <td>대체 불가. <b>9/18 은 고정 기일</b>이다</td>
         </tr>
@@ -288,20 +289,27 @@ footer code{background:none}
 
 <!-- ================= WBS 표 ================= -->
 <section>
-  <div class="zone-head"><h2>작업분해 — 대공정 13 · 작업 34</h2><span class="tag t-plain">WBS</span></div>
+  <div class="zone-head"><h2>작업분해 — 끝난 것과 남은 것</h2><span class="tag t-plain">WBS</span></div>
+  <p>
+    끝난 것은 <b>기록</b>이라 그대로 두고, <b>남은 것만 반나절 안에 확인되는 크기로 쪼갰다.</b>
+    남은 표에는 <b>완료 기준</b>을 붙였다 — <b>«대기»에서 «완료»로 바뀌는 순간을 본인만
+    판단할 수 있으면 남이 확인해 줄 수가 없다.</b> 그래서 전부 <b>눈으로 확인되는 결과</b>로 적었다.
+  </p>
+
+  <h3>끝난 것 — 기록</h3>
   <div class="tablebox">
     <table class="wbs">
       <thead><tr><th>번호</th><th>작업</th><th>산출물</th><th>기간</th><th>상태</th></tr></thead>
       <tbody>
         <tr><td>1.1</td><td>아이디어 원문 · 문제 재정의</td><td><code>docs/00_아이디어_원문.md</code> · <code>01_문제정의.md</code></td><td>8/31</td><td class="ok">완료</td></tr>
-        <tr><td>1.2</td><td>결정과 근거 기록 (D-001 ~ D-007)</td><td><code>docs/08_DECISION_LOG.md</code></td><td>8/31~9/10</td><td class="ok">완료</td></tr>
-        <tr><td>1.3</td><td>카페·베이커리 하루 흐름 · 현업 검수 4건</td><td><code>docs/day-flow.md</code></td><td>9/1~9/3</td><td class="ok">완료</td></tr>
+        <tr><td>1.2</td><td>결정과 근거 기록 (D-001 ~ D-011)</td><td><code>docs/08_DECISION_LOG.md</code></td><td>8/31~9/11</td><td class="ok">완료</td></tr>
+        <tr><td>1.3</td><td>카페·베이커리 하루 흐름 · <b>현업 검수 4건</b></td><td><code>docs/day-flow.md</code></td><td>9/1~9/3</td><td class="ok">완료</td></tr>
 
         <tr><td>2.1</td><td>체크리스트 · 교육 모드 · 사장님 화면</td><td><code>src/app/p</code> · <code>t</code> · <code>page.tsx</code></td><td>8/31</td><td class="ok">완료</td></tr>
         <tr><td>2.2</td><td>지표 수집 15종 (<code>runId</code> 로 이어 붙임)</td><td><code>src/lib/metrics.ts</code> · <code>api/log</code></td><td>8/31~9/2</td><td class="ok">완료</td></tr>
         <tr><td>2.3</td><td>프렙(리드타임) · 레시피(배수 계산)</td><td><code>src/lib/leadTime.ts</code> · <code>app/r</code></td><td>8/31~9/2</td><td class="ok">완료</td></tr>
 
-        <tr><td>3.1</td><td>원가 · 거래처 단가 · 단위 환산</td><td><code>src/lib/cost.ts</code> · <code>vendors.ts</code> · <code>units.ts</code></td><td>9/4</td><td class="ok">완료</td></tr>
+        <tr><td>3.1</td><td>원가 · 거래처 단가 · 단위 환산</td><td><code>cost.ts</code> · <code>vendors.ts</code> · <code>units.ts</code></td><td>9/4</td><td class="ok">완료</td></tr>
         <tr><td>3.2</td><td>출퇴근 · 근태 · 근로계약</td><td><code>attendance.ts</code> · <code>contracts.ts</code> · <code>shiftClock.ts</code></td><td>9/4</td><td class="ok">완료</td></tr>
         <tr><td>3.3</td><td>매출(남은 돈) · 발주 체크</td><td><code>sales.ts</code> · <code>orders.ts</code></td><td>9/4</td><td class="ok">완료</td></tr>
 
@@ -317,9 +325,10 @@ footer code{background:none}
 
         <tr><td>6.1</td><td>AI 촬영 목록 만들기 (유일한 외부 호출)</td><td><code>api/shoot-plan</code> · <code>shootPlan.ts</code> · <code>rateLimit.ts</code></td><td>9/10</td><td class="ok">완료</td></tr>
         <tr><td>6.2</td><td>하단 탭바 · 프렙 안에서 레시피 끝까지</td><td><code>src/components</code></td><td>9/10</td><td class="ok">완료</td></tr>
+        <tr><td>6.3</td><td><b>매장 잠금을 서버 인증으로</b> (레시피 · 프렙)</td><td><code>ServerStoreGate.tsx</code> · <code>serverGate.ts</code></td><td>9/10</td><td class="ok">완료</td></tr>
 
         <tr><td>7.1</td><td>스키마 v2 — 연결선을 두 칸으로</td><td><code>db/schema_v2.dbml</code> · <code>.sql</code></td><td>9/10~9/11</td><td class="ok">완료</td></tr>
-        <tr><td>7.2</td><td>심사 피드백 1·2·3차 반영</td><td>같은 파일 · <code>docs/deliverables/03_ERD.md</code></td><td>9/11</td><td class="ok">완료</td></tr>
+        <tr><td>7.2</td><td>심사 피드백 1·2·3차 반영</td><td>같은 파일 · <code>03_ERD.md</code></td><td>9/11</td><td class="ok">완료</td></tr>
         <tr><td>7.3</td><td>검사기 6종 (셈 · 동작 · 1:1 · 전수 · 그림 · 문서)</td><td><code>db/counts·verify·audit·sweep·checkdbml·docs.js</code></td><td>9/11</td><td class="ok">완료</td></tr>
         <tr><td>7.4</td><td>이관 대응표</td><td><code>docs/이관_매핑.md</code></td><td>9/11</td><td class="ok">완료</td></tr>
 
@@ -329,28 +338,117 @@ footer code{background:none}
 
         <tr><td>9.1</td><td>제출용 HTML — 혼자 열리는 파일 + 생성기</td><td><code>docs/제출물/_원본/mkhtml.py</code></td><td>9/11</td><td class="ok">완료</td></tr>
         <tr><td>9.2</td><td>표지 · 링크로 내기</td><td><code>docs/제출물/index.html</code></td><td>9/11</td><td class="ok">완료</td></tr>
-        <tr><td>9.3</td><td>DB 아키텍처 · WBS 문서</td><td>이 문서 · <code>storenote_db_architecture</code></td><td>9/11</td><td class="brw">진행</td></tr>
-
+        <tr><td>9.3</td><td>DB 아키텍처 · WBS 문서</td><td><code>storenote_db_architecture</code> · 이 문서</td><td>9/11~9/12</td><td class="ok">완료</td></tr>
         <tr><td>10.0</td><td><b>지표를 서버 DB 로</b> — D-002 예외(검증 인프라 복구)<br><span class="sub">events 표 · 쌓기만 · 이름/금액 없음 · SDK 없이 REST</span></td><td><code>db/migrations/0001_events.sql</code> · <code>api/log</code></td><td>9/12</td><td class="ok">완료</td></tr>
-        <tr><td>10.1</td><td class="own">main 머지 + Vercel 배포 · 환경변수</td><td>배포 주소 · <code>docs/배포.md</code></td><td>9/12~</td><td>대기</td></tr>
-        <tr><td>10.2</td><td>배포 후 — <b>로그인 + 역할 3종</b>(사장님 · 매장 관리자 · 직원)<br><span class="sub">지금의 번호 두 개는 사람을 구분하지 않는다</span></td><td>Auth · 줄 단위 접근통제 정책</td><td>배포 후</td><td>대기</td></tr>
-        <tr><td>10.3</td><td>서버 DB 이관 — 브라우저 저장소 → 표 37개<br><span class="sub">촬영 파일은 Storage 버킷으로, 지표는 표 insert 로</span></td><td><code>src/lib/repo.ts</code> + 각 lib 의 <code>load/save</code></td><td>배포 후</td><td>대기</td></tr>
-
-        <tr><td>11.1</td><td class="own">촬영 4개</td><td><code>public/photos/</code></td><td>9/12~9/15</td><td>대기</td></tr>
-        <tr><td>11.2</td><td class="own">레시피 수치 검수</td><td><code>data/seed.json</code></td><td>9/12~9/15</td><td>대기</td></tr>
-        <tr><td>11.3</td><td class="own">시연 기기 데이터 정리 (실명 · 시급 · 매출)</td><td>시연 태블릿</td><td>9/17</td><td>대기</td></tr>
-
-        <tr><td>12.1</td><td>발표 자료 13분 구성</td><td>발표 파일 (저장소 밖)</td><td>9/12~9/17</td><td>미착수</td></tr>
-        <tr><td>12.2</td><td class="own">수익모델 — 점주가 왜 돈을 내는가</td><td>IR 슬라이드</td><td>9/12~9/17</td><td class="no">근거 0</td></tr>
-
-        <tr><td>13.1</td><td>Demo Day — MVP 시연 + IR 피칭</td><td>—</td><td>9/18</td><td>고정</td></tr>
       </tbody>
     </table>
   </div>
+
+  <h3>남은 것 — 완료 기준까지</h3>
   <p>
-    <span class="own">갈색</span>은 <b>사장님만 할 수 있는 일</b>이다. 아홉 건이고,
-    그중 <b>세 건이 임계경로</b>에 있다.
+    <span class="own">갈색 번호</span>는 <b>사장님만 할 수 있는 일</b>이다.
+    이것은 <b>담당</b>이지 우선순위가 아니다 — 우선순위는 <b>필수 · 보완</b> 두 가지뿐이다.
+    상태도 <b>미착수 · 진행 · 완료</b> 셋으로만 쓴다.
   </p>
+  <div class="tablebox">
+    <table class="wbs">
+      <thead><tr><th>번호</th><th>작업 (예상)</th><th>선행</th><th>도구</th><th>우선</th><th>상태</th><th>완료 기준 — 눈으로 확인되는 것</th></tr></thead>
+      <tbody>
+        <tr><td>9.4</td><td><b>원가 입력 오류 4종 테스트</b> (60분)</td><td>3.1</td><td>앱 · 브라우저 콘솔</td><td>필수</td><td>미착수</td>
+            <td>필수값 빈칸으로 저장 → <b>경고가 뜨고 행이 안 생긴다</b> / 단가 칸에 문자 → 거부 /
+                같은 거래처를 두 번 저장 → 중복이 안 쌓인다 / 데이터 0건 → <b>빈 화면 문구가 뜬다</b>.
+                <b>저장·수정·삭제 뒤 새로고침</b>해서 화면과 저장소가 같은지 확인
+                <span class="sub">(오류 확인: 브라우저 콘솔)</span></td></tr>
+        <tr><td>9.5</td><td><b>저장 실패 알림을 일부러 깨보기</b> (30분)</td><td>5.4</td><td>앱 · 개발자도구</td><td>필수</td><td>미착수</td>
+            <td>개발자도구로 저장소를 막은 뒤 체크 → <b>빨간 알림이 뜬다.</b>
+                화면이 거짓으로 «저장됨»이라 말하지 않는다
+                <span class="sub">(5.4 에서 만들어 놓고 한 번도 깨본 적이 없다)</span></td></tr>
+        <tr><td>9.6</td><td>발주 · 근태 입력 오류 (40분)</td><td>3.2 · 3.3</td><td>앱</td><td>보완</td><td>미착수</td>
+            <td>퇴근이 출근보다 빠른 시각 → 거부 또는 경고 / 자정 넘긴 마감조가 <b>음수 시간으로 안 나온다</b> /
+                «들어옴»을 «주문함» 없이 누를 수 있는지 확인</td></tr>
+
+        <tr><td class="own">10.1</td><td class="own">main 머지 + Vercel 프로젝트 연결 (30분)</td><td><b>9.4</b></td><td>GitHub · Vercel</td><td>필수</td><td>미착수</td>
+            <td>Vercel Deployments 에 <b>Ready 상태 배포 1건</b>
+                <span class="sub">(오류 확인: Vercel Build Logs)</span></td></tr>
+        <tr><td class="own">10.2</td><td class="own">환경변수 5개 넣기 (20분)</td><td>10.1</td><td>Vercel</td><td>필수</td><td>미착수</td>
+            <td><code>/r</code> 을 열면 <b>빨간 띠가 아니라 번호 입력 화면</b>이 뜬다(= <code>STORE_PIN</code> 이 살아 있다) /
+                <code>/api/log</code> 응답의 <code>sink</code> 가 <b><code>"db"</code></b></td></tr>
+        <tr><td class="own">10.3</td><td class="own">다른 기기에서 열어보기 (15분)</td><td>10.2</td><td>휴대폰 LTE</td><td>필수</td><td>미착수</td>
+            <td><b>와이파이를 끄고</b> 휴대폰에서 배포 주소 접속 → 사장님 화면이 뜨고
+                <code>/r</code> 은 번호를 묻는다</td></tr>
+        <tr><td>10.4</td><td><b>사장님 잠금을 서버로</b> (90분)<br><span class="sub">매장 잠금은 6.3 에서 이미 서버가 막는다</span></td><td>10.2</td><td>앱 · 서버</td><td>보완</td><td>미착수</td>
+            <td>개발자도구에서 <code>sop:ownerPin</code> 을 지워도 <b>원가 · 매출 화면이 안 열린다</b></td></tr>
+        <tr><td>10.5</td><td><b>격리 확인</b> (30분)</td><td>10.3</td><td>시크릿 창 · <code>curl</code></td><td>필수</td><td>미착수</td>
+            <td><b>시크릿 창</b>에서 주소창에 <code>/cost</code> · <code>/sales</code> 를 직접 쳐도 안 열린다 /
+                <code>curl</code> 로 <code>/r/shokupan</code> 을 받아 재료 이름을 세면 <b>0</b></td></tr>
+        <tr><td>10.6</td><td>운영 데이터 이관 — 브라우저 → 표 37개<br><span class="sub">촬영 파일은 Storage, 로그인·역할 3종 포함</span></td><td>10.4</td><td>Supabase</td><td>보완</td><td>미착수</td>
+            <td>다른 태블릿에서 열어도 <b>같은 매출 · 같은 근태가 보인다</b> (= 교대 인계가 된다)</td></tr>
+
+        <tr><td class="own">11.1</td><td class="own">★ <b>시연 기기 데이터를 가명 · 더미로</b> (30분)</td><td>—</td><td>시연 태블릿</td><td>필수</td><td>미착수</td>
+            <td>근무표 · 계약서 · 매출 화면에 <b>실명 · 실제 시급 · 실제 매출이 한 건도 없다</b></td></tr>
+        <tr><td class="own">11.2</td><td class="own">촬영1 — 추출 테스트 합격 기준 (40분)</td><td>6.1</td><td>휴대폰 카메라</td><td>필수</td><td>미착수</td>
+            <td><code>/shoot</code> 의 그 파일명 자리에서 <b>회색 네모가 사라진다</b></td></tr>
+        <tr><td class="own">11.3</td><td class="own">촬영2 — 스팀 밀크 온도 · 거품 (40분)</td><td>6.1</td><td>휴대폰 카메라</td><td>필수</td><td>미착수</td>
+            <td>같음</td></tr>
+        <tr><td class="own">11.4</td><td class="own">촬영3 — 잔여 할인 · 폐기 전환 (40분)</td><td>6.1</td><td>휴대폰 카메라</td><td>필수</td><td>미착수</td>
+            <td>같음</td></tr>
+        <tr><td class="own">11.5</td><td class="own">촬영4 — 반죽 발효 완료 판단 (40분)</td><td>6.1</td><td>휴대폰 카메라</td><td>필수</td><td>미착수</td>
+            <td>같음. 넷이 끝나면 <code>/shoot</code> 에 <b>회색 네모 0개</b></td></tr>
+        <tr><td class="own">11.6</td><td class="own">레시피 수치 검수 (60분)</td><td>—</td><td><code>data/seed.json</code></td><td>필수</td><td>미착수</td>
+            <td><code>/r</code> 의 레시피에서 <b>표준 비율 자리표시자가 매장 실제 값으로 바뀐다</b></td></tr>
+
+        <tr><td>12.1</td><td><b>5분 대본 다듬기</b> (60분)<br><span class="sub">9/18 데모데이 · 배점 30%</span></td><td>10.3 · 11.5</td><td>—</td><td>필수</td><td>미착수</td>
+            <td><b>타이머 켜고 1회 완주, 4:30~5:00 안에 끝난다</b></td></tr>
+        <tr><td>12.2</td><td>Q&amp;A 탄약 7건 점검 (45분)</td><td>12.1</td><td>—</td><td>필수</td><td>미착수</td>
+            <td>7개 질문에 <b>각 30초 안에</b> 답이 나온다</td></tr>
+        <tr><td>12.3</td><td><b>7분 확장안</b> (90분)<br><span class="sub">9/22 선정평가 · 배점 70%</span></td><td>12.1</td><td>—</td><td>필수</td><td>미착수</td>
+            <td>타이머 1회 완주, <b>6:30~7:00</b></td></tr>
+        <tr><td>12.4</td><td>슬라이드 초안 (90분)</td><td>12.3</td><td>—</td><td>보완</td><td>미착수</td>
+            <td><b>9장 이하</b>이고 시연 구간에는 슬라이드를 안 띄운다</td></tr>
+        <tr><td>12.5</td><td>타이머 리허설 1회 (60분)</td><td>12.1~12.4</td><td>배포 주소</td><td>필수</td><td>미착수</td>
+            <td>배포 주소로 <b>시연까지 포함해 끊김 없이 1회</b></td></tr>
+        <tr><td class="own">12.6</td><td class="own"><b>수익모델</b> — 점주가 왜 돈을 내는가</td><td>12.7</td><td>—</td><td>필수</td><td>미착수</td>
+            <td>7분 발표에 <b>금액과 근거가 들어간 슬라이드 1장</b>이 있다</td></tr>
+        <tr><td class="own">12.7</td><td class="own">★ <b>지불 의사 질문 4건</b> (30분)</td><td>1.3</td><td>전화 · 메신저</td><td>필수</td><td>미착수</td>
+            <td>«월 1만원이면 쓰시겠어요» <b>응답 4건이 <code>docs/</code> 에 기록</b>된다</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note hot">
+    <h4>★ 시연 데이터 가명화(11.1)를 촬영보다 앞에 둔 이유</h4>
+    <p>
+      <b>촬영 한 장이 빠지는 것보다 심사장 스크린에 직원 실명과 시급이 뜨는 쪽이 훨씬 큰 사고다.</b>
+      그리고 <b>시연 중에는 잠금이 풀려 있어서</b> 사장님 화면의 가림막이 보호해 주지 않는다.
+      시간이 모자라면 <b>11.1 을 먼저 하고 촬영을 줄인다.</b>
+    </p>
+  </div>
+
+  <div class="note srvb">
+    <h4>배포(10)가 데이터 이관(10.6)보다 먼저인 이유 — 일부러 이 순서다</h4>
+    <p>
+      일반적인 흐름은 <b>DB → 기능 → 검수 → 배포</b>인데 이 프로젝트는 배포가 먼저다.
+      데이터가 <b>서버가 아니라 각 기기의 브라우저에 있기</b> 때문이다.
+      그래서 «이관 전에 배포하면 시연 중 입력한 데이터가 사라진다»는 일은
+      <b>이 앱에서는 일어나지 않는다</b> — 서버 파일에 쓰던 것은 이용 기록 하나뿐이었고,
+      그건 <b>9/12 에 서버 DB 로 옮겼다(10.0).</b>
+    </p>
+    <p>
+      <b>대신 배포본의 진짜 한계는 따로 있다 — 데이터가 태블릿마다 따로 쌓여서 교대 인계가 안 된다.</b>
+      이건 숨기지 않고 <b>발표에서 먼저 말한다</b>(12.1 대본에 포함). 10.6 을 <b>보완</b>으로 둔 것은
+      남은 날이 닷새이고, <b>이관보다 잠금(10.4 · 10.5)이 먼저</b>이기 때문이다.
+    </p>
+  </div>
+
+  <div class="note">
+    <h4>고정 기일 — 작업이 아니라 날짜다</h4>
+    <p>
+      <b>9/17 18:00</b> 사업화 지원 서류 접수 (<b>시연 링크가 필수 증빙</b>) ·
+      <b>9/18</b> 데모데이 발표 5분 + Q&amp;A 3분 (<b>30%</b>) ·
+      <b>9/22</b> 선정평가 발표 7분 + Q&amp;A 5분 (<b>70%</b>).
+      <b>배포 데드라인은 9/18 이 아니라 9/17 이다.</b>
+    </p>
+  </div>
 </section>
 
 <!-- ================= 실제 진행 ================= -->
@@ -439,7 +537,7 @@ footer code{background:none}
         <tr><td>14.1</td><td><b>실증 매장 투입</b> 1~2곳</td><td class="no">0곳</td>
             <td>기능은 7개 늘었는데 <b>매장 투입은 아직 0곳</b>이다.
                 문제 자체는 16년 경력으로 알지만, <b>이 제품이 그 문제를 푸는지는 다른 질문</b>이다</td></tr>
-        <tr><td>14.2</td><td><b>수익모델</b> — 점주가 왜 돈을 내는가</td><td class="no">근거 0</td>
+        <tr><td>14.2</td><td><b>수익모델</b> — 점주가 왜 돈을 내는가</td><td>미착수</td>
             <td>운영 기능이 점주가 보는 숫자(원가율·인건비율·남은 돈)를 화면에 올린 것은 맞다.
                 <b>그런데 그건 화면을 만든 것이지 지불 의사의 근거가 아니다.</b>
                 주방장은 예산 집행자가 아니었다 — 경력이 길다는 사실이 이것을 풀지 않는다</td></tr>
@@ -464,7 +562,7 @@ footer code{background:none}
 <footer>
   <p>
     <b>매장수첩 — 작업분해구조 (WBS)</b> · 2026-09-11 ·
-    기간 2026-08-31 ~ 09-18 · 커밋 118건 / 12일 · 대공정 13 · 작업 34 · 산출물 23종
+    기간 2026-08-31 ~ 09-18 · 커밋 118건 / 12일 · 대공정 13 · 작업 53 (끝남 31 · 남음 22) · 산출물 23종
   </p>
   <p>
     날짜와 커밋 수는 <b>저장소에서 직접 센 값</b>이고, 상태 칸은 사람이 적은 것이다.
