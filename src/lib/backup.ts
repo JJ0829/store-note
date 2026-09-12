@@ -110,6 +110,11 @@ export const BACKUP_KEYS = [
  *
  * 날짜별 체크 상태(`sop:<슬러그>:<날짜>`, `sop:run:<슬러그>`)는 lib 이 아니라
  * 화면에서 만들고, 영업일이 바뀌면 어차피 초기화된다. 그래서 목록에 없다.
+ *
+ * ⚠️ `sop:mark:<범위>:<날짜>` (누가 · 몇 시에 체크했나, 2026-09-12 신설) 도
+ *   날짜가 붙어서 이 목록에 못 넣는다. **기기에는 남지만 백업에는 안 담긴다.**
+ *   되짚기용이라 당장은 그래도 되지만, 태블릿을 잃으면 같이 사라진다 —
+ *   백업 형식을 고칠 때(`BACKUP_VERSION` 을 올릴 때) 같이 담을 것.
  */
 export const EXCLUDED_KEYS = [
   "sop:ownerPin",
@@ -118,6 +123,9 @@ export const EXCLUDED_KEYS = [
   "sop:storeOpen",
   "sop:sid",
   "sop:lastBackup",
+  /* 이 태블릿을 지금 쓰는 사람. **기기마다 다르고 영업일이 지나면 잊는다.**
+     백업에 담아 다른 기기에 되돌리면 거기서 엉뚱한 사람 이름으로 체크가 남는다 */
+  "sop:whoami",
 ] as const;
 
 export type BackupFile = {

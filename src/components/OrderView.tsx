@@ -6,6 +6,8 @@ import { BTN, Card, Caveat, Chip, Empty, INPUT, Screen, useSaveState } from "@/c
 import { copyText } from "@/lib/copyText";
 import { logEvent } from "@/lib/metrics";
 import { businessDay, recentDays } from "@/lib/businessDay";
+import WhoBar from "@/components/WhoBar";
+import { loadMarks, mark, saveMarks, type MarkLog, type WhoAmI } from "@/lib/whoami";
 import { ro } from "@/lib/store";
 import { label as dayLabel } from "@/lib/roster";
 import {
@@ -64,6 +66,9 @@ export default function OrderView({
   const [links, setLinks] = useState<OrderLinks>({});
   /* 「거래처 만들고 바로 문자」 — 어느 항목에서 열었는지와 입력값 */
   const [quick, setQuick] = useState<{ taskId: string; name: string; phone: string } | null>(null);
+  /* 누가 · 몇 시에 눌렀는가 — 잘못됐을 때 되짚는 데 쓴다 */
+  const [marks, setMarks] = useState<MarkLog>({});
+  const [who, setWho] = useState<WhoAmI | null>(null);
   const save = useSaveState();
 
   useEffect(() => {
@@ -71,6 +76,7 @@ export default function OrderView({
     setVendors(loadVendors());
     setLog(loadOrderLog());
     setLinks(loadOrderLinks());
+    setMarks(loadMarks("order", businessDay()));
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
@@ -119,6 +125,17 @@ export default function OrderView({
     }
     if (p.received === true && !before.received) {
       logEvent("order_mark", { step: "received" });
+    }
+    /* ★ 「주문함」이 켜지고 꺼지는 것만 남긴다. 「들어옴」은 그 위에 얹히는
+       것이라 같은 칸에 쓰면 주문한 사람이 지워진다 — 주문을 빠뜨린 사람을
+       찾는 게 목적이므로 주문 쪽을 남긴다 */
+    if (typeof p.ordered === "boolean") {
+      const day = businessDay();
+      setMarks((prev) => {
+        const nextMarks = mark(prev, taskId, p.ordered as boolean, who?.name ?? "");
+        saveMarks("order", day, nextMarks);
+        return nextMarks;
+      });
     }
     // ★ "주문함" 이 안 남으면 내일 아침에 안 들어온 것을 못 잡는다.
     //   이 화면의 존재 이유가 바로 그 한 칸이다
@@ -203,6 +220,8 @@ export default function OrderView({
       saveFailed={save.failures}
       wide
     >
+      <WhoBar onChange={setWho} />
+
       {/* ---------- 1. 안 들어온 것 ---------- */}
       {pending.length > 0 && (
         <section className="mt-5 rounded-2xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
@@ -362,6 +381,12 @@ export default function OrderView({
                       {!task.recoverable && (
                         <span className="mt-1 block text-[12px] font-semibold text-red-600 dark:text-red-400">
                           까먹지 말고 해야 할 것 — {task.consequence}
+                        </span>
+                      )}
+                      {st.ordered && marks[task.id] && (
+                        <span className="mt-1 block text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
+                          ✓ 주문함 — {marks[task.id].who || "이름 안 고름"} ·{" "}
+                          {marks[task.id].at}
                         </span>
                       )}
                     </span>

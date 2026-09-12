@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
+import { loadMarks, mark, saveMarks, type MarkLog, type WhoAmI } from "@/lib/whoami";
 import MediaSlot from "@/components/MediaSlot";
+import WhoBar from "@/components/WhoBar";
 import { SaveFailed, useSaveState } from "@/components/ui";
 import { SCALES, scaled } from "@/lib/scale";
 import { businessDay, dayKey, pruneDayKeys } from "@/lib/businessDay";
@@ -266,6 +268,10 @@ export default function PrepView({
   const today = businessDay();
   const storageKey = dayKey(keyPrefix, today);
   const [done, setDone] = useState<Set<string>>(() => new Set());
+  /* ★ 누가 · 몇 시에 눌렀는가. 체크 상태와 **따로** 둔다 —
+     체크는 영업일이 지나면 지워지지만 기록은 남겨야 되짚을 수 있다 */
+  const [marks, setMarks] = useState<MarkLog>({});
+  const [who, setWho] = useState<WhoAmI | null>(null);
   const [scales, setScales] = useState<Record<string, number>>({});
   const [now, setNow] = useState<Date | null>(null);
   /* ★ 주기 점검은 **그날 체크가 아니라 마지막으로 한 날**을 남긴다.
@@ -340,6 +346,7 @@ export default function PrepView({
     } catch {
       /* 사생활 보호 모드 등 — 빈 상태로 시작 */
     }
+    setMarks(loadMarks(`prep:${list.slug}`, businessDay()));
     setCycleDone(loadCycleDone());
     setCycleEveryState(loadCycleEvery());
     log("prep_view", { prepSlug: list.slug });
@@ -363,10 +370,18 @@ export default function PrepView({
         } catch {
           /* 저장 실패해도 화면은 계속 쓸 수 있게 둔다 */
         }
+        /* 누가 · 몇 시에 눌렀는지 같이 남긴다. 껐으면 지운다 —
+           껐는데 이름이 남아 있으면 "이 사람이 했다" 는 거짓말이 된다 */
+        const day = businessDay();
+        setMarks((prevMarks) => {
+          const nextMarks = mark(prevMarks, task.id, next.has(task.id), who?.name ?? "");
+          saveMarks(`prep:${list.slug}`, day, nextMarks);
+          return nextMarks;
+        });
         return next;
       });
     },
-    [storageKey, list.slug],
+    [storageKey, list.slug, who],
   );
 
   /** 이 목록이 주기 점검인가. 주기 항목은 체크 방식이 다르다 */
@@ -591,6 +606,12 @@ export default function PrepView({
         </p>
       )}
 
+      {/* ★ 누가 하고 있나 (사장님 요청 2026-09-12: "누가 실수했는지 알 수 있게").
+          체크 위에 둔다 — 다 누르고 나서 물으면 아무도 안 고른다 */}
+      <div className="px-4">
+        <WhoBar onChange={setWho} />
+      </div>
+
       {/* ---------- 항목 ---------- */}
       <ul className="flex flex-col gap-3 px-4 pt-4">
         {tops.map((task, ti) => {
@@ -695,6 +716,12 @@ export default function PrepView({
                   >
                     {task.title}
                   </h3>
+                  {/* 누가 · 몇 시에 체크했나. 되짚을 때 이것만 있으면 된다 */}
+                  {checked && marks[task.id] && (
+                    <p className="mt-0.5 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
+                      ✓ {marks[task.id].who || "이름 안 고름"} · {marks[task.id].at}
+                    </p>
+                  )}
                   <p className="mt-1 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
                     {task.desc}
                   </p>
