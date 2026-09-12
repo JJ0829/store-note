@@ -168,6 +168,7 @@ footer code{background:none}
 .dia .bar.ms{fill:var(--hole-bg);stroke:var(--hole)}
 .dia .grid{stroke:var(--line);stroke-width:1}
 .dia .today{stroke:var(--hole);stroke-width:1.6;stroke-dasharray:5 3}
+.dia .deadline{stroke:var(--hole);stroke-width:1.6}
 .dia .nm{font-size:11px;fill:var(--ink-2)}
 .dia .nm.own{fill:var(--brw)}
 .dia .wc{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
@@ -224,11 +225,11 @@ footer code{background:none}
   <div class="dia">
 <svg viewBox="0 0 890 432" role="img" aria-labelledby="g1t g1d">
 <title id="g1t">8월 31일부터 9월 18일까지의 대공정 일정</title>
-<desc id="g1d">대공정 1번부터 9번까지는 8월 31일에서 9월 11일 사이에 끝났다. 9월 12일부터 남은 것은 배포, 촬영과 레시피 검수, 발표 자료이고 이 셋이 9월 18일 데모데이까지의 임계경로다. 배포와 촬영·검수는 대표자만 할 수 있다.</desc>
+<desc id="g1d">대공정 1번부터 9번까지는 8월 31일에서 9월 11일 사이에 끝났다. 9월 12일부터 남은 것은 배포, 촬영과 레시피 검수, 발표 자료이고 이 셋이 임계경로다. 진짜 마감은 9월 18일 데모데이가 아니라 9월 17일 18시 서류 접수다 — 시연 링크가 접수 증빙이라서다. 배포와 촬영·검수는 대표자만 할 수 있다.</desc>
 
 <text class="dt" x="170" y="22">8/31</text>
-<text class="dt" x="614" y="22">9/12 — 여기부터가 남은 일</text>
-<text class="hotlab" x="836" y="22" text-anchor="end">9/18 Demo Day</text>
+<text class="dt" x="614" y="22">9/12 — 남은 일</text>
+<text class="hotlab" x="873" y="22" text-anchor="end">9/17 서류 마감 · 9/18 발표</text>
 
 <text class="dt" x="188.5" y="48" text-anchor="middle">31</text>
 <text class="dt" x="225.5" y="48" text-anchor="middle">1</text>
@@ -277,9 +278,10 @@ footer code{background:none}
 <text class="nm" x="14" y="358">12 발표 자료 (5분 · 7분)</text>
 <rect class="bar todo" x="616" y="347" width="218" height="15" rx="2"/>
 <text class="nm" x="14" y="383">13 서류 9/17 · 데모데이 9/18</text>
-<rect class="bar ms" x="838" y="372" width="33" height="15" rx="2"/>
+<rect class="bar ms" x="801" y="372" width="70" height="15" rx="2"/>
 
 <path class="today" d="M614,40 V400"/>
+<path class="deadline" d="M836,40 V400"/>
 
 <rect class="bar done" x="170" y="410" width="13" height="11" rx="2"/>
 <text class="lg" x="190" y="420">끝남 9개</text>
