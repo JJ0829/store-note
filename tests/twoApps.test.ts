@@ -162,6 +162,7 @@ const FIELD_MAP: [seed: string, single: string][] = [
   ["critical", "critical"],
   ["recipeSlug", "recipe"],
   ["optional", "optional"],
+  ["group", "group"], // 어느 자리에서 하는 일인가 (2026-09-12)
 ];
 
 /* ------------------------------------------------------------------ *

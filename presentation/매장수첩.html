@@ -430,6 +430,12 @@ details.fold .fold-body .rows{display:flex;flex-direction:column;gap:8px}
 .flow-hit{border-color:var(--accent-b,var(--line));background:var(--accent-w,var(--surface-2));font-weight:600}
 .flow-out{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}
 .flow-side{margin:10px 0 0;font-size:12px;color:var(--ink-3);line-height:1.6}
+
+/* 프렙 소제목 — 어느 자리에서 하는 일인가 (2026-09-12) */
+h3.grp{display:flex;align-items:center;gap:8px;margin:14px 2px 2px;
+  font-size:13px;font-weight:700;color:var(--ink-3)}
+h3.grp:first-child{margin-top:0}
+h3.grp i{flex:1;height:1px;background:var(--line)}
 </style>
 
 <header class="top">
@@ -664,37 +670,37 @@ const DATA = {
     { slug:"afternoon", name:"오후 프렙", note:"14:00~15:30. 점심 손님이 빠진 뒤 한꺼번에 확인하고 만듭니다. 대부분 내일을 위한 일입니다.", tasks:[
       { id:"p1", title:"내일용 콜드브루 걸기", desc:"원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.",
         trigger:"매일 14:00", cycle:false, hours:16, days:null, recoverable:false, critical:true, varies:true,
-        option:null, optional:false, conseq:"내일 콜드브루 못 팝니다. 사올 수도 없습니다.", recipe:"cold-brew" },
-      { id:"p2", title:"내일용 반죽 제조 후 냉장", desc:"내일 아침 구울 분량만큼. 판매량 보고 배수를 정합니다.",
-        trigger:"매일 14:00", cycle:false, hours:15, days:null, recoverable:false, critical:true, varies:true,
-        option:null, optional:false, conseq:"내일 아침 빵이 없습니다. 사올 수도 없습니다.", recipe:"shokupan" },
-      { id:"p3", title:"르방 갱신", desc:"매일 같은 시간에. 실온에 따라 6~12시간이면 부피가 두 배로 오릅니다 — 화면의 시각은 넉넉한 12시간 기준입니다. 거르면 되살리는 데 2~3일 걸립니다.",
-        trigger:"매일 14:00", cycle:false, hours:12, days:null, recoverable:false, critical:true, varies:false,
-        option:"p2", optional:true, conseq:"복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.", recipe:"levain" },
+        group:"바 (bar)", option:null, optional:false, conseq:"내일 콜드브루 못 팝니다. 사올 수도 없습니다.", recipe:"cold-brew" },
       { id:"pbar", title:"바 부재료 점검 · 제조", desc:"점심 손님이 빠진 뒤 아래를 한꺼번에 확인합니다. 남아 있으면 넘어가고, 부족한 것만 지금 만듭니다.",
         trigger:"매일 14:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
-        option:null, optional:false, conseq:"", recipe:null },
+        group:"바 (bar)", option:null, optional:false, conseq:"", recipe:null },
       { id:"p7", title:"에이드 청 만들기", desc:"과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다.",
         trigger:"매일 14:00", cycle:false, hours:72, days:null, recoverable:false, critical:false, varies:true,
-        option:"pbar", optional:true, conseq:"떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.", recipe:"cheong" },
+        group:"바 (bar)", option:"pbar", optional:true, conseq:"떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.", recipe:"cheong" },
       { id:"p9", title:"냉침차(콜드티) 우리기", desc:"찬물에 8~12시간 우립니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 맛이 옅습니다.",
         trigger:"매일 14:00", cycle:false, hours:12, days:null, recoverable:false, critical:false, varies:true,
-        option:"pbar", optional:true, conseq:"내일 아이스티 못 팝니다. 찬물에 우리는 8~12시간을 되돌릴 방법이 없습니다.", recipe:"cold-tea" },
+        group:"바 (bar)", option:"pbar", optional:true, conseq:"내일 아이스티 못 팝니다. 찬물에 우리는 8~12시간을 되돌릴 방법이 없습니다.", recipe:"cold-tea" },
       { id:"p10", title:"밀크티 베이스 침출", desc:"찻잎을 4~12시간 침출합니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 싱겁습니다.",
         trigger:"매일 14:00", cycle:false, hours:12, days:null, recoverable:false, critical:false, varies:true,
-        option:"pbar", optional:true, conseq:"내일 밀크티 못 팝니다. 침출 시간을 되돌릴 방법이 없습니다.", recipe:"milk-tea-base" },
+        group:"바 (bar)", option:"pbar", optional:true, conseq:"내일 밀크티 못 팝니다. 침출 시간을 되돌릴 방법이 없습니다.", recipe:"milk-tea-base" },
       { id:"p4", title:"시럽 제조", desc:"잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
         trigger:"매일 14:00", cycle:false, hours:4, days:null, recoverable:true, critical:false, varies:true,
-        option:"pbar", optional:true, conseq:"", recipe:"simple-syrup" },
+        group:"바 (bar)", option:"pbar", optional:true, conseq:"", recipe:"simple-syrup" },
       { id:"p8", title:"크림폼 만들기", desc:"생크림을 그날 쓸 만큼만 올립니다. 미리 많이 만들어두면 분리됩니다. 아인슈페너·크림라떼 판매량 보고 배수를 정합니다.",
         trigger:"매일 14:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:true,
-        option:"pbar", optional:true, conseq:"피크에 떨어지면 줄이 섭니다.", recipe:"cream-foam" },
+        group:"바 (bar)", option:"pbar", optional:true, conseq:"피크에 떨어지면 줄이 섭니다.", recipe:"cream-foam" },
+      { id:"p2", title:"내일용 반죽 제조 후 냉장", desc:"내일 아침 구울 분량만큼. 판매량 보고 배수를 정합니다.",
+        trigger:"매일 14:00", cycle:false, hours:15, days:null, recoverable:false, critical:true, varies:true,
+        group:"제빵", option:null, optional:false, conseq:"내일 아침 빵이 없습니다. 사올 수도 없습니다.", recipe:"shokupan" },
+      { id:"p3", title:"르방 갱신", desc:"매일 같은 시간에. 실온에 따라 6~12시간이면 부피가 두 배로 오릅니다 — 화면의 시각은 넉넉한 12시간 기준입니다. 거르면 되살리는 데 2~3일 걸립니다.",
+        trigger:"매일 14:00", cycle:false, hours:12, days:null, recoverable:false, critical:true, varies:false,
+        group:"제빵", option:"p2", optional:true, conseq:"복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.", recipe:"levain" },
       { id:"p5", title:"우유·식자재 발주", desc:"재고 확인하고 주문합니다. 금요일에는 주말치까지 함께 넣습니다.",
         trigger:"월·화·수·목·금 15:00", cycle:false, hours:null, days:1, recoverable:true, critical:false, varies:true,
-        option:null, optional:false, conseq:"", recipe:null },
+        group:"발주", option:null, optional:false, conseq:"", recipe:null },
       { id:"p6", title:"원두 발주", desc:"볶은 뒤 며칠 두어야 쓸 수 있으므로 넉넉히 앞서 주문합니다.",
         trigger:"원두 재고가 3일치 이하일 때", cycle:false, hours:null, days:4, recoverable:false, critical:true, varies:true,
-        option:null, optional:false, conseq:"거래처 원두는 다른 데서 못 삽니다. 맛이 바뀝니다.", recipe:null }
+        group:"발주", option:null, optional:false, conseq:"거래처 원두는 다른 데서 못 삽니다. 맛이 바뀝니다.", recipe:null }
     ]},
     { slug:"evening", name:"마감 준비", note:"19:00~22:00. 영업하면서 같이 합니다. 22시 영업이 끝난 뒤의 마감 작업은 마감 체크리스트에 있습니다.", tasks:[
       { id:"e1", title:"재료 준비", desc:"영업하면서 떨어진 것을 채우고, 내일 아침 오픈조가 바로 쓸 수 있게 미리 꺼내둡니다. 양은 그날 판매량 보고 정합니다.",
@@ -1740,7 +1746,17 @@ function renderPrep(slug) {
     }
   }
 
-  parentTasks.forEach(t => {
+  parentTasks.forEach((t, ti) => {
+    /* ★ 「어느 자리에서 하는 일인가」 소제목 (2026-09-12, 사장님 지적).
+       오후 프렙에 바(bar) 일과 제빵 일이 섞여 있었다 — 콜드브루·청·시럽은
+       바에서, 반죽·르방은 제빵에서 한다. 한 사람이 한 자리에서 쭉 하는데
+       목록이 섞여 있으면 오갔다 해야 한다.
+       ⚠️ 셈에는 아무 영향이 없다. 진행률 분모는 그대로다.
+       Next 앱 `PrepView` 와 같은 규칙 — 앞 항목과 group 이 달라지는 곳에서만 낸다. */
+    const prevGroup = ti > 0 ? (parentTasks[ti - 1].group || null) : null;
+    if (t.group && t.group !== prevGroup) {
+      rows.appendChild(el(`<h3 class="grp"><span>${esc(t.group)}</span><i aria-hidden="true"></i></h3>`));
+    }
     const head = isHeader(t.id);
     const card = el(`<div class="task ${t.recoverable ? "" : "keep"}"></div>`);
     /* 묶음 머리는 누를 수 없다. 아무 일도 안 하는 버튼을 두면

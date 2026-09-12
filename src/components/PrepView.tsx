@@ -593,8 +593,16 @@ export default function PrepView({
 
       {/* ---------- 항목 ---------- */}
       <ul className="flex flex-col gap-3 px-4 pt-4">
-        {tops.map((task) => {
+        {tops.map((task, ti) => {
           const checked = done.has(task.id);
+          /* ★ 「어느 자리에서 하는 일인가」 소제목 (2026-09-12).
+             바로 앞 항목과 `group` 이 달라지는 곳에서만 낸다 — 시드가 이미
+             그룹끼리 모아 놓았으므로 그 경계가 곧 소제목 자리다.
+             ⚠️ 셈에는 아무 영향이 없다. 진행률 분모는 그대로다. */
+          const groupHead =
+            task.group && task.group !== (tops[ti - 1]?.group ?? null)
+              ? task.group
+              : null;
           const header = isHeader(task.id);
           const hasLead =
             task.leadTimeHours !== null || task.leadTimeDays !== null;
@@ -609,8 +617,14 @@ export default function PrepView({
               : null;
 
           return (
-            <li
-              key={task.id}
+            <li key={task.id} className="contents">
+              {groupHead && (
+                <h3 className="mt-2 flex items-center gap-2 px-1 text-[13px] font-bold text-zinc-500 first:mt-0 dark:text-zinc-400">
+                  <span>{groupHead}</span>
+                  <span aria-hidden className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+                </h3>
+              )}
+            <div
               className={[
                 "overflow-hidden rounded-2xl border-2 bg-white transition-colors dark:bg-zinc-900",
                 checked
@@ -980,6 +994,7 @@ export default function PrepView({
                   </ul>
                 </div>
               )}
+            </div>
             </li>
           );
         })}

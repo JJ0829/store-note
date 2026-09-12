@@ -1093,51 +1093,8 @@
           "videoUrl": null,
           "recipeSlug": "cold-brew",
           "optionOf": null,
-          "optional": false
-        },
-        {
-          "id": "p-2",
-          "title": "내일용 반죽 제조 후 냉장",
-          "desc": "내일 아침 구울 분량만큼. 판매량 보고 배수를 정합니다.",
-          "kind": "time",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": 15,
-          "leadTimeDays": null,
-          "recoverable": false,
-          "consequence": "내일 아침 빵이 없습니다. 사올 수도 없습니다.",
-          "quantityVaries": true,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": "shokupan",
-          "optionOf": null,
-          "optional": false
-        },
-        {
-          "id": "p-3",
-          "title": "르방 갱신",
-          "desc": "매일 같은 시간에. 실온에 따라 6~12시간이면 부피가 두 배로 오릅니다 — 화면의 시각은 넉넉한 12시간 기준입니다. 거르면 되살리는 데 2~3일 걸립니다.",
-          "kind": "time",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": 12,
-          "leadTimeDays": null,
-          "recoverable": false,
-          "consequence": "복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.",
-          "quantityVaries": false,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": "levain",
-          "optionOf": "p-2",
-          "optional": true
+          "optional": false,
+          "group": "바 (bar)"
         },
         {
           "id": "p-bar",
@@ -1159,7 +1116,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": "바 (bar)"
         },
         {
           "id": "p-7",
@@ -1181,7 +1139,8 @@
           "videoUrl": null,
           "recipeSlug": "cheong",
           "optionOf": "p-bar",
-          "optional": true
+          "optional": true,
+          "group": "바 (bar)"
         },
         {
           "id": "p-9",
@@ -1203,7 +1162,8 @@
           "videoUrl": null,
           "recipeSlug": "cold-tea",
           "optionOf": "p-bar",
-          "optional": true
+          "optional": true,
+          "group": "바 (bar)"
         },
         {
           "id": "p-10",
@@ -1225,7 +1185,8 @@
           "videoUrl": null,
           "recipeSlug": "milk-tea-base",
           "optionOf": "p-bar",
-          "optional": true
+          "optional": true,
+          "group": "바 (bar)"
         },
         {
           "id": "p-4",
@@ -1247,7 +1208,8 @@
           "videoUrl": null,
           "recipeSlug": "simple-syrup",
           "optionOf": "p-bar",
-          "optional": true
+          "optional": true,
+          "group": "바 (bar)"
         },
         {
           "id": "p-8",
@@ -1269,7 +1231,54 @@
           "videoUrl": null,
           "recipeSlug": "cream-foam",
           "optionOf": "p-bar",
-          "optional": true
+          "optional": true,
+          "group": "바 (bar)"
+        },
+        {
+          "id": "p-2",
+          "title": "내일용 반죽 제조 후 냉장",
+          "desc": "내일 아침 구울 분량만큼. 판매량 보고 배수를 정합니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 15,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "내일 아침 빵이 없습니다. 사올 수도 없습니다.",
+          "quantityVaries": true,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": "shokupan",
+          "optionOf": null,
+          "optional": false,
+          "group": "제빵"
+        },
+        {
+          "id": "p-3",
+          "title": "르방 갱신",
+          "desc": "매일 같은 시간에. 실온에 따라 6~12시간이면 부피가 두 배로 오릅니다 — 화면의 시각은 넉넉한 12시간 기준입니다. 거르면 되살리는 데 2~3일 걸립니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 12,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "복구에 2~3일. 그동안 사워도우 전 품목이 중단됩니다.",
+          "quantityVaries": false,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": "levain",
+          "optionOf": "p-2",
+          "optional": true,
+          "group": "제빵"
         },
         {
           "id": "p-5",
@@ -1298,7 +1307,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": "발주"
         },
         {
           "id": "p-6",
@@ -1320,7 +1330,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": "발주"
         }
       ]
     },
@@ -1350,7 +1361,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "e-2",
@@ -1372,7 +1384,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "e-3",
@@ -1394,7 +1407,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": null
         }
       ]
     },
@@ -1424,7 +1438,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-5",
@@ -1446,7 +1461,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-machine",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-1",
@@ -1468,7 +1484,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-machine",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-2",
@@ -1490,7 +1507,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-machine",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-8",
@@ -1512,7 +1530,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-machine",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-7",
@@ -1534,7 +1553,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-machine",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-13",
@@ -1556,7 +1576,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-machine",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-clean",
@@ -1578,7 +1599,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-6",
@@ -1600,7 +1622,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-clean",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-3",
@@ -1622,7 +1645,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-clean",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-12",
@@ -1644,7 +1668,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-clean",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-9",
@@ -1666,7 +1691,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-clean",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-legal",
@@ -1688,7 +1714,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": null,
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-4",
@@ -1710,7 +1737,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-legal",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-10",
@@ -1732,7 +1760,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-legal",
-          "optional": false
+          "optional": false,
+          "group": null
         },
         {
           "id": "c-11",
@@ -1754,7 +1783,8 @@
           "videoUrl": null,
           "recipeSlug": null,
           "optionOf": "c-legal",
-          "optional": false
+          "optional": false,
+          "group": null
         }
       ]
     }
