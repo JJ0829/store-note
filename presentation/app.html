@@ -1099,7 +1099,10 @@ function familyLabel(u) {
 const COMMON_UNITS = ["g","kg","ml","L","개","장","팩","봉"];
 
 /* ---------- 설정 ---------- */
-const SETTINGS_DEFAULT = { minWage: 10320, fiveOrMore: false, targetCostRate: 30, prices: {}, excluded: [] };
+const SETTINGS_DEFAULT = { minWage: 10320, fiveOrMore: false, targetCostRate: 30, prices: {}, excluded: [],
+  /* ★ 고정비를 넣어야 「순수익」이 진짜 순수익이 된다 (2026-09-12).
+     0 은 «없음» 이 아니라 «아직 안 넣음» 이다 — 화면이 그때는 이름을 바꿔 부른다 */
+  monthlyFixed: 0, openDaysPerMonth: 26 };
 function loadSettings() {
   const s = store.get("settings", {}) || {};
   return {
@@ -1107,8 +1110,15 @@ function loadSettings() {
     fiveOrMore: s.fiveOrMore === true,
     targetCostRate: (typeof s.targetCostRate === "number" && s.targetCostRate > 0) ? s.targetCostRate : 30,
     prices: (s.prices && typeof s.prices === "object") ? s.prices : {},
-    excluded: Array.isArray(s.excluded) ? s.excluded : []
+    excluded: Array.isArray(s.excluded) ? s.excluded : [],
+    monthlyFixed: (typeof s.monthlyFixed === "number" && s.monthlyFixed > 0) ? s.monthlyFixed : 0,
+    openDaysPerMonth: (typeof s.openDaysPerMonth === "number" && s.openDaysPerMonth > 0) ? s.openDaysPerMonth : 26
   };
+}
+/** 하루치 고정비. 월 고정비 ÷ 월 영업일수 */
+function dailyFixed(monthlyFixed, openDaysPerMonth) {
+  const m = Math.max(0, monthlyFixed || 0), d = Math.max(1, openDaysPerMonth || 1);
+  return m === 0 ? 0 : Math.round(m / d);
 }
 const saveSettings = s => store.set("settings", s);
 
@@ -1302,14 +1312,19 @@ function checkContract(c, minWage, today) {
 }
 
 /* ---------- 매출 ----------
-   ⚠ 여기서 말하는 "순수익"은 재료비·인건비만 뺀 것이다. 임대료·공과금·카드수수료·세금이 없다 */
+   ★ 2026-09-12 — 고정비를 넣으면 진짜 순수익이 된다. 안 넣었으면 화면이
+   「순수익」이라고 부르지 않는다. ⚠ 세금·감가상각은 여전히 빠져 있다 */
 const loadSales = () => store.get("sales", {}) || {};
 const saveSales = d => store.set("sales", d);
 const emptyDay = date => ({ date, total:0, count:0, material:0, note:"" });
 const getDaySales = (data, date) => data[date] || emptyDay(date);
-function profitOf(day, laborCost) {
+function profitOf(day, laborCost, fixedPerDay = 0) {
   const sales = day.total || 0, material = day.material || 0, labor = Math.max(0, laborCost || 0);
-  return { sales, material, labor, left: sales - material - labor,
+  const fixed = Math.max(0, fixedPerDay || 0);
+  /* ★ `fixedMissing` 이 true 면 left 는 순수익이 **아니다** — 재료비·인건비만 뺀 값이고
+     화면이 그렇게 말해야 한다. Next 앱 `src/lib/sales.ts` 와 같은 규칙. */
+  return { sales, material, labor, fixed, fixedMissing: fixed === 0,
+    left: sales - material - labor - fixed,
     perCustomer: day.count > 0 ? sales / day.count : null };
 }
 function sumRange(data, dates) {
@@ -3635,10 +3650,15 @@ function renderSales() {
         out.innerHTML = "";
         const d2 = getDaySales(sales, pick);
         const lb = laborOn(pick);
-        const p = profitOf(d2, lb.cost);
+        /* 하루치 고정비 — 안 넣었으면 0 이고 `fixedMissing` 이 true 라
+           아래 제목이 「순수익」 대신 「재료비·인건비 뺀 것」이 된다 */
+        const st = loadSettings();
+        const fixedDay = dailyFixed(st.monthlyFixed, st.openDaysPerMonth);
+        const p = profitOf(d2, lb.cost, fixedDay);
         const box = el(`<div style="border:2px solid ${p.left >= 0 ? "var(--ok-b)" : "var(--danger-b)"};
           background:${p.left >= 0 ? "var(--ok-w)" : "var(--danger-w)"};border-radius:var(--r);padding:16px;margin-top:14px">
-          <b style="font-size:15px">${esc(dayLabel(new Date(pick + "T00:00:00")))} 순수익</b>
+          <b style="font-size:15px">${esc(dayLabel(new Date(pick + "T00:00:00")))} ${
+            p.fixedMissing ? "재료비·인건비 뺀 것" : "순수익"}</b>
           <p style="margin:5px 0 0;font-family:var(--mono);font-size:31px;font-weight:700;
             font-variant-numeric:tabular-nums">${won(p.left)}<span style="font-size:16px">원</span></p>
           <div style="margin-top:11px;border-top:1px solid rgba(0,0,0,.08);padding-top:5px"></div></div>`);
@@ -3647,8 +3667,32 @@ function renderSales() {
         bd.appendChild(moneyRow(`재료비 ${d2.total > 0 ? `(${pct(p.material, p.sales)}%)` : ""}`, `− ${won(p.material)}원`));
         bd.appendChild(moneyRow(`인건비 ${d2.total > 0 ? `(${pct(p.labor, p.sales)}%)` : ""}
           <span style="color:var(--ink-3)">${hoursLabel(lb.minutes)}</span>`, `− ${won(p.labor)}원`));
+        if (!p.fixedMissing) bd.appendChild(moneyRow(
+          `고정비 ${d2.total > 0 ? `(${pct(p.fixed, p.sales)}%)` : ""}
+           <span style="color:var(--ink-3)">월 ${won(st.monthlyFixed)}원 ÷ ${st.openDaysPerMonth}일</span>`,
+          `− ${won(p.fixed)}원`));
         if (p.perCustomer !== null) bd.appendChild(moneyRow("객단가", `${won(p.perCustomer)}원`));
         out.appendChild(box);
+
+        /* ★ 고정비 — 「순수익」이 진짜 순수익이 되는 조건.
+           매달 거의 안 바뀌므로 한 번 넣으면 끝이다 */
+        const fx = el(`<div class="card" style="padding:14px 16px;margin-top:14px">
+          <b style="font-size:15px">${p.fixedMissing ? "고정비를 아직 안 넣었습니다" : "월 고정비"}</b>
+          <p class="muted" style="margin:5px 0 10px">${p.fixedMissing
+            ? "임대료·공과금·카드수수료·보험·통신을 합쳐 한 번만 넣으면, 위 숫자가 재료비·인건비만 뺀 값에서 <b>진짜 순수익</b>으로 바뀝니다."
+            : `하루치 <b>${won(fixedDay)}원</b>씩 빠집니다. 바뀐 달에만 고치세요.`}</p>
+          <div class="grid2"></div></div>`);
+        const fg = fx.querySelector(".grid2");
+        fg.appendChild(field("한 달 고정비 합계",
+          numIn(st.monthlyFixed, x => { const n = loadSettings(); n.monthlyFixed = x; saveSettings(n); redraw(); },
+            "3500000", "한 달 고정비 합계")));
+        fg.appendChild(field("한 달 영업일수",
+          numIn(st.openDaysPerMonth, x => { const n = loadSettings(); n.openDaysPerMonth = x; saveSettings(n); redraw(); },
+            "26", "한 달 영업일수")));
+        fx.appendChild(el(`<p class="muted" style="margin:10px 0 0;font-size:11px">⚠️ 세금(부가세·소득세)과
+          감가상각은 여기 안 넣습니다 — 매출에 따라 달라져서 하루에 얼마로 나눌 수가 없습니다.
+          <b>그만큼은 여전히 빠져 있습니다.</b></p>`));
+        out.appendChild(fx);
 
         if (lb.noWage.length) {
           const c = caveat(`시급이 없는 직원(<b>${esc(lb.noWage.join(", "))}</b>)이 근무한 날입니다.
@@ -3680,7 +3724,11 @@ function renderSales() {
       const dates = week.map(dk);
       const wSum = sumRange(sales, dates);
       const wLabor = dates.reduce((s, d) => s + laborOn(d).cost, 0);
-      const wp = profitOf(wSum, wLabor);
+      const stw = loadSettings();
+      const fxw = dailyFixed(stw.monthlyFixed, stw.openDaysPerMonth);
+      /* ★ 주간은 **영업한 날 수만큼** 뺀다. 7 을 곱하면 쉬는 날에도 문 것이 되고,
+         하루치만 빼면 주간 순수익이 부풀려진다 */
+      const wp = profitOf(wSum, wLabor, fxw * dates.filter(d => (sales[d]?.total || 0) > 0).length);
 
       const card = el(`<div class="card" style="padding:14px 16px;margin-top:14px">
         <b style="font-size:15px">${esc(dayLabel(week[0]))} ~ ${esc(dayLabel(week[6]))}</b>
@@ -3689,7 +3737,10 @@ function renderSales() {
       bd.appendChild(moneyRow("매출", `${won(wp.sales)}원`));
       bd.appendChild(moneyRow(`재료비 (${pct(wp.material, wp.sales)}%)`, `− ${won(wp.material)}원`));
       bd.appendChild(moneyRow(`인건비 (${pct(wp.labor, wp.sales)}%)`, `− ${won(wp.labor)}원`));
-      bd.appendChild(moneyRow("순수익", `${won(wp.left)}원`, { strong: true }));
+      if (!wp.fixedMissing) bd.appendChild(moneyRow(
+        `고정비 (${pct(wp.fixed, wp.sales)}%)`, `− ${won(wp.fixed)}원`));
+      bd.appendChild(moneyRow(wp.fixedMissing ? "재료비·인건비 뺀 것" : "순수익",
+        `${won(wp.left)}원`, { strong: true }));
       if (wp.perCustomer !== null) bd.appendChild(moneyRow("객단가", `${won(wp.perCustomer)}원`));
       v.appendChild(card);
 
@@ -3702,7 +3753,8 @@ function renderSales() {
         const date = dk(d);
         const row = getDaySales(sales, date);
         const lb = laborOn(date);
-        const pr = profitOf(row, lb.cost);
+        // 안 연 날(매출 0)에는 고정비를 안 뺀다 — 빼면 쉬는 날마다 적자가 찍힌다
+        const pr = profitOf(row, lb.cost, row.total > 0 ? fxw : 0);
         const empty = row.total === 0 && lb.cost === 0;
         const tr = el(`<tr style="cursor:pointer">
           <td><b>${esc(dayLabel(d))}</b></td>
@@ -3717,8 +3769,14 @@ function renderSales() {
       v.appendChild(tw);
     }
 
-    const c = caveat(`<b>여기서 말하는 "순수익"은 재료비·인건비만 뺀 것입니다.</b> 임대료·공과금·카드수수료·세금·감가상각이
-      빠져 있습니다. 재료비도 그날 발주 금액이라 실제로 쓴 양과는 다릅니다(로스·재고 변동).
+    const stc = loadSettings();
+    const fxc = dailyFixed(stc.monthlyFixed, stc.openDaysPerMonth);
+    const c = caveat(`${fxc === 0
+      ? `<b>고정비를 안 넣어서 아직 순수익이 아닙니다.</b> 지금 숫자는 재료비·인건비만 뺀 것이라,
+         이걸로 가격을 정하면 <b>실제보다 낙관적입니다.</b>`
+      : `<b>세금(부가세·소득세)과 감가상각은 여전히 빠져 있습니다.</b> 매출에 따라 달라져서
+         하루에 얼마로 나눌 수가 없습니다.`}
+      재료비도 그날 발주 금액이라 실제로 쓴 양과는 다릅니다(로스·재고 변동).
       메뉴별 재료비는 <button type="button" id="tk" style="padding:0;background:none;border:0;color:inherit;
       text-decoration:underline;font-size:12px;font-weight:600">원가 화면</button>에서 봅니다.`);
     c.querySelector("#tk").onclick = () => go("#/cost");
