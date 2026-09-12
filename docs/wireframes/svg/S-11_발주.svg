@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="788" height="1024" viewBox="0 0 788 1024" fill="none">
+<!--
+  매장수첩 · S-11 발주  /order
+  2026-09-11 · Figma 파일 「매장수첩 — 화면설계서」에 드래그해서 넣는 용도.
+
+  ★ 치수 788×1024 는 같은 파일의 S-09 출퇴근 그룹 실측값이다. 나란히 놓으면 높이가 맞는다.
+  ★ 색은 코드의 Tailwind 값을 그대로 옮겼다 (orange-500 #f97316 · zinc-200 #e4e4e7 …).
+  ★ 내용은 src/components/OrderView.tsx + data/seed.json 의 kind:"order" 두 항목에서 왔다.
+     지어낸 값은 거래처 3곳과 마감 시각뿐이다 (거래처는 사장님이 넣는 값이라 시드에 없다).
+  ★ 상태는 N(거래처 있음 · 아침 08:10). Z(거래처 0건)는 별도 아트보드로 뺀다.
+-->
+
+<!-- ===== 화면 바탕 ===== -->
+<rect id="bg" x="0.5" y="0.5" width="787" height="1023" fill="#fafafa" stroke="#e4e4e7"/>
+
+<!-- ===== 헤더 ===== -->
+<g id="header" font-family="Noto Sans KR, sans-serif">
+  <rect x="17" y="25" width="66" height="38" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+  <text x="50" y="49" font-size="13" font-weight="700" fill="#52525b" text-anchor="middle">‹ 뒤로</text>
+  <text x="95" y="38" font-size="12" fill="#71717a">○○ 베이커리 카페</text>
+  <text x="95" y="60" font-size="20" font-weight="700" fill="#18181b">발주</text>
+</g>
+
+<!-- ===== 1. 주문했는데 안 들어온 것 — 이 섹션이 맨 위인 게 이 화면의 설계 전부다 ===== -->
+<g id="s1_pending" font-family="Noto Sans KR, sans-serif">
+  <rect x="17" y="80" width="754" height="130" rx="16" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+  <text x="33" y="111" font-size="15" font-weight="700" fill="#991b1b">주문했는데 아직 안 들어온 것 1개</text>
+  <text x="33" y="131" font-size="12" fill="#b91c1c">들어왔으면 눌러서 표시해 주세요. 안 들어왔으면 거래처에 확인이 필요합니다.</text>
+
+  <rect x="33" y="144" width="722" height="52" rx="12" fill="#ffffff"/>
+  <text x="45" y="167" font-size="14" font-weight="700" fill="#18181b">우유·식자재 발주</text>
+  <text x="45" y="185" font-size="11" fill="#71717a">2026-09-09 주문 · 우유 12팩</text>
+  <rect x="659" y="153" width="84" height="34" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+  <text x="701" y="175" font-size="14" font-weight="700" fill="#18181b" text-anchor="middle">들어왔음</text>
+</g>
+
+<!-- ===== 2. 오늘 주문 마감 — 마감 임박한 순으로 선다 ===== -->
+<g id="s2_cutoff" font-family="Noto Sans KR, sans-serif">
+  <rect x="17.5" y="226.5" width="753" height="247" rx="16" fill="#ffffff" stroke="#e4e4e7"/>
+  <text x="33" y="258" font-size="15" font-weight="700" fill="#18181b">오늘 주문 마감</text>
+  <text x="33" y="277" font-size="12" fill="#71717a">마감을 넘기면 그 주문은 다음 배송일로 밀립니다.</text>
+
+  <!-- 우유 대리점 -->
+  <text x="33" y="313" font-size="14" font-weight="700" fill="#18181b">우유 대리점</text>
+  <text x="33" y="331" font-size="11" fill="#71717a">카톡 · 김대리 · 지금 주문하면 금(9/11) 도착</text>
+  <text x="592" y="322" font-size="13" fill="#52525b" text-anchor="end">6시간 50분</text>
+  <rect x="605" y="304" width="58" height="34" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+  <text x="634" y="326" font-size="14" font-weight="700" fill="#18181b" text-anchor="middle">전화</text>
+  <rect x="671" y="304" width="84" height="34" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+  <text x="713" y="326" font-size="14" font-weight="700" fill="#18181b" text-anchor="middle">발주서</text>
+  <line x1="33" y1="348" x2="755" y2="348" stroke="#e4e4e7"/>
+
+  <!-- 원두 로스터리 — 1시간 이하라 빨강 -->
+  <text x="33" y="369" font-size="14" font-weight="700" fill="#18181b">원두 로스터리</text>
+  <text x="33" y="387" font-size="11" fill="#71717a">홈페이지 · 지금 주문하면 월(9/14) 도착</text>
+  <text x="592" y="378" font-size="13" font-weight="700" fill="#dc2626" text-anchor="end">0시간 40분</text>
+  <rect x="671" y="360" width="84" height="34" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+  <text x="713" y="382" font-size="14" font-weight="700" fill="#18181b" text-anchor="middle">발주서</text>
+  <line x1="33" y1="404" x2="755" y2="404" stroke="#e4e4e7"/>
+
+  <!-- 제과 부자재 — 이미 마감 -->
+  <text x="33" y="425" font-size="14" font-weight="700" fill="#71717a">제과 부자재</text>
+  <text x="33" y="443" font-size="11" fill="#a1a1aa">전화 · 지금 주문하면 수(9/16) 도착</text>
+  <text x="592" y="434" font-size="13" fill="#a1a1aa" text-anchor="end">마감</text>
+  <rect x="605" y="416" width="58" height="34" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+  <text x="634" y="438" font-size="14" font-weight="700" fill="#18181b" text-anchor="middle">전화</text>
+</g>
+
+<!-- ===== 3. 주문할 것 — 프렙의 kind:"order" 를 그대로 가져온다 ===== -->
+<g id="s3_todo" font-family="Noto Sans KR, sans-serif">
+  <rect x="17.5" y="489.5" width="753" height="319" rx="16" fill="#ffffff" stroke="#e4e4e7"/>
+  <text x="33" y="521" font-size="15" font-weight="700" fill="#18181b">주문할 것</text>
+  <text x="33" y="540" font-size="12" fill="#71717a">프렙 목록의 발주 항목을 그대로 가져옵니다. 여기서 체크하면 프렙과 따로 관리하지 않아도 됩니다.</text>
+
+  <!-- p-5 우유·식자재 발주 — 주문함까지 눌린 상태 -->
+  <g id="task_p5">
+    <rect x="33" y="556" width="722" height="104" rx="12" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+    <text x="45" y="581" font-size="15" font-weight="700" fill="#18181b">우유·식자재 발주</text>
+    <text x="45" y="599" font-size="11" fill="#71717a">오후 프렙 · 주문 후 1일</text>
+    <rect x="593" y="568" width="72" height="32" rx="8" fill="#f97316" stroke="#f97316" stroke-width="2"/>
+    <text x="629" y="589" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">주문함</text>
+    <rect x="671" y="568" width="72" height="32" rx="8" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+    <text x="707" y="589" font-size="13" font-weight="700" fill="#52525b" text-anchor="middle">들어옴</text>
+    <rect x="45" y="612" width="220" height="40" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+    <text x="57" y="638" font-size="16" fill="#18181b">우유 12팩</text>
+    <rect x="275" y="612" width="180" height="40" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+    <text x="287" y="638" font-size="16" fill="#18181b">우유 대리점</text>
+    <path d="M431 629l5 6 5-6" stroke="#71717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- p-6 원두 발주 — recoverable:false 라 빨간 테두리 + 결과 한 줄 -->
+  <g id="task_p6">
+    <rect x="33" y="670" width="722" height="122" rx="12" fill="#ffffff" stroke="#fca5a5" stroke-width="2"/>
+    <text x="45" y="695" font-size="15" font-weight="700" fill="#18181b">원두 발주</text>
+    <text x="45" y="713" font-size="11" fill="#71717a">오후 프렙 · 주문 후 4일</text>
+    <text x="45" y="733" font-size="12" font-weight="700" fill="#dc2626">까먹지 말고 해야 할 것 — 거래처 원두는 다른 데서 못 삽니다. 맛이 바뀝니다.</text>
+    <rect x="593" y="682" width="72" height="32" rx="8" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+    <text x="629" y="703" font-size="13" font-weight="700" fill="#52525b" text-anchor="middle">주문함</text>
+    <rect x="671" y="682" width="72" height="32" rx="8" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+    <text x="707" y="703" font-size="13" font-weight="700" fill="#52525b" text-anchor="middle">들어옴</text>
+    <rect x="45" y="744" width="220" height="40" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+    <text x="57" y="770" font-size="16" fill="#a1a1aa">수량 (우유 12팩)</text>
+    <rect x="275" y="744" width="180" height="40" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+    <text x="287" y="770" font-size="16" fill="#a1a1aa">거래처 고르기</text>
+    <path d="M431 761l5 6 5-6" stroke="#71717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</g>
+
+<!-- ===== 하단 탭바 — 매일 누르는 다섯. 발주가 켜져 있다 ===== -->
+<g id="tabbar" font-family="Noto Sans KR, sans-serif">
+  <rect x="1" y="960" width="786" height="63" fill="#ffffff"/>
+  <line x1="1" y1="960.5" x2="787" y2="960.5" stroke="#e4e4e7"/>
+
+  <g id="tab_today" stroke="#71717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M3 10.5 12 4l9 6.5V19a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" transform="translate(68 974)"/>
+  </g>
+  <text x="79" y="1010" font-size="11" font-weight="700" fill="#71717a" text-anchor="middle" font-family="Noto Sans KR, sans-serif">오늘</text>
+
+  <g id="tab_prep" stroke="#71717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M5 4h11l3 3v13H5z" transform="translate(226 974)"/>
+    <path d="M9 10h6M9 14h6" transform="translate(226 974)"/>
+  </g>
+  <text x="237" y="1010" font-size="11" font-weight="700" fill="#71717a" text-anchor="middle" font-family="Noto Sans KR, sans-serif">프렙</text>
+
+  <g id="tab_order_on" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M3 6h13l2 9H6z" transform="translate(383 974)"/>
+    <circle cx="8" cy="19" r="1.6" transform="translate(383 974)"/>
+    <circle cx="16" cy="19" r="1.6" transform="translate(383 974)"/>
+  </g>
+  <text x="394" y="1010" font-size="11" font-weight="700" fill="#ea580c" text-anchor="middle" font-family="Noto Sans KR, sans-serif">발주</text>
+
+  <g id="tab_attendance" stroke="#71717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <circle cx="12" cy="12" r="8" transform="translate(540 974)"/>
+    <path d="M12 7v5l3 2" transform="translate(540 974)"/>
+  </g>
+  <text x="551" y="1010" font-size="11" font-weight="700" fill="#71717a" text-anchor="middle" font-family="Noto Sans KR, sans-serif">출퇴근</text>
+
+  <g id="tab_ops" stroke="#71717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <circle cx="12" cy="12" r="3" transform="translate(698 974)"/>
+    <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15a2 2 0 1 1 0-4 1.6 1.6 0 0 0 1.6-1.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.6a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21 11a2 2 0 1 1 0 4 1.6 1.6 0 0 0-1.6 1z" transform="translate(698 974)"/>
+  </g>
+  <text x="709" y="1010" font-size="11" font-weight="700" fill="#71717a" text-anchor="middle" font-family="Noto Sans KR, sans-serif">운영</text>
+</g>
+</svg>
