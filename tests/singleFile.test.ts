@@ -112,3 +112,81 @@ for (const path of FILES) {
     assert.match(body, /done\.(has|add|delete)\(t\.id\)/, "체크 판정이 t.id 가 아니다");
   });
 }
+
+/* ------------------------------------------------------------------ *
+ * ★ 시연에서 열어야 하는 화면이 routes 에 다 있는가 (2026-09-12 신설)
+ *
+ *   `/backup` 과 `/shoot` 이 **이 파일에만 없었다.** Next 앱에는 있는데
+ *   단일 파일에는 빠져 있어서, 시연 중 "내보내기 보여주세요" 가 나오면
+ *   열 화면이 없었다. `docs/HANDOFF.md` §3-① 이 그걸 #2 로 적어두고 있었고,
+ *   **표에 적어두는 것만으로는 2026-09-10 부터 이틀을 그냥 지나갔다.**
+ *   그래서 사람이 아니라 테스트가 지키게 한다.
+ * ------------------------------------------------------------------ */
+test("★ routes 에 시연에서 여는 화면이 다 있다", () => {
+  const js = scriptOf(FILES[0]);
+  const block = js.slice(js.indexOf("const routes = {"));
+  const table = block.slice(0, block.indexOf("};"));
+
+  /* Next 앱의 경로 ↔ 단일 파일의 해시 이름. 이름이 다른 것은 일부러다
+     (`/p/[slug]` → `list`, `/t/[slug]` → `study`, `/r` → `recipes`). */
+  const 필요한_화면: [경로: string, 해시: string][] = [
+    ["/", ""],
+    ["/prep", "prep"],
+    ["/r", "recipes"],
+    ["/r/[slug]", "recipe"],
+    ["/roster", "roster"],
+    ["/t/[slug]", "study"],
+    ["/p/[slug]", "list"],
+    ["/attendance", "attend"],
+    ["/contracts", "contracts"],
+    ["/sales", "sales"],
+    ["/cost", "cost"],
+    ["/order", "order"],
+    ["/vendors", "vendors"],
+    ["/backup", "backup"],
+    ["/shoot", "shoot"],
+  ];
+
+  const 없는 = 필요한_화면
+    .filter(([, 해시]) => !new RegExp(`"${해시}"\s*:`).test(table))
+    .map(([경로, 해시]) => `${경로} → "${해시}"`);
+
+  assert.deepEqual(
+    없는,
+    [],
+    "Next 앱에는 있는데 단일 파일 routes 에 없다 — 시연 중 그 화면을 못 연다:\n  " +
+      없는.join("\n  "),
+  );
+});
+
+test("★ 내보내는 CSV 가 BOM 과 수식 주입 차단을 지킨다", () => {
+  const js = scriptOf(FILES[0]);
+
+  /* BOM 이 빠지면 엑셀이 UTF-8 을 못 알아보고 한글이 전부 깨진다 —
+     사장님이 "안 된다" 고 판단하는 가장 흔한 지점이다. */
+  assert.match(js, /function toCsv/, "toCsv 가 없다");
+  assert.ok(
+    /return\s*"﻿"\s*\+/.test(js),
+    "CSV 앞에 BOM 을 안 붙인다 — 엑셀에서 한글이 깨진다",
+  );
+
+  /* `= + - @` 로 시작하는 칸은 엑셀·구글시트가 수식으로 실행한다.
+     직원이 메모를 손으로 넣는 칸이 있어서 실제로 걸리는 경로다. */
+  assert.match(js, /function csvSafe/, "csvSafe 가 없다");
+  /* 규칙의 모양이 아니라 **하는 일**을 본다 — `= + - @` 넷을 다 보고,
+     걸리면 앞에 작은따옴표를 붙인다. 정규식 리터럴을 글자로 맞추려 하면
+     이스케이프 한 글자에 검사가 헛돈다. */
+  const 규칙 = js.slice(js.indexOf("function csvSafe"), js.indexOf("function csvCell"));
+  for (const c of ["=", "+", "-", "@"])
+    assert.ok(규칙.includes(c), `수식 주입 차단에서 ${c} 가 빠졌다 — 메모 칸으로 들어온다`);
+  assert.match(규칙, /"'"\s*\+/, "걸린 칸 앞에 작은따옴표를 안 붙인다");
+});
+
+test("★ 촬영 목록이 「묶음 머리」를 빼고 옵션은 센다", () => {
+  const js = scriptOf(FILES[0]);
+  /* Next 앱 `repo.filmableTasks()` 와 같은 규칙이어야 한다.
+     진행률(countedTasks)과 **분모가 다른 것이 일부러**라, 한쪽만 고치면
+     두 앱이 서로 다른 수를 말하게 된다 (전에 88 과 85 로 갈렸다). */
+  assert.match(js, /function filmableTasks/, "filmableTasks 가 없다");
+  assert.match(js, /function prepHeadIds/, "prepHeadIds 가 없다");
+});

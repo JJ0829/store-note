@@ -1328,7 +1328,11 @@ const routes = {
   "sales": renderSales,
   "cost": renderCost,
   "order": renderOrder,
-  "vendors": renderVendors
+  "vendors": renderVendors,
+
+  /* 2026-09-12 신설. 여기 없어서 시연 중에 못 열던 둘이다 (HANDOFF §3-① #2) */
+  "backup": renderBackup,
+  "shoot": renderShoot
 };
 
 function go(hash) { location.hash = hash; }
@@ -1517,7 +1521,10 @@ function renderHome() {
     /* 근무표 바로 아래에 둔다 — 근무표가 계획이고 출퇴근이 실제라 짝이다 */
     { label: "출퇴근 · 근태", meta: "버튼 두 개로 찍고, 근무표와 비교해 지각·연장을 봅니다", to: "#/attend" },
     { label: "발주", meta: "주문 마감까지 남은 시간, 주문했는데 안 들어온 것", to: "#/order" },
-    { label: "운영 (원가 · 매출 · 거래처 · 계약서)", meta: "매출 − 재료비 − 인건비 = 오늘 남은 돈", to: "#/ops" }
+    { label: "운영 (원가 · 매출 · 거래처 · 계약서)", meta: "매출 − 재료비 − 인건비 = 오늘 남은 돈", to: "#/ops" },
+    /* 촬영은 매일 여는 것이 아니라 맨 아래에 둔다. 다만 「사진·영상」이 핵심 가치
+       셋 중 하나라, 화면이 아예 없으면 시연에서 그 주장을 보여줄 데가 없다 */
+    { label: "촬영 진행", meta: "무엇을 찍어야 하는지 — 85개, 먼저 찍을 것 4개", to: "#/shoot" }
   ].forEach(x => {
     const b = el(`<button type="button" class="nav-row"><span><b>${esc(x.label)}</b><span class="meta">${esc(x.meta)}</span></span><span class="chev">›</span></button>`);
     b.onclick = () => go(x.to);
@@ -2539,7 +2546,8 @@ const OPS_MENU = [
   { hash:"#/sales",     name:"매출",           note:"마감에 세 칸만 넣으면 매출 − 재료비 − 인건비가 계산됩니다", lock:true },
   { hash:"#/cost",      name:"원가",           note:"메뉴별 재료비와 원가율. 목표 원가율에서 판매가를 거꾸로 계산합니다", lock:true },
   { hash:"#/order",     name:"발주",           note:"주문 마감까지 남은 시간, 주문했는데 안 들어온 것", lock:false },
-  { hash:"#/vendors",   name:"거래처",         note:"전화·마감 시각·배송 요일과 품목 단가. 원가가 여기서 나옵니다", lock:true }
+  { hash:"#/vendors",   name:"거래처",         note:"전화·마감 시각·배송 요일과 품목 단가. 원가가 여기서 나옵니다", lock:true },
+  { hash:"#/backup",    name:"내보내기",       note:"출퇴근·계약은 3년 보관해야 합니다. 태블릿을 잃으면 사라집니다", lock:true }
 ];
 
 function renderOps() {
@@ -3749,6 +3757,248 @@ function renderContracts() {
   }
 
   draw();
+}
+
+
+/* ================================================================== *
+   촬영 진행 · 내보내기 — 2026-09-12 신설
+
+   ★ 왜 이제서야 붙나. `routes` 에 열다섯이 있는데 **이 둘만 없었다**
+     (`docs/HANDOFF.md` §3-① #2). 시연 중 "내보내기 보여주세요" 나
+     "촬영은 어떻게 하나요" 가 나오면 **열 화면이 아예 없었다.**
+ * ================================================================== */
+
+/* ---------- 촬영 ------------------------------------------------- */
+
+/** 「묶음 머리」 id — 할 일이 아니라 **이름표**인 카드.
+ *  Next 앱 `src/lib/repo.ts` 의 `headerIds()` 와 같은 규칙이어야 한다. */
+function prepHeadIds(list) {
+  const kids = {};
+  list.tasks.forEach(t => { if (t.option) (kids[t.option] = kids[t.option] || []).push(t); });
+  return Object.keys(kids).filter(id => kids[id].some(k => !k.optional));
+}
+
+/** 찍을 수 있는 프렙 항목.
+ *
+ *  ★ 진행률(`countedTasks`)과 **분모가 다르다. 일부러다.**
+ *    옵션은 **센다** — 르방 갱신은 실제로 찍을 수 있는 일이고, 르방을 쓰는
+ *    매장에서는 오히려 기준이 가장 안 맞는 항목이다.
+ *    묶음 머리는 **뺀다** — `기계 · 설비 점검` 은 이름표라 찍을 장면이 없다.
+ *
+ *  Next 앱의 `filmableTasks()` 와 같은 규칙. 두 앱 합계가 똑같이 85 다. */
+function filmableTasks(list) {
+  const heads = prepHeadIds(list);
+  return list.tasks.filter(t => heads.indexOf(t.id) < 0);
+}
+
+/** 기준이 사람마다 가장 갈리는 넷. `docs/day-flow.md` 의 「영상으로 박제할 1순위」.
+ *
+ *  ★ Next 앱은 항목 id 로 짚지만 여기서는 그럴 수 없다 — 단일 파일의 레시피
+ *    순서에는 id 가 없고, 프렙 id 는 하이픈이 빠져 있다(`p-1` → `p1`,
+ *    `tests/twoApps.test.ts` 의 `flatId`). 그래서 **화면에 보이는 것**으로 짚는다. */
+const SHOOT_FIRST = {
+  "t-open-5": "추출 테스트 합격 기준",
+  "t-bake-1": "르방 · 발효 완료 판단",
+  "스팀 — 온도와 거품": "스팀 밀크 온도 · 거품",
+  "p1": "콜드브루 거는 장면"
+};
+
+/** 찍어야 할 것 전부 — 포지션 스텝 26 + 레시피 순서 32 + 프렙 27 = 85. */
+function shootItems() {
+  const out = [];
+  DATA.positions.forEach(p => p.sections.forEach(s => s.steps.forEach(st =>
+    out.push({ key: st.id, title: st.title, group: p.name + " · 포지션", critical: !!st.critical }))));
+  DATA.recipes.forEach(r => (r.steps || []).forEach(st =>
+    out.push({ key: st.title, title: st.title, group: r.name + " · 레시피", critical: !!st.critical })));
+  DATA.prepLists.forEach(l => filmableTasks(l).forEach(t =>
+    out.push({ key: t.id, title: t.title, group: l.name + " · 프렙", critical: !!t.critical })));
+  return out;
+}
+
+function renderShoot() {
+  topbar({ title: "촬영 진행", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+  const items = shootItems();
+
+  /* ★ 이 화면은 원본 앱의 촬영 보드와 **하는 일이 다르다.** 거기서는 파일명을
+     복사해 `public/media/` 에 넣지만, 이 파일에는 넣을 폴더가 없다(파일 하나다).
+     그래서 **무엇을 찍어야 하는지만** 보여주고, 넣는 것은 원본에서 한다고
+     화면이 먼저 말한다. 여기서 파일명을 흉내 내면 시연에서만 되는 것이 된다. */
+  v.appendChild(el(`<div class="card" style="padding:16px;margin-top:18px">
+    <p class="eyebrow" style="margin:0">${items.length}개를 찍어야 합니다</p>
+    <p style="margin:4px 0 0;font-size:13px;line-height:1.7;color:var(--ink-2)">
+      포지션 순서 <b>26</b> · 레시피 순서 <b>32</b> · 프렙 <b>27</b>.
+      프렙 30개 중 셋은 <b>이름표</b>라 찍을 장면이 없어 뺐습니다.</p>
+    <p style="margin:9px 0 0;background:var(--sunken);border-radius:11px;padding:10px 12px;
+      font-size:12px;line-height:1.65;color:var(--ink-2)">
+      <b>이 파일은 사진·영상을 담지 않습니다.</b> 파일 하나로 열리는 시연용이라
+      넣을 폴더가 없습니다. 찍은 것을 넣는 일은 <b>원본 앱의 촬영 화면</b>에서 합니다 —
+      거기서는 항목마다 파일 이름이 나오고, 그 이름으로 저장해 폴더에 넣으면 붙습니다.</p>
+  </div>`));
+
+  const first = items.filter(i => SHOOT_FIRST[i.key]);
+  if (first.length) {
+    const sec = el(`<section class="sec"><h2>먼저 찍을 것</h2>
+      <p class="hint">기준이 사람마다 가장 갈리는 항목입니다. 이것만 있어도 발표는 됩니다.</p>
+      <div class="rows"></div></section>`);
+    first.forEach(i => sec.querySelector(".rows").appendChild(el(
+      `<div class="card" style="padding:12px 14px">
+        <b style="font-size:14px">${esc(SHOOT_FIRST[i.key])}</b>
+        <span class="meta" style="display:block;font-size:12px;color:var(--ink-3);margin-top:2px">${esc(i.group)} · ${esc(i.title)}</span>
+      </div>`)));
+    v.appendChild(sec);
+  }
+
+  /* 그룹별 — 찍으러 다닐 때 한 자리에서 끝나도록 묶는다 */
+  const groups = [];
+  items.forEach(i => {
+    const g = groups.find(x => x.name === i.group);
+    (g ? g.items : (groups.push({ name: i.group, items: [] }), groups[groups.length - 1].items)).push(i);
+  });
+  groups.forEach(g => {
+    const sec = el(`<section class="sec"><h2>${esc(g.name)}</h2>
+      <p class="hint">${g.items.length}개</p><div class="rows"></div></section>`);
+    g.items.forEach(i => sec.querySelector(".rows").appendChild(el(
+      `<div class="nav-row" style="cursor:default"><span><b>${esc(i.title)}</b>${
+        i.critical ? ` <span style="font-size:11px;font-weight:700;color:var(--danger)">꼭 지키기</span>` : ""
+      }</span></div>`)));
+    v.appendChild(sec);
+  });
+
+  v.appendChild(caveat(`<b>지금 실제로 찍은 것은 0장입니다.</b> 배관은 원본 앱에 다 돼 있고
+    비어 있는 것은 내용입니다. 좋은 예가 한 장만 있어도 그 항목에 붙고, 나쁜 예는 없으면
+    안 보입니다 — <b>완벽하게 찍을 필요가 없다</b>는 뜻입니다.`));
+}
+
+/* ---------- 내보내기 --------------------------------------------- */
+
+/** ★ 칸이 `= + - @` 로 시작하면 앞에 `'` 를 붙인다. 안 붙이면 엑셀·구글시트가
+ *  **수식으로 실행한다.** 직원이 메모를 손으로 넣는 칸이 있어서 실제로 걸리는
+ *  경로다. Next 앱 `src/lib/backup.ts` 의 `csvSafe()` 와 같은 규칙. */
+function csvSafe(v) { return /^[=+\-@]/.test(v) ? "'" + v : v; }
+function csvCell(v) {
+  const s = csvSafe(v == null ? "" : String(v));
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+/** ★ 맨 앞의 BOM 을 지우지 말 것. 없으면 **엑셀이 UTF-8 을 못 알아보고 한글이
+ *  전부 깨진다.** 사장님이 "안 된다" 고 판단하는 가장 흔한 지점이다. */
+function toCsv(rows) {
+  return "﻿" + rows.map(r => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+}
+
+/** 파일로 내려받기. 파일(`file://`)로 열면 막는 브라우저가 있어서
+ *  **되면 받고, 안 되면 내용을 화면에 펴서 복사하게 한다.** 조용히 실패하면
+ *  사장님은 눌렀는데 아무 일도 안 일어난 것으로 보인다. */
+function saveFile(name, text, mime) {
+  try {
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(new Blob([text], { type: mime + ";charset=utf-8" }));
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 1000);
+    return true;
+  } catch { return false; }
+}
+
+/** 내보낼 것 — `store` 가 쓰는 키 전부. 하나라도 빠지면 조용히 덜 나간다. */
+const BACKUP_KEYS = ["roster", "roster:mode", "punch", "contracts", "sales",
+  "vendors", "settings", "orderLog", "orderLinks", "cycleDone", "cycleEvery", "recipes:mine"];
+
+function renderBackup() {
+  if (!opsGate("내보내기")) return;
+  topbar({ title: "내보내기", sub: DATA.store.name, back: true });
+  const v = document.getElementById("view");
+
+  const bundle = {};
+  BACKUP_KEYS.forEach(k => { const val = store.get(k, null); if (val != null) bundle[k] = val; });
+
+  const roster = store.get("roster", { staff: [] }) || { staff: [] };
+  const staff = Array.isArray(roster.staff) ? roster.staff : [];
+  const nameOf = id => (staff.find(s => s.id === id) || {}).name || id;
+
+  const punches = store.get("punch", {}) || {};
+  const punchRows = [];
+  Object.keys(punches).forEach(sid => Object.keys(punches[sid] || {}).forEach(d => {
+    const p = punches[sid][d] || {};
+    punchRows.push([nameOf(sid), d, p.inAt || "", p.outAt || "", p.breakMin || 0, p.note || ""]);
+  }));
+  punchRows.sort((a, b) => (a[1] + a[0] < b[1] + b[0] ? -1 : 1));
+
+  const contracts = store.get("contracts", []) || [];
+  const contractRows = (Array.isArray(contracts) ? contracts : []).map(c => [
+    nameOf(c.staffId), c.startDate || "", c.endDate || "", c.hourlyWage || 0,
+    c.weeklyHours || 0, (c.workDays || []).map(i => WD[i]).join("·"),
+    c.handedOver ? "예" : "아니오", c.insured ? "예" : "아니오", c.note || ""
+  ]);
+
+  const done = store.get("cycleDone", {}) || {};
+  const every = store.get("cycleEvery", {}) || {};
+  const titleOf = id => {
+    for (const l of DATA.prepLists) { const t = l.tasks.find(x => x.id === id); if (t) return t.title; }
+    return id;
+  };
+  const cycleRows = Object.keys(done).map(id => [titleOf(id), done[id] || "", every[id] || ""]);
+
+  const stamp = bizDay();
+  const files = [
+    { name: `매장수첩_백업_${stamp}.json`, mime: "application/json",
+      make: () => JSON.stringify({ kind: "store-note-backup", exportedAt: new Date().toISOString(),
+        storeName: DATA.store.name, data: bundle }, null, 2),
+      label: "전체 백업 (JSON)",
+      note: "되돌릴 때 쓰는 파일입니다. 사람이 읽으라고 만든 것이 아닙니다",
+      count: Object.keys(bundle).length + "가지" },
+    { name: `출퇴근_${stamp}.csv`, mime: "text/csv",
+      make: () => toCsv([["이름", "날짜", "출근", "퇴근", "휴게(분)", "메모"], ...punchRows]),
+      label: "출퇴근 (CSV · 엑셀)", note: "3년 보관 대상입니다 (근로기준법 제42조)",
+      count: punchRows.length + "건" },
+    { name: `근로계약_${stamp}.csv`, mime: "text/csv",
+      make: () => toCsv([["이름", "시작", "종료", "시급", "주 소정근로", "근무요일", "서면교부", "4대보험", "메모"], ...contractRows]),
+      label: "근로계약 (CSV · 엑셀)", note: "주민등록번호는 애초에 담지 않습니다",
+      count: contractRows.length + "건" },
+    { name: `주기점검_${stamp}.csv`, mime: "text/csv",
+      make: () => toCsv([["항목", "마지막으로 한 날", "주기(일)"], ...cycleRows]),
+      label: "주기 점검 (CSV · 엑셀)", note: "보건증·소방처럼 기억에만 있던 것들입니다",
+      count: cycleRows.length + "건" }
+  ];
+
+  const sec = el(`<section class="sec" style="margin-top:16px">
+    <h2>태블릿을 잃으면 같이 사라집니다</h2>
+    <p class="hint">출퇴근과 계약은 <b>3년 보관</b>해야 합니다. 한 달에 한 번 받아두세요.
+      <b>CSV 는 엑셀로 열어 보관·제출용</b>, <b>JSON 은 되돌리기용</b>입니다.</p>
+    <div class="rows"></div></section>`);
+  const rows = sec.querySelector(".rows");
+  v.appendChild(sec);
+
+  files.forEach(f => {
+    const b = el(`<button type="button" class="nav-row"><span>
+      <b>${esc(f.label)}</b>
+      <span class="meta">${esc(f.count)} · ${esc(f.note)}</span></span><span class="chev">↓</span></button>`);
+    b.onclick = () => {
+      const text = f.make();
+      if (saveFile(f.name, text, f.mime)) { say(f.label + " 내려받았습니다"); return; }
+      /* 파일로 열어서 내려받기가 막힌 경우 — 조용히 넘어가지 않는다 */
+      const box = el(`<div class="card" style="padding:14px 16px">
+        <b style="font-size:14px">이 브라우저에서는 바로 못 받습니다</b>
+        <p class="muted" style="margin:5px 0 9px">파일로 열면 막는 브라우저가 있습니다.
+          아래 내용을 복사해서 <b>${esc(f.name)}</b> 으로 저장하세요.</p></div>`);
+      const ta = el(`<textarea readonly style="width:100%;height:150px;font-family:var(--mono);font-size:11px"></textarea>`);
+      ta.value = text;
+      box.appendChild(ta);
+      b.replaceWith(box);
+      ta.focus(); ta.select();
+    };
+    rows.appendChild(b);
+  });
+
+  /* ★ 되돌리기는 **일부러 안 넣었다.** 되돌리기는 합치지 않고 **덮어쓴다** —
+     시연 도중에 잘못 누르면 화면의 데이터가 그 자리에서 사라진다.
+     원본 앱에는 있고, 거기서는 확인을 두 번 받고 **잃는 건수를 그 순간 다시
+     읽어서** 보여준다. 여기서 흉내만 내면 그 안전장치가 없는 채로 위험만 남는다. */
+  v.appendChild(caveat(`<b>되돌리기는 이 시연 파일에 넣지 않았습니다.</b> 되돌리기는
+    합치는 것이 아니라 <b>덮어쓰는 것</b>이라, 시연 중에 잘못 누르면 화면의 데이터가
+    그 자리에서 사라집니다. 원본 앱에는 있고 거기서는 <b>확인을 두 번 받고, 잃게 되는
+    건수를 그 순간 다시 세어</b> 보여줍니다. 그리고 되돌리기는 <b>JSON 만 받습니다</b> —
+    엑셀에서 한 칸만 고쳐도 시각·요일이 깨지고 근태와 인건비가 조용히 틀어집니다.`));
 }
 
 </script>
