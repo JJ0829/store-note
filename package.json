@@ -9,7 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test",
-    "check": "npm run typecheck && npm run build && npm test && npm run counts:db && npm run verify:db && npm run audit:db && npm run sweep:db && npm run dbml:db && npm run docs:db",
+    "check": "npm run typecheck && npm run build && npm test && npm run counts:db && npm run verify:db && npm run audit:db && npm run sweep:db && npm run dbml:db && npm run docs:db && npm run shootlist:check",
     "test:watch": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --watch",
     "test:cov": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage",
     "counts:db": "node db/counts.js",
@@ -17,7 +17,9 @@
     "audit:db": "node db/audit.js",
     "sweep:db": "node db/sweep.js",
     "dbml:db": "node db/checkdbml.js",
-    "docs:db": "node db/docs.js"
+    "docs:db": "node db/docs.js",
+    "shootlist": "node db/shootlist.js",
+    "shootlist:check": "node db/shootlist.js --check"
   },
   "engines": {
     "node": ">=22.18"

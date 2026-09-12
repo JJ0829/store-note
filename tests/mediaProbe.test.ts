@@ -145,3 +145,53 @@ test("네트워크가 끊겨도 화면이 죽지 않는다", async () => {
   const f = await probe("p-1");
   assert.equal(hasAny(f), false);
 });
+
+/* ------------------------------------------------------------------ *
+ * ★ 촬영 목록이 시드와 같은가 (2026-09-12 신설)
+ *
+ *   `public/media/촬영목록.md` 는 **사장님이 폰을 들고 보는 목록**이다.
+ *   손으로 적어둔 것이라 시드가 자라는 동안 조용히 낡았다 —
+ *   재보니 57개만 적혀 있고 **28개가 빠져 있었다.** 빠진 것은 바 부재료
+ *   레시피 여섯과 오후 프렙에 나중에 들어온 항목들이고,
+ *   **마감 준비 세 개는 표가 통째로 없었다.**
+ *
+ *   목록에 없으면 안 찍는다. 안 찍으면 그 항목은 영영 회색으로 남고,
+ *   **아무도 그 사실을 모른다** — 목록은 그럴듯하게 채워져 있으니까.
+ *   지금은 `db/shootlist.js` 가 시드에서 만든다. 이 검사는 그게 낡았는지 본다.
+ * ------------------------------------------------------------------ */
+
+import fsSync from "node:fs";
+import pathSync from "node:path";
+import { groups } from "../db/shootlist.js";
+
+test("★ 촬영 목록에 찍을 것이 하나도 안 빠졌다", () => {
+  const md = fsSync.readFileSync(
+    pathSync.join(process.cwd(), "public/media/촬영목록.md"),
+    "utf-8",
+  );
+  const 적힌 = new Set([...md.matchAll(/`([a-z]-[a-z0-9-]+)`/g)].map((m) => m[1]));
+  const 있어야 = groups().flatMap((g: { items: { id: string }[] }) => g.items.map((i) => i.id));
+
+  const 빠짐 = 있어야.filter((id: string) => !적힌.has(id));
+  assert.deepEqual(
+    빠짐,
+    [],
+    "시드에는 있는데 촬영 목록에 없다 — 사장님이 그건 안 찍는다.\n" +
+      "  `npm run shootlist` 로 다시 만들 것:\n  " +
+      빠짐.join(", "),
+  );
+});
+
+test("촬영 목록이 없는 항목을 적지 않는다", () => {
+  const md = fsSync.readFileSync(
+    pathSync.join(process.cwd(), "public/media/촬영목록.md"),
+    "utf-8",
+  );
+  /* 파일명 예시(`t-open-5-good.jpg`)는 빼고 항목 id 만 본다 */
+  const 적힌 = [...md.matchAll(/\| `([a-z]-[a-z0-9-]+)` \|/g)].map((m) => m[1]);
+  const 있어야 = new Set(
+    groups().flatMap((g: { items: { id: string }[] }) => g.items.map((i) => i.id)),
+  );
+  const 없는것 = 적힌.filter((id) => !있어야.has(id));
+  assert.deepEqual(없는것, [], "시드에 없는 항목을 찍으라고 적었다: " + 없는것.join(", "));
+});
