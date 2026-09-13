@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
  *
  *   ⚠️ SDK 를 안 깐다. REST 라 `fetch` 로 된다 —
  *     의존성을 더하면 라이선스 감사까지 같이 고쳐야 한다
- *     (`tests/licenseAudit.test.ts`). Anthropic 호출 때와 같은 판단이다.
+ *     (`tests/licenseAudit.test.ts`). 외부 AI 호출(Gemini) 때와 같은 판단이다.
  */
 
 /** 본문 크기 상한. 이벤트 한 건은 200바이트 남짓이다 */

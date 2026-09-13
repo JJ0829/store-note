@@ -99,9 +99,12 @@ export default function ShootPlanner() {
             누르기 전에 보여야 하므로 버튼 위에 둔다.
             → 05_AI기본법_검토.md §6.2 (1) · §6.3
             ⚠️ 문서 초안은 "포지션명만 전송" 이었으나 **매장 사정 칸도 같이 간다.**
-               사실과 다른 고지는 안 하느니만 못하므로 두 칸이라고 적었다 */}
+               사실과 다른 고지는 안 하느니만 못하므로 두 칸이라고 적었다
+            ★ 2026-09-13 — 제공자 이름도 같은 이유로 고쳤다. Anthropic 에서
+               **Google Gemini** 로 바꿨는데(`038560c`) 이 문장만 옛 이름으로
+               남아 있었다. 국외 이전 대상 사업자를 틀리게 적은 고지다 */}
         <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-[12px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-300">
-          <b>이 기능은 외부 AI 서비스(Anthropic)를 씁니다.</b> 위에 적은{" "}
+          <b>이 기능은 외부 AI 서비스(Google Gemini)를 씁니다.</b> 위에 적은{" "}
           <b>두 칸(포지션·메뉴 이름, 매장 사정)만</b> 전송되고,{" "}
           <b>직원 이름·연락처·시급·출퇴근·체크 기록은 전송되지 않습니다.</b>{" "}
           그러니 <b>매장 사정 칸에 사람 이름이나 연락처를 쓰지 마세요.</b>
