@@ -17,7 +17,7 @@
  *   화면에도 그대로 적어둔다. 급여를 이 숫자로 지급하면 안 된다.
  * ------------------------------------------------------------------ */
 
-import { loadJson, newId, saveJson } from "./store.ts";
+import { loadJson, newUuid, saveJson } from "./store.ts";
 import type { Shift } from "./types.ts";
 import type { Assign } from "./roster.ts";
 
@@ -62,7 +62,7 @@ export function putPunch(data: PunchData, p: Punch): PunchData {
 
 export function newPunch(staffId: string, date: string): Punch {
   return {
-    id: newId("pu"),
+    id: newUuid(),
     staffId,
     date,
     inAt: "",

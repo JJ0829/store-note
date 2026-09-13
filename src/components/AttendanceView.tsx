@@ -20,6 +20,7 @@ import {
   type PunchData,
 } from "@/lib/attendance";
 import { contractOf, loadContracts, type Contract } from "@/lib/contracts";
+import { SKIP, pullPunches, pushAttendance } from "@/lib/serverSync";
 import { InlineUnlock, useOwnerOpen } from "@/components/OwnerGate";
 import { loadSettings, type Settings } from "@/lib/settings";
 import { applyShiftEdits, loadShiftEdits } from "@/lib/shiftEdit";
@@ -71,6 +72,16 @@ export default function AttendanceView({
     setContracts(loadContracts());
     setSettings(loadSettings());
     setShifts(applyShiftEdits(seedShifts, loadShiftEdits()));
+
+    /* ★ 서버에 사본이 있으면 그것으로 덮어쓴다 (2026-09-13).
+       출퇴근은 태블릿 안에만 있으면 기기를 바꾸는 날 통째로 사라진다.
+       로그인 안 했으면 `null` 이 와서 아무 일도 안 일어난다 — 지금까지와 같다. */
+    void pullPunches().then((server) => {
+      if (!server) return;
+      savePunches(server);
+      setPunches(server);
+    });
+
     // ★ 1초마다. 「지금 15:22」 가 30초 늦게 바뀌면 찍은 시각을 의심하게 된다
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
@@ -80,6 +91,19 @@ export default function AttendanceView({
     setPunches(next);
     // ★ 실패를 알려야 한다. 출퇴근이 안 남으면 급여가 틀린다
     save.report("출퇴근 기록", savePunches(next), () => save.report("출퇴근 기록", savePunches(next)));
+    sendUp(next);
+  }
+
+  /* ★ 서버에도 보낸다. **태블릿에 저장된 것과 별개로 알린다** —
+     둘을 한 줄로 묶으면 «태블릿에는 남았는데 서버에 못 갔다» 를 구분 못 하고,
+     그러면 기기를 바꾼 날에야 빈 칸을 보게 된다.
+     로그인 안 했으면 `SKIP` 이 와서 아무 말도 안 한다. */
+  function sendUp(next: PunchData) {
+    if (!roster) return;
+    void pushAttendance(roster.staff, next).then((r) => {
+      if (!r.ok && r.reason === SKIP) return;
+      save.report("출퇴근 기록(서버 보관)", r.ok, () => sendUp(next));
+    });
   }
 
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);

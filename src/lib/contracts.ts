@@ -23,7 +23,7 @@
  *   - 최저임금법 제6조   최저임금 미달 지급 금지
  * ------------------------------------------------------------------ */
 
-import { loadJson, newId, saveJson } from "./store.ts";
+import { loadJson, newUuid, saveJson } from "./store.ts";
 
 export type Contract = {
   id: string;
@@ -62,7 +62,7 @@ export function saveContracts(list: Contract[]): boolean {
 
 export function newContract(staffId: string): Contract {
   return {
-    id: newId("ct"),
+    id: newUuid(),
     staffId,
     startDate: "",
     endDate: "",

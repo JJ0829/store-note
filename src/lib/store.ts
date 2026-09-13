@@ -35,6 +35,33 @@ export function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/**
+ * 서버 표의 id 와 **같은 모양**인 id.
+ *
+ * ★ 왜 `newId` 와 따로 두나 (2026-09-13)
+ *   서버 표의 `id` 는 전부 `uuid` 다. `newId` 가 만드는 `st-a1b2c3` 는 uuid 가
+ *   아니라서 그대로 보내면 거절당한다. 그렇다고 서버가 새 id 를 발급하게 하면
+ *   **브라우저가 가진 id 와 서버의 id 가 달라져** 같은 줄이 두 번 들어가거나
+ *   출퇴근이 어느 직원 것인지 못 잇는다.
+ *
+ *   그래서 **브라우저가 처음부터 uuid 로 만든다.** 그러면 로컬 id 가 곧
+ *   서버 id 이고, 넣을 때도 고칠 때도 같은 값으로 찾는다.
+ *
+ *   ⚠️ 이건 **저장된 것이 하나도 없을 때만** 바꿀 수 있는 것이다
+ *   (2026-09-13 실측: 직원·출퇴근·계약·매출 전부 0건). 기록이 쌓인 뒤에
+ *   바꾸면 옛 id 와 새 id 가 섞인다.
+ */
+export function newUuid(): string {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  /* 아주 오래된 브라우저 대비. 모양만 맞추면 서버가 받는다 */
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0;
+    const v = ch === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* 돈 표기                                                              */
 /* ------------------------------------------------------------------ */

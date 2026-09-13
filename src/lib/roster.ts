@@ -8,6 +8,8 @@
  * 저장은 이 기기(localStorage). 서버 DB는 배포 직전 작업이다.
  * ------------------------------------------------------------------ */
 
+import { newUuid } from "./store.ts";
+
 export type Staff = {
   id: string;
   /** 어느 섹션인지 — 제빵 / 바 / 홀 / 주방 */
@@ -64,8 +66,17 @@ export function saveRoster(data: RosterData): boolean {
   }
 }
 
+/**
+ * 직원 id.
+ *
+ * ★ 2026-09-13 에 `st-a1b2c3` 에서 **uuid** 로 바꿨다.
+ *   서버 `staff.id` 가 `uuid` 라서 옛 모양은 거절당한다. 그리고 서버가 새 id 를
+ *   발급하게 두면 **출퇴근·근로계약이 어느 직원 것인지 못 잇는다**
+ *   (`punches.staff_id` 와 `contracts.staff_id` 가 이 값을 가리킨다).
+ *   저장된 직원이 0명일 때만 바꿀 수 있는 것이었고, 그때 바꿨다.
+ */
 export function newStaffId(): string {
-  return "st-" + Math.random().toString(36).slice(2, 9);
+  return newUuid();
 }
 
 export function ymd(d: Date): string {

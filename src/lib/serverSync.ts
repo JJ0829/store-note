@@ -1,0 +1,262 @@
+import type { Punch, PunchData } from "./attendance.ts";
+import type { Contract } from "./contracts.ts";
+import type { Staff } from "./roster.ts";
+
+/* ------------------------------------------------------------------ *
+ * 브라우저 ↔ 서버 — 매장 데이터를 옮기는 층
+ *
+ * ★ 왜 localStorage 를 안 버리나
+ *   화면이 전부 **동기로** 읽는다(`loadPunches()` 가 바로 값을 돌려준다).
+ *   그걸 비동기로 바꾸면 화면 30개를 다 고쳐야 하고, 주방 와이파이가
+ *   끊기면 앱이 통째로 멈춘다. 그래서 **localStorage 는 그대로 두고**
+ *   서버를 «사라지지 않는 사본» 으로 옆에 붙인다.
+ *
+ *     화면 열 때  → 서버에서 받아 localStorage 에 덮어쓴다 (pull)
+ *     저장할 때   → localStorage 에 쓰고 서버에도 보낸다  (push)
+ *
+ * ★ 로그인 안 했으면 아무 일도 안 한다.
+ *   `STORE_PIN` 없으면 열리고 `SUPABASE_URL` 없으면 파일에 쌓는 것과 같은
+ *   규율이다 — **9/18 데모데이에서 로그인이 길을 막으면 안 된다.**
+ *
+ * ★ 실패를 삼키지 않는다.
+ *   못 보냈으면 `{ok:false, reason}` 을 그대로 돌려준다. 화면이 그 문장을
+ *   띄운다. 조용히 넘어가면 사장님은 저장된 줄 알고, 기기를 바꾼 날
+ *   아무것도 없다는 걸 알게 된다 — 그때는 다시 못 모은다.
+ * ------------------------------------------------------------------ */
+
+export type SyncResult =
+  | { ok: true; rows: number }
+  | { ok: false; reason: string };
+
+/**
+ * 「서버를 안 쓰는 상태」 — 오류가 아니다.
+ *
+ * ★ 이걸 오류와 나누지 않으면 **로그인 안 한 사람에게 빨간 경고가 뜬다.**
+ *   로그인은 선택이고(`24_DB이관순서.md`), 9/18 데모데이에서 로그인 화면이
+ *   길을 막으면 안 된다. 화면은 이 값을 보면 아무 말도 하지 않는다.
+ */
+export const SKIP = "skip";
+
+/** 서버 쪽 사정으로 «지금은 안 보낸다» 인 응답들. 사람에게 보일 것이 아니다 */
+const SKIP_REASONS = new Set(["anon", "off", "not-configured", "no-store"]);
+
+export function isSkip(r: SyncResult): boolean {
+  return !r.ok && r.reason === SKIP;
+}
+
+async function get(table: string): Promise<unknown[] | null> {
+  try {
+    const res = await fetch(`/api/data/${table}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { ok?: boolean; rows?: unknown[] };
+    return body.ok && Array.isArray(body.rows) ? body.rows : null;
+  } catch {
+    return null;
+  }
+}
+
+async function put(table: string, rows: unknown[]): Promise<SyncResult> {
+  try {
+    const res = await fetch(`/api/data/${table}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rows }),
+    });
+    const body = (await res.json().catch(() => null)) as
+      | { ok?: boolean; wrote?: number; reason?: string }
+      | null;
+    if (res.ok && body?.ok) return { ok: true, rows: body.wrote ?? rows.length };
+    const why = body?.reason ?? "";
+    /* 로그인 안 했거나 설정이 없는 것은 «실패» 가 아니다 — 조용히 넘어간다 */
+    if (SKIP_REASONS.has(why)) return { ok: false, reason: SKIP };
+    return { ok: false, reason: why || `보내지 못했습니다 (${res.status})` };
+  } catch {
+    return { ok: false, reason: "서버에 연결하지 못했습니다" };
+  }
+}
+
+/** 지금 로그인해 있고 매장이 연결돼 있는가 */
+export async function signedIn(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/auth/me", { cache: "no-store" });
+    if (!res.ok) return false;
+    const who = (await res.json()) as { state?: string };
+    return who.state === "ok";
+  } catch {
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 모양 바꾸기 — 앱은 camelCase, 표는 snake_case
+ *
+ * ⚠️ 여기서 칸 하나를 빠뜨리면 **그 값만 조용히 사라진다.** 화면은 멀쩡히
+ *   돌고, 기기를 바꾼 날에야 빈 칸을 보게 된다. 그래서 양쪽을 한 곳에
+ *   붙여 두고 `tests/serverSync.test.ts` 가 왕복을 확인한다.
+ * ------------------------------------------------------------------ */
+
+type Row = Record<string, unknown>;
+
+const str = (v: unknown): string => (typeof v === "string" ? v : "");
+const num = (v: unknown): number => (typeof v === "number" ? v : Number(v) || 0);
+const bool = (v: unknown): boolean => v === true;
+
+export function staffToRow(s: Staff): Row {
+  return {
+    id: s.id,
+    name: s.name,
+    section: s.section || null,
+    email: s.email || null,
+    phone: s.phone || null,
+  };
+}
+
+export function rowToStaff(r: Row): Staff {
+  return {
+    id: str(r.id),
+    section: str(r.section),
+    name: str(r.name),
+    email: str(r.email),
+    phone: str(r.phone),
+  };
+}
+
+export function punchToRow(p: Punch): Row {
+  return {
+    id: p.id,
+    staff_id: p.staffId,
+    business_date: p.date,
+    in_at: p.inAt || null,
+    out_at: p.outAt || null,
+    /* ★ 마감조는 자정을 넘는다. 퇴근이 출근보다 «이르면» 넘긴 것이다 —
+       이 값을 안 넣으면 서버에서 근로시간이 음수로 나온다 */
+    crosses_midnight: !!(p.inAt && p.outAt && p.outAt < p.inAt),
+    break_min: p.breakMin,
+    note: p.note || null,
+  };
+}
+
+export function rowToPunch(r: Row): Punch {
+  return {
+    id: str(r.id),
+    staffId: str(r.staff_id),
+    date: str(r.business_date),
+    inAt: str(r.in_at).slice(0, 5),
+    outAt: str(r.out_at).slice(0, 5),
+    breakMin: num(r.break_min),
+    note: str(r.note),
+  };
+}
+
+export function contractToRow(c: Contract): Row {
+  return {
+    id: c.id,
+    staff_id: c.staffId,
+    start_date: c.startDate,
+    end_date: c.endDate || null,
+    hourly_wage: c.hourlyWage,
+    weekly_hours: c.weeklyHours,
+    work_days: c.workDays,
+    work_start: c.startTime || null,
+    work_end: c.endTime || null,
+    /* ★ 이 둘은 법정 점검이 읽는 값이다 (`0006_contract_flags.sql`).
+       빠뜨리면 앱이 «교부 안 했습니다» 라고 거짓으로 경고한다 */
+    handed_over: c.handedOver,
+    insured: c.insured,
+    memo: c.note || null,
+  };
+}
+
+export function rowToContract(r: Row): Contract {
+  return {
+    id: str(r.id),
+    staffId: str(r.staff_id),
+    startDate: str(r.start_date),
+    endDate: str(r.end_date),
+    hourlyWage: num(r.hourly_wage),
+    weeklyHours: num(r.weekly_hours),
+    workDays: Array.isArray(r.work_days) ? (r.work_days as number[]).map(num) : [],
+    startTime: str(r.work_start).slice(0, 5),
+    endTime: str(r.work_end).slice(0, 5),
+    handedOver: bool(r.handed_over),
+    insured: bool(r.insured),
+    note: str(r.memo),
+  };
+}
+
+/** `punches[staffId][날짜]` 를 줄 목록으로 편다 */
+export function flattenPunches(data: PunchData): Punch[] {
+  const out: Punch[] = [];
+  for (const byDate of Object.values(data)) for (const p of Object.values(byDate)) out.push(p);
+  return out;
+}
+
+/** 줄 목록을 다시 `punches[staffId][날짜]` 로 접는다 */
+export function nestPunches(list: Punch[]): PunchData {
+  const out: PunchData = {};
+  for (const p of list) {
+    if (!p.staffId || !p.date) continue;
+    (out[p.staffId] ??= {})[p.date] = p;
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * 실제로 주고받는 함수
+ * ------------------------------------------------------------------ */
+
+export async function pullStaff(): Promise<Staff[] | null> {
+  const rows = await get("staff");
+  return rows ? rows.map((r) => rowToStaff(r as Row)) : null;
+}
+
+export async function pushStaff(list: Staff[]): Promise<SyncResult> {
+  return put("staff", list.map(staffToRow));
+}
+
+export async function pullPunches(): Promise<PunchData | null> {
+  const rows = await get("punches");
+  return rows ? nestPunches(rows.map((r) => rowToPunch(r as Row))) : null;
+}
+
+export async function pushPunches(data: PunchData): Promise<SyncResult> {
+  return put("punches", flattenPunches(data).map(punchToRow));
+}
+
+export async function pullContracts(): Promise<Contract[] | null> {
+  const rows = await get("contracts");
+  return rows ? rows.map((r) => rowToContract(r as Row)) : null;
+}
+
+export async function pushContracts(list: Contract[]): Promise<SyncResult> {
+  return put("contracts", list.map(contractToRow));
+}
+
+/* ------------------------------------------------------------------ *
+ * 순서가 있는 것들
+ *
+ * ★ `punches.staff_id` 와 `contracts.staff_id` 는 `staff.id` 를 가리키는
+ *   **외래키**다. 직원이 서버에 없는 채로 출퇴근을 보내면 줄이 통째로
+ *   거부되는데, 화면에는 「보내지 못했습니다」 로만 보여서 원인을 못 찾는다.
+ *   그래서 **직원을 먼저 보내고** 그 다음에 보낸다.
+ * ------------------------------------------------------------------ */
+
+/** 직원 → 출퇴근 순서로 보낸다 */
+export async function pushAttendance(
+  staff: Staff[],
+  data: PunchData,
+): Promise<SyncResult> {
+  const s = await pushStaff(staff);
+  if (!s.ok && s.reason !== SKIP) return s;
+  return pushPunches(data);
+}
+
+/** 직원 → 근로계약 순서로 보낸다 */
+export async function pushContractSet(
+  staff: Staff[],
+  list: Contract[],
+): Promise<SyncResult> {
+  const s = await pushStaff(staff);
+  if (!s.ok && s.reason !== SKIP) return s;
+  return pushContracts(list);
+}
