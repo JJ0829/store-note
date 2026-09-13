@@ -133,6 +133,43 @@
       "summary": "영업 끝나고 하는 마감입니다. 내일 아침 오픈조가 바로 시작할 수 있는 상태로 만들어두는 게 목표예요. 빠르게보다 빠짐없이가 중요합니다 — 여기서 빠뜨린 건 내일 아침에 드러납니다. 빨간 표시는 건너뛰지 마세요.",
       "sections": [
         {
+          "id": "sec-close-hall",
+          "title": "홀 · 청소 (19시부터)",
+          "note": "영업 종료를 기다리지 말고 손님이 뜸해지는 19시쯤부터 미리 합니다. 아래 기계·위생은 영업이 끝난 뒤입니다.",
+          "steps": [
+            {
+              "id": "t-close-hall-1",
+              "title": "재료 준비",
+              "desc": "영업하면서 떨어진 것을 채우고, 내일 아침 오픈조가 바로 쓸 수 있게 미리 꺼내둡니다. 양은 그날 판매량 보고 정합니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t-close-hall-2",
+              "title": "홀 정리",
+              "desc": "테이블·의자·바닥 순서로. 아직 영업 중이라 한 번에 몰아서 하지 않고 자리 비는 대로 합니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "t-close-hall-3",
+              "title": "화장실 청소",
+              "desc": "변기·세면대·바닥, 그리고 휴지·비누 보충. 손님이 있는 시간이라 문 앞에 표시를 걸고 합니다.",
+              "tip": null,
+              "critical": true,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            }
+          ]
+        },
+        {
           "id": "sec-close-1",
           "title": "기계",
           "note": null,
@@ -1482,83 +1519,6 @@
       ]
     },
     {
-      "id": "prep-evening",
-      "slug": "evening",
-      "name": "마감 준비",
-      "note": "19:00~22:00. 영업하면서 같이 합니다. 22시 영업이 끝난 뒤의 마감 작업은 마감 체크리스트에 있습니다.",
-      "tasks": [
-        {
-          "id": "e-1",
-          "title": "재료 준비",
-          "desc": "영업하면서 떨어진 것을 채우고, 내일 아침 오픈조가 바로 쓸 수 있게 미리 꺼내둡니다. 양은 그날 판매량 보고 정합니다.",
-          "kind": "routine",
-          "trigger": {
-            "type": "daily",
-            "at": "19:00"
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "내일 아침 오픈조가 그만큼 늦게 엽니다. 되돌릴 수는 있지만 아침에 몰립니다.",
-          "quantityVaries": true,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null,
-          "optional": false,
-          "group": null
-        },
-        {
-          "id": "e-2",
-          "title": "홀 정리",
-          "desc": "테이블·의자·바닥 순서로. 아직 영업 중이라 한 번에 몰아서 하지 않고 자리 비는 대로 합니다.",
-          "kind": "routine",
-          "trigger": {
-            "type": "daily",
-            "at": "19:00"
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "22시 뒤로 밀립니다. 마감이 그만큼 늦어집니다.",
-          "quantityVaries": false,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null,
-          "optional": false,
-          "group": null
-        },
-        {
-          "id": "e-3",
-          "title": "화장실 청소",
-          "desc": "변기·세면대·바닥, 그리고 휴지·비누 보충. 손님이 있는 시간이라 문 앞에 표시를 걸고 합니다.",
-          "kind": "routine",
-          "trigger": {
-            "type": "daily",
-            "at": "19:00"
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "손님이 바로 봅니다. 내일 아침에 치워도 오늘 본 사람에게는 늦습니다.",
-          "quantityVaries": false,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null,
-          "optional": false,
-          "group": null
-        }
-      ]
-    },
-    {
       "id": "prep-cycle",
       "slug": "cycle",
       "name": "주기 점검",
@@ -1944,11 +1904,6 @@
       "note": "어제 걸어둔 것 받고, 내일 것 다시 걸어두기",
       "focus": [
         {
-          "kind": "training",
-          "slug": "bakery-morning",
-          "label": "제빵 순서 보기"
-        },
-        {
           "kind": "recipes",
           "label": "레시피 찾기"
         }
@@ -1997,11 +1952,6 @@
           "kind": "prep",
           "slug": "afternoon",
           "label": "오후 프렙 (내일 것 걸기)"
-        },
-        {
-          "kind": "prep",
-          "slug": "evening",
-          "label": "마감 준비 (19시부터)"
         },
         {
           "kind": "checklist",

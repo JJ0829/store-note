@@ -205,26 +205,40 @@ test("없는 slug를 물으면 null (404로 이어진다)", () => {
 });
 
 test("★ 19:00~22:00 마감 준비 구간에 열 화면이 있다", () => {
-  // day-flow 검수에서 나온 구멍(2026-09-09). 영업 종료 전 3시간 동안
-  // 마감조가 여는 화면이 없었다 — cafe-close 체크리스트는 22시 이후 것이다
-  const evening = getPrepListBySlug("evening");
-  assert.ok(evening, "마감 준비 목록이 없다");
-  assert.ok(evening.tasks.length > 0, "마감 준비 목록이 비었다");
-  for (const t of evening.tasks) {
-    assert.equal(t.trigger.type, "daily", `${t.id}: 매일 뜨는 일이 아니다`);
-    assert.equal(
-      (t.trigger as { at: string }).at,
-      "19:00",
-      `${t.id}: 19:00 이 아니다`,
-    );
-  }
+  /* day-flow 검수에서 나온 구멍(2026-09-09). 영업 종료 전 3시간 동안
+     마감조가 여는 화면이 없었다 — 마감 체크리스트는 22시 이후 것이었다.
 
-  const close = listShifts().find((s) => s.name === "마감조");
-  assert.ok(close, "마감조가 없다");
+     ★ 2026-09-13 — 그 구멍을 **별도 프렙 목록(`evening`)이 아니라
+       마감 체크리스트 안의 한 섹션**으로 메운다 (사장님 지적:
+       *"마감준비나 체크리스트나 거기서 거기지"*).
+
+       실제로 둘은 같은 사람이 이어서 하는 한 흐름이고, 화면이 둘로
+       나뉘면 마감조가 뭘 눌러야 할지 고르게 된다. 다만 **19시라는 시각은
+       버리면 안 된다** — 그게 이 구멍의 내용 전부다. 그래서 섹션 제목과
+       안내 문구에 남기고, 하는 순서대로 맨 앞에 둔다. */
+  const close = listPositions().find((p) => p.shareSlug === "cafe-close");
+  assert.ok(close, "마감 체크리스트가 없다");
+
+  const hall = close.sections.find((sec) => sec.title.includes("19시"));
+  assert.ok(hall, "19시부터 하는 구간이 마감 체크리스트에 없다 — 그 3시간이 다시 빈다");
+  assert.ok(hall.steps.length > 0, "19시 구간이 비었다");
   assert.ok(
-    close.focus.some((f) => f.kind === "prep" && f.slug === "evening"),
-    "마감조 화면에 마감 준비가 안 걸려 있다 — 만들어놓고 아무도 못 연다",
+    hall.note && hall.note.includes("19"),
+    "19시라는 시각이 화면 문구에 없다 — 제목만으로는 왜 미리 하는지 모른다",
   );
+  assert.equal(close.sections[0].id, hall.id, "19시 구간이 맨 앞에 없다 — 하는 순서와 다르다");
+
+  const closeShift = listShifts().find((s) => s.name === "마감조");
+  assert.ok(closeShift, "마감조가 없다");
+  assert.ok(
+    closeShift.focus.some((f) => f.kind === "checklist" && f.slug === "cafe-close"),
+    "마감조 화면에 마감 체크리스트가 안 걸려 있다 — 만들어놓고 아무도 못 연다",
+  );
+  assert.ok(
+    !closeShift.focus.some((f) => f.kind === "prep" && f.slug === "evening"),
+    "없어진 목록(evening)이 마감조 화면에 아직 걸려 있다",
+  );
+  assert.equal(getPrepListBySlug("evening"), null, "evening 목록이 아직 남아 있다");
 });
 
 test("★ 추가 옵션(optionOf)은 같은 목록의 실재하는 항목을 가리킨다", () => {
@@ -384,9 +398,8 @@ test("★★ 진행률 분모 — 묶음 머리는 안 세고 그 안의 항목�
   // 바 부재료는 안에 든 게 전부 optional 이라 그 카드 자체가 할 일(점검했다)이다
   assert.equal(countedOf(af).length, 5, "오후 프렙 분모가 5가 아니다");
 
-  const ev = getPrepListBySlug("evening");
-  assert.ok(ev);
-  assert.equal(countedOf(ev).length, 3);
+  /* 마감 준비(evening)는 2026-09-13 에 마감 체크리스트로 합쳐졌다.
+     프렙에 남을 이유가 없었다 — 세 항목 다 `routine` 이라 기다릴 것이 없었다. */
 });
 
 test("★★ 주기 숫자를 시드에 박아두지 않는다 — 매장마다 다르다", () => {
@@ -466,10 +479,9 @@ test("★ 숫자 정본 — 프렙 목록의 개수", () => {
   const want: Record<string, { all: number; counted: number; irreversible: number }> = {
     midday: { all: 6, counted: 6, irreversible: 0 },
     afternoon: { all: 11, counted: 5, irreversible: 7 },
-    evening: { all: 3, counted: 3, irreversible: 0 },
     cycle: { all: 16, counted: 13, irreversible: 1 },
   };
-  assert.equal(listPrepLists().length, 4, `프렙 목록 수가 바뀌었다 — ${정본}`);
+  assert.equal(listPrepLists().length, 3, `프렙 목록 수가 바뀌었다 — ${정본}`);
   for (const list of listPrepLists()) {
     const w = want[list.slug];
     assert.ok(w, `모르는 프렙 목록 ${list.slug} — ${정본}`);
@@ -490,7 +502,7 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   const positions = listPositions();
   assert.equal(positions.length, 3, `포지션 수 — ${정본}`);
   const positionSteps = positions.reduce((n, p) => n + countTasks(p), 0);
-  assert.equal(positionSteps, 26, `포지션 스텝 합계 — ${정본}`);
+  assert.equal(positionSteps, 29, `포지션 스텝 합계 — ${정본}`);
 
   const recipeSteps = listRecipes().reduce(
     (n, r) => n + r.sections.reduce((m, s) => m + s.steps.length, 0),
@@ -499,7 +511,7 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   assert.equal(recipeSteps, 32, `레시피 스텝 합계 — ${정본}`);
 
   const prepTasks = listPrepLists().reduce((n, l) => n + l.tasks.length, 0);
-  assert.equal(prepTasks, 36, `프렙 항목 합계 — ${정본}`);
+  assert.equal(prepTasks, 33, `프렙 항목 합계 — ${정본}`);
 
   /* ★ 촬영 대상은 프렙 **전체(30)가 아니라 묶을 머리를 뺀 27** 이다 (2026-09-12).
    *
@@ -532,5 +544,5 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
 test("★ 숫자 정본 — 레시피가 붙은 프렙 · 수량이 바뀌는 프렙", () => {
   const all = listPrepLists().flatMap((l) => l.tasks);
   assert.equal(all.filter((t) => t.recipeSlug).length, 8, `레시피가 붙은 프렙 — ${정본}`);
-  assert.equal(all.filter((t) => t.quantityVaries).length, 10, `수량이 바뀌는 프렙 — ${정본}`);
+  assert.equal(all.filter((t) => t.quantityVaries).length, 9, `수량이 바뀌는 프렙 — ${정본}`);
 });

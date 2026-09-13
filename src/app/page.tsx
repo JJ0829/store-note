@@ -67,7 +67,10 @@ export default function Home() {
   const shifts = listShifts();
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-[560px] bg-zinc-50 px-4 py-8 dark:bg-zinc-950">
+    /* ★ pb-24 — 하단 탭바가 `fixed` 라 여백이 없으면 **마지막 카드(촬영)가**
+       **탭바 밑에 깔려서 반쯤 잘린다.** 다른 화면은 `Screen`(ui.tsx)이
+       같은 값을 주는데 이 화면만 `<main>` 을 직접 써서 빠져 있었다. */
+    <main className="mx-auto min-h-dvh w-full max-w-[560px] bg-zinc-50 px-4 py-8 pb-24 dark:bg-zinc-950">
       <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
       <h1 className="mt-1 flex flex-wrap items-baseline text-2xl font-bold">
         오늘
@@ -186,7 +189,7 @@ export default function Home() {
       {/* 근무표(계획) → 출퇴근(실제) → 계약서(조건). 이 순서로 이어진다.
           출퇴근은 탭바에 있어서 여기서는 뺐다 */}
       <Fold
-        title="사람"
+        title="직원"
         note="근무표가 계획, 출퇴근이 실제입니다. 두 개의 차이가 근태이고, 계약서의 시급을 곱하면 인건비가 됩니다."
       >
         <div className="flex flex-col gap-2">
@@ -218,7 +221,7 @@ export default function Home() {
       {/* ---------- 돈 ---------- */}
       {/* 거래처(단가) → 원가, 그리고 매출에서 뺀다. 발주는 탭바에 있다 */}
       <Fold
-        title="돈"
+        title="재무"
         note="거래처 단가를 넣으면 레시피에서 원가가 나오고, 출퇴근에서 인건비가 나옵니다. 매출에서 둘을 빼면 그날 하루 순익입니다."
       >
         <div className="flex flex-col gap-2">
