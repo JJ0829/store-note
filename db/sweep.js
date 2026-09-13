@@ -193,9 +193,16 @@ const 공통칸 = new Set([
         left join pg_policy p on p.polrelid=c.oid
        where n.nspname='public' and c.relkind='r'
        group by c.relname, c.relrowsecurity, c.relforcerowsecurity`);
-    const bad = t.filter((r) => !r.rls || !r.forced || r.pols === 0 || r["쓰기없음"] > 0)
+    /* ★ 제목이 「매장 표는」인데 실제로는 전 표를 봤다. 둘을 맞춘다 (2026-09-13).
+       `events`(이용 기록)에는 store_id 가 없다 — 매장을 안 나누는 표다.
+       force 는 «주인도 정책을 우회 못 하게» 인데, 이 표가 막는 상대는 익명 키라
+       주인이 아니다. 걸면 사장님이 대시보드에서 지표를 읽는 것만 막힌다.
+       ★ 그래도 «RLS 와 정책이 아예 없는 표» 는 verify.js 가 **전 표**로 본다 —
+         여기서 좁힌다고 통제가 새지 않는다. */
+    const 매장것 = t.filter((r) => 매장표.has(r.relname));
+    const bad = 매장것.filter((r) => !r.rls || !r.forced || r.pols === 0 || r["쓰기없음"] > 0)
       .map((r) => `${r.relname}  rls=${r.rls} force=${r.forced} 정책=${r.pols} 쓰기조건없음=${r["쓰기없음"]}`);
-    bad.length === 0 ? ok("빠진 곳 없음", `표 ${t.length}개 전부`) : no("통제가 덜 걸린 표", bad);
+    bad.length === 0 ? ok("빠진 곳 없음", `매장 표 ${매장것.length}개 전부`) : no("통제가 덜 걸린 표", bad);
   }
 
   // ── 규칙 6. SQL 의 칸이 그림(DBML)에도 있다 ─────────────────────────

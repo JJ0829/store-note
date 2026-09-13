@@ -25,7 +25,7 @@ export default function RecipeDetail({
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    log("recipe_view", { recipeSlug: recipe.slug });
+    log("레시피_열기", { recipeSlug: recipe.slug });
   }, [recipe.slug]);
 
   return (
@@ -61,7 +61,7 @@ export default function RecipeDetail({
                 type="button"
                 onClick={() => {
                   setScale(s);
-                  log("recipe_scale", { recipeSlug: recipe.slug, scale: s });
+                  log("레시피_배수", { recipeSlug: recipe.slug, scale: s });
                 }}
                 className={[
                   "min-w-[56px] rounded-xl border-2 px-3 py-2.5 text-[15px] font-bold tabular-nums transition-colors",

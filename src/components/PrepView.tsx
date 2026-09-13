@@ -349,7 +349,7 @@ export default function PrepView({
     setMarks(loadMarks(`prep:${list.slug}`, businessDay()));
     setCycleDone(loadCycleDone());
     setCycleEveryState(loadCycleEvery());
-    log("prep_view", { prepSlug: list.slug });
+    log("프렙_열기", { prepSlug: list.slug });
   }, [storageKey, keyPrefix, list.slug]);
 
   const toggle = useCallback(
@@ -359,7 +359,7 @@ export default function PrepView({
         if (next.has(task.id)) next.delete(task.id);
         else {
           next.add(task.id);
-          log("prep_check", {
+          log("프렙_체크", {
             prepSlug: list.slug,
             taskId: task.id,
             recoverable: task.recoverable,
@@ -397,7 +397,7 @@ export default function PrepView({
       save.report("점검 기록", saveCycleDone(next), () =>
         save.report("점검 기록", saveCycleDone(next)),
       );
-      log("prep_check", {
+      log("프렙_체크", {
         prepSlug: list.slug,
         taskId: task.id,
         recoverable: task.recoverable,
@@ -462,7 +462,7 @@ export default function PrepView({
   const setScale = useCallback(
     (taskId: string, s: number) => {
       setScales((prev) => ({ ...prev, [taskId]: s }));
-      log("prep_scale", { prepSlug: list.slug, taskId, scale: s });
+      log("프렙_배수", { prepSlug: list.slug, taskId, scale: s });
     },
     [list.slug],
   );

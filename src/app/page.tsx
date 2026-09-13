@@ -4,6 +4,7 @@ import StorageAlarm from "@/components/StorageAlarm";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import NowPanel from "@/components/NowPanel";
 import Clock from "@/components/Clock";
+import SessionBadge from "@/components/SessionBadge";
 import Fold from "@/components/Fold";
 import { OwnerLockButton } from "@/components/OwnerGate";
 import { StoreLockButton } from "@/components/StoreGate";
@@ -71,7 +72,14 @@ export default function Home() {
        **탭바 밑에 깔려서 반쯤 잘린다.** 다른 화면은 `Screen`(ui.tsx)이
        같은 값을 주는데 이 화면만 `<main>` 을 직접 써서 빠져 있었다. */
     <main className="mx-auto min-h-dvh w-full max-w-[560px] bg-zinc-50 px-4 py-8 pb-24 dark:bg-zinc-950">
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
+      {/* ★ 로그인 상태는 **맨 위 오른쪽**이다. 공용 태블릿이라
+          «지금 누구로 열려 있나» 가 매출·시급을 보기 전에 보여야 한다.
+          서버에 Supabase 설정이 없으면 이 자리는 비어 있다 — 없는 기능을
+          광고하지 않는다. */}
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
+        <SessionBadge />
+      </div>
       <h1 className="mt-1 flex flex-wrap items-baseline text-2xl font-bold">
         오늘
         <Clock />
@@ -102,9 +110,9 @@ export default function Home() {
           탭바에 있는 쪽이다.
           ================================================================ */}
 
-      {/* ---------- 프렙 — 매일 연다. 유일하게 펴 둔다 ---------- */}
+      {/* ---------- 할 일 — 매일 연다. 유일하게 펴 둔다 ---------- */}
       <Fold
-        title="프렙"
+        title="할 일"
         note="오늘 해야 내일 쓸 수 있는 것들입니다."
         count={`${prepLists.length}개 목록`}
         open
@@ -218,36 +226,6 @@ export default function Home() {
         </div>
       </Fold>
 
-      {/* ---------- 돈 ---------- */}
-      {/* 거래처(단가) → 원가, 그리고 매출에서 뺀다. 발주는 탭바에 있다 */}
-      <Fold
-        title="재무"
-        note="거래처 단가를 넣으면 레시피에서 원가가 나오고, 출퇴근에서 인건비가 나옵니다. 매출에서 둘을 빼면 그날 하루 순익입니다."
-      >
-        <div className="flex flex-col gap-2">
-          <Tile
-            href="/sales"
-            name="매출"
-            note="마감에 세 칸만 넣으면 매출 − 재료비 − 인건비가 계산됩니다"
-            lock
-          />
-          <Tile
-            href="/cost"
-            name="원가"
-            note="메뉴별 재료비와 원가율. 목표 원가율에서 판매가를 거꾸로 계산합니다"
-            lock
-          />
-          <Tile
-            href="/vendors"
-            name="거래처"
-            note="전화·마감 시각·배송 요일과 품목 단가. 원가가 여기서 나옵니다"
-            lock
-          />
-        </div>
-
-        <OwnerLockButton />
-      </Fold>
-
       {/* ---------- 교육 ---------- */}
       <Fold
         title="포지션별 체크리스트"
@@ -311,6 +289,36 @@ export default function Home() {
             ›
           </span>
         </Link>
+      </Fold>
+
+      {/* ---------- 돈 ---------- */}
+      {/* 거래처(단가) → 원가, 그리고 매출에서 뺀다. 발주는 탭바에 있다 */}
+      <Fold
+        title="재무"
+        note="거래처 단가를 넣으면 레시피에서 원가가 나오고, 출퇴근에서 인건비가 나옵니다. 매출에서 둘을 빼면 그날 하루 순익입니다."
+      >
+        <div className="flex flex-col gap-2">
+          <Tile
+            href="/sales"
+            name="매출"
+            note="마감에 세 칸만 넣으면 매출 − 재료비 − 인건비가 계산됩니다"
+            lock
+          />
+          <Tile
+            href="/cost"
+            name="원가"
+            note="메뉴별 재료비와 원가율. 목표 원가율에서 판매가를 거꾸로 계산합니다"
+            lock
+          />
+          <Tile
+            href="/vendors"
+            name="거래처"
+            note="전화·마감 시각·배송 요일과 품목 단가. 원가가 여기서 나옵니다"
+            lock
+          />
+        </div>
+
+        <OwnerLockButton />
       </Fold>
     </main>
   );

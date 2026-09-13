@@ -19,6 +19,7 @@
 
 import { loadJson, newId, saveJson } from "./store.ts";
 import type { Shift } from "./types.ts";
+import type { Assign } from "./roster.ts";
 
 export type Punch = {
   id: string;
@@ -319,4 +320,79 @@ export function dayLaborCost(
   const base = (worked / 60) * wage;
   const premium = fiveOrMore ? (day.overtimeMin / 60) * wage * 0.5 : 0;
   return base + premium;
+}
+
+/* ------------------------------------------------------------------ */
+/* 조가 지금 정말 일하고 있는가                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * ★ 근무조 시간은 **예정**일 뿐이다 (사장님 지적 2026-09-13).
+ *
+ * 홈 화면이 근무조 시간표만 보고 「근무 중」을 붙이면, 13:48 에 열었을 때
+ * 제빵(05:00~13:00)이 **아무도 출근을 안 찍었는데도** 방금 끝난 것처럼
+ * 보이거나, 반대로 13:00 을 넘겨 일하는 날에 「끝남」으로 뜬다.
+ * 둘 다 화면이 모르는 것을 아는 척하는 것이다.
+ *
+ * 그래서 「근무 중」은 **찍힌 기록**으로만 판정한다.
+ *   출근을 찍었고 퇴근을 안 찍었다 → 근무 중
+ *   퇴근까지 찍었다               → 퇴근함
+ *   아무도 안 찍었다              → 아무 말도 하지 않는다 (예정만 보여준다)
+ *
+ * 근무표의 `assign` 은 **조 이름**을 담는다(조 id 가 아니다). 그래서
+ * 여기서도 조 이름을 열쇠로 쓴다 — `estimateDay` 가 쓰는 방식과 같다.
+ */
+export type ShiftPunchState = {
+  /** 출근을 찍고 아직 퇴근을 안 찍은 사람 수 */
+  working: number;
+  /** 퇴근까지 찍은 사람 수 */
+  finished: number;
+  /** 가장 이른 출근 시각. 없으면 null */
+  firstIn: string | null;
+  /** 퇴근까지 찍힌 사람들의 실근로 합계(분). 없으면 null */
+  workedMin: number | null;
+};
+
+/**
+ * 조 이름 → 지금 상태.
+ *
+ * `dates` 에 **어제도 같이 넣는다.** 마감조가 자정을 넘겨 01:00 에 퇴근하는
+ * 날이 있는데(사장님 확인 2026-09-09), 오늘 날짜만 보면 그 사람은 화면에서
+ * 사라진다. 어제 것은 **아직 안 닫힌 기록**만 살린다 — 어제 퇴근까지 찍고
+ * 끝난 조를 오늘 화면에 「퇴근함」으로 띄우면 그것도 거짓말이다.
+ */
+export function shiftPunchStates(
+  assign: Assign,
+  punches: PunchData,
+  dates: string[],
+): Record<string, ShiftPunchState> {
+  const out: Record<string, ShiftPunchState> = {};
+
+  const bump = (name: string): ShiftPunchState =>
+    (out[name] ??= { working: 0, finished: 0, firstIn: null, workedMin: null });
+
+  dates.forEach((date, i) => {
+    const isToday = i === 0;
+    for (const [staffId, byDate] of Object.entries(assign)) {
+      const name = byDate?.[date];
+      if (!name) continue; // 휴무이거나 그날 근무표에 없다
+      const p = punches[staffId]?.[date];
+      if (!p || !p.inAt) continue; // 안 찍었으면 아무 말도 안 한다
+
+      const open = !p.outAt;
+      if (!isToday && !open) continue; // 어제 것은 안 닫힌 기록만
+
+      const st = bump(name);
+      if (open) {
+        st.working += 1;
+      } else {
+        st.finished += 1;
+        const w = workedMinutes(p);
+        if (w !== null) st.workedMin = (st.workedMin ?? 0) + w;
+      }
+      if (st.firstIn === null || p.inAt < st.firstIn) st.firstIn = p.inAt;
+    }
+  });
+
+  return out;
 }

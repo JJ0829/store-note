@@ -465,8 +465,6 @@ const DATA = {
        «오픈조가 오후 프렙 담당» 으로 읽힌다 — 그건 마감조 일이다. */
     { id:"sh-open",   name:"오픈조", start:"07:30", end:"15:30", note:"오픈 준비 → 오전 영업",
       focus:[{kind:"checklist", slug:"cafe-open", label:"오픈 체크리스트"}] },
-    { id:"sh-middle", name:"미들",   start:"11:00", end:"19:00", note:"피크 커버 → 13시 중간 점검",
-      focus:[{kind:"prep", slug:"midday", label:"중간 점검"},{kind:"recipes", label:"레시피 찾기"}] },
     { id:"sh-close",  name:"마감조", start:"14:30", end:"22:30", note:"오후 영업 → 19시부터 마감 준비 → 22시 영업 종료 → 22:30 마감 완료",
       focus:[{kind:"prep", slug:"afternoon", label:"오후 프렙 (내일 것 걸기)"},{kind:"checklist", slug:"cafe-close", label:"마감 체크리스트"}] }
   ],
@@ -489,6 +487,16 @@ const DATA = {
         { id:"sec-open-3", title:"매장 열기", note:null, steps:[
           { id:"t-open-8", title:"쇼케이스 진열 + 가격표·알레르기 표시", desc:"제빵조가 구운 것을 받아 진열합니다. 알레르기 표시가 빠지면 법적 문제가 됩니다.", critical:true, tip:null },
           { id:"t-open-9", title:"POS 개시, 잔돈 확인", desc:"시재 확인하고 영수증 용지 남은 양도 같이 봅니다.", critical:false, tip:null }
+        ]},
+        /* ★ 중간 점검 6개를 여기로 옮겼다 (사장님 지시 2026-09-13). 미들조를 없앴으니
+           그 일은 오픈조가 나가기 전에 한다. 목록을 따로 두면 여는 사람이 없다. */
+        { id:"sec-open-4", title:"퇴근 전", note:"오픈조가 나가기 전에 한 바퀴 돕니다. 여기서 잡으면 마감이 짧아집니다.", steps:[
+          { id:"m-1", title:"휴지통 비우기", desc:"홀·화장실·바 세 곳. 점심에 가장 빨리 찹니다.", critical:false, tip:"오후에 넘치면 손님이 먼저 봅니다." },
+          { id:"m-2", title:"화장실 점검 · 청소", desc:"변기·세면대·바닥, 휴지·비누·손 건조기 확인. 손님이 있는 시간이라 문 앞에 표시를 걸고 합니다.", critical:true, tip:"오후 손님이 먼저 봅니다. 매장 평이 여기서 갈립니다." },
+          { id:"m-3", title:"홀 테이블 · 의자 정리", desc:"점심에 흐트러진 것을 한 번에 맞춥니다. 바닥에 떨어진 것도 같이.", critical:false, tip:"오후 손님이 앉을 자리가 지저분합니다." },
+          { id:"m-4", title:"쇼케이스 채우기 · 남은 것 확인", desc:"빈 자리를 채우고, 오늘 안 나갈 것 같은 품목은 이 시간에 정합니다 — 잔여 할인은 늦게 걸수록 안 나갑니다.", critical:false, tip:"오후에 팔 것이 없거나, 마감에 폐기가 늘어납니다." },
+          { id:"m-5", title:"바 정리 · 스팀피처 · 행주 교체", desc:"피크에 쓴 행주는 이 시간에 전부 바꿉니다. 스팀완드도 한 번 닦습니다.", critical:true, tip:"위생 문제가 되고, 오후 우유 맛이 달라집니다." },
+          { id:"m-6", title:"재고 한 바퀴 — 오후 프렙에 넘길 것", desc:"우유·원두·부재료 잔량을 봅니다. 여기서 본 것이 오후 프렙 배수와 발주 수량이 됩니다.", critical:false, tip:"오후 프렙에서 얼마나 만들지 감으로 정하게 됩니다." }
         ]}
       ]},
 
@@ -663,26 +671,6 @@ const DATA = {
   ],
 
   prepLists: [
-    { slug:"midday", name:"중간 점검", note:"13:00~14:00. 점심 피크가 끝나고 오후 손님이 들기 전 한 바퀴 돕니다. 여기서 잡으면 마감이 짧아집니다.", tasks:[
-      { id:"m1", title:"휴지통 비우기", desc:"홀·화장실·바 세 곳. 점심에 가장 빨리 찹니다.",
-        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
-        group:null, option:null, optional:false, conseq:"오후에 넘치면 손님이 먼저 봅니다.", recipe:null },
-      { id:"m2", title:"화장실 점검 · 청소", desc:"변기·세면대·바닥, 휴지·비누·손 건조기 확인. 손님이 있는 시간이라 문 앞에 표시를 걸고 합니다.",
-        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:true, varies:false,
-        group:null, option:null, optional:false, conseq:"오후 손님이 먼저 봅니다. 매장 평이 여기서 갈립니다.", recipe:null },
-      { id:"m3", title:"홀 테이블 · 의자 정리", desc:"점심에 흐트러진 것을 한 번에 맞춥니다. 바닥에 떨어진 것도 같이.",
-        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
-        group:null, option:null, optional:false, conseq:"오후 손님이 앉을 자리가 지저분합니다.", recipe:null },
-      { id:"m4", title:"쇼케이스 채우기 · 남은 것 확인", desc:"빈 자리를 채우고, 오늘 안 나갈 것 같은 품목은 이 시간에 정합니다 — 잔여 할인은 늦게 걸수록 안 나갑니다.",
-        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
-        group:null, option:null, optional:false, conseq:"오후에 팔 것이 없거나, 마감에 폐기가 늘어납니다.", recipe:null },
-      { id:"m5", title:"바 정리 · 스팀피처 · 행주 교체", desc:"피크에 쓴 행주는 이 시간에 전부 바꿉니다. 스팀완드도 한 번 닦습니다.",
-        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:true, varies:false,
-        group:null, option:null, optional:false, conseq:"위생 문제가 되고, 오후 우유 맛이 달라집니다.", recipe:null },
-      { id:"m6", title:"재고 한 바퀴 — 오후 프렙에 넘길 것", desc:"우유·원두·부재료 잔량을 봅니다. 여기서 본 것이 오후 프렙 배수와 발주 수량이 됩니다.",
-        trigger:"매일 13:00", cycle:false, hours:null, days:null, recoverable:true, critical:false, varies:false,
-        group:null, option:null, optional:false, conseq:"오후 프렙에서 얼마나 만들지 감으로 정하게 됩니다.", recipe:null }
-    ]},
     { slug:"afternoon", name:"오후 프렙", note:"14:00~15:30. 점심 손님이 빠진 뒤 한꺼번에 확인하고 만듭니다. 대부분 내일을 위한 일입니다.", tasks:[
       { id:"p1", title:"내일용 콜드브루 걸기", desc:"원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.",
         trigger:"매일 14:00", cycle:false, hours:16, days:null, recoverable:false, critical:true, varies:true,

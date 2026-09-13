@@ -18,6 +18,12 @@ import {
   ymd,
   type RosterData,
 } from "@/lib/roster";
+import ShiftEditor from "@/components/ShiftEditor";
+import {
+  applyShiftEdits,
+  loadShiftEdits,
+  type ShiftEdits,
+} from "@/lib/shiftEdit";
 import type { Shift } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -39,13 +45,19 @@ const inputBase =
   "rounded-xl border-2 border-zinc-300 bg-white px-3 py-2.5 text-[15px] outline-none focus:border-orange-500 dark:border-zinc-700 dark:bg-zinc-900";
 
 export default function RosterView({
-  shifts,
+  shifts: seedShifts,
   storeName,
 }: {
   shifts: Shift[];
   storeName: string;
 }) {
   const [data, setData] = useState<RosterData>({ staff: [], assign: {} });
+  /* ★ 시드의 조 시간은 **기본값**이다. 매장이 고친 값이 있으면 그게 이긴다 */
+  const [shiftEdits, setShiftEdits] = useState<ShiftEdits>({});
+  const shifts = useMemo(
+    () => applyShiftEdits(seedShifts, shiftEdits),
+    [seedShifts, shiftEdits],
+  );
   const [monday, setMonday] = useState<Date | null>(null);
   /* 달력은 접혀 있다가 날짜를 누르면 열린다 — 늘 펴 두면 근무표가 아래로 밀린다 */
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -61,6 +73,7 @@ export default function RosterView({
 
   useEffect(() => {
     setData(loadRoster());
+    setShiftEdits(loadShiftEdits());
     setMonday(mondayOf(new Date()));
   }, []);
 
@@ -219,6 +232,18 @@ export default function RosterView({
           />
         )}
       </div>
+
+      {/* ---------- 근무조 고치기 ----------
+          ★ 직원 추가보다 위에 둔다. 조를 먼저 정하고 사람을 배정하는 순서다. */}
+      <ShiftEditor
+        shifts={shifts}
+        edits={shiftEdits}
+        onChange={(next) => {
+          setShiftEdits(next);
+          // 이름이 바뀌면 근무표 배정도 옮겨졌다 — 화면의 표를 다시 읽는다
+          setData(loadRoster());
+        }}
+      />
 
       {/* ---------- 직원 추가 ---------- */}
       <section className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">

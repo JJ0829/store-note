@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import RecipeSearch from "@/components/RecipeSearch";
+import BackButton from "@/components/BackButton";
 import ServerStoreGate from "@/components/ServerStoreGate";
 import {
   countedTasks,
@@ -39,7 +40,7 @@ import {
  * ------------------------------------------------------------------ */
 
 export const metadata: Metadata = {
-  title: "프렙",
+  title: "할 일",
   robots: { index: false, follow: false },
 };
 
@@ -49,10 +50,20 @@ export default async function PrepIndexPage() {
   const recipes = listRecipes();
 
   return (
-    <ServerStoreGate title="프렙">
+    <ServerStoreGate title="할 일">
       <main className="mx-auto min-h-dvh w-full max-w-[720px] bg-zinc-50 px-4 py-8 pb-28 dark:bg-zinc-950">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">{store.name}</p>
-        <h1 className="mt-1 text-2xl font-bold">프렙</h1>
+        {/* ★ 뒤로 가기 — 제목과 같은 줄 (사장님 지시 2026-09-13).
+            매장 태블릿은 전체화면이라 주소창이 없다. 화면 안에 없으면 갇힌다.
+            기록이 있으면 뒤로, 없으면 홈으로 간다 (BackButton). */}
+        <div className="flex items-center gap-3">
+          <BackButton />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+              {store.name}
+            </p>
+            <h1 className="text-2xl font-bold">할 일</h1>
+          </div>
+        </div>
 
         {/* ---------- 오늘 할 것 ---------- */}
         <section className="mt-6">
@@ -98,7 +109,7 @@ export default async function PrepIndexPage() {
         <section className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
           <h2 className="text-[15px] font-bold">주문 받고 찾을 때</h2>
           <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
-            프렙 목록에 없는 메뉴는 여기서 이름으로 찾습니다.
+            할 일 목록에 없는 메뉴는 여기서 이름으로 찾습니다.
           </p>
           <RecipeSearch recipes={recipes} />
         </section>

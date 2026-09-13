@@ -477,11 +477,10 @@ const 정본 = "docs/deliverables/21_화면명세.md §1-b 를 같이 고칠 것
 
 test("★ 숫자 정본 — 프렙 목록의 개수", () => {
   const want: Record<string, { all: number; counted: number; irreversible: number }> = {
-    midday: { all: 6, counted: 6, irreversible: 0 },
     afternoon: { all: 11, counted: 5, irreversible: 7 },
     cycle: { all: 16, counted: 13, irreversible: 4 },
   };
-  assert.equal(listPrepLists().length, 3, `프렙 목록 수가 바뀌었다 — ${정본}`);
+  assert.equal(listPrepLists().length, 2, `프렙 목록 수가 바뀌었다 — ${정본}`);
   for (const list of listPrepLists()) {
     const w = want[list.slug];
     assert.ok(w, `모르는 프렙 목록 ${list.slug} — ${정본}`);
@@ -497,12 +496,12 @@ test("★ 숫자 정본 — 프렙 목록의 개수", () => {
 
 test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상", () => {
   assert.equal(listRecipes().length, 10, `레시피 수 — ${정본}`);
-  assert.equal(listShifts().length, 4, `근무조 수 — ${정본}`);
+  assert.equal(listShifts().length, 3, `근무조 수 — ${정본}`);
 
   const positions = listPositions();
   assert.equal(positions.length, 3, `포지션 수 — ${정본}`);
   const positionSteps = positions.reduce((n, p) => n + countTasks(p), 0);
-  assert.equal(positionSteps, 29, `포지션 스텝 합계 — ${정본}`);
+  assert.equal(positionSteps, 35, `포지션 스텝 합계 — ${정본}`);
 
   const recipeSteps = listRecipes().reduce(
     (n, r) => n + r.sections.reduce((m, s) => m + s.steps.length, 0),
@@ -511,9 +510,9 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   assert.equal(recipeSteps, 32, `레시피 스텝 합계 — ${정본}`);
 
   const prepTasks = listPrepLists().reduce((n, l) => n + l.tasks.length, 0);
-  assert.equal(prepTasks, 33, `프렙 항목 합계 — ${정본}`);
+  assert.equal(prepTasks, 27, `프렙 항목 합계 — ${정본}`);
 
-  /* ★ 촬영 대상은 프렙 **전체(30)가 아니라 묶을 머리를 뺀 27** 이다 (2026-09-12).
+  /* ★ 촬영 대상은 프렙 **전체(27)가 아니라 묶음 머리를 뺀 24** 이다.
    *
    *   예전에는 `prepTasks` 를 그대로 더해 88 이라고 했는데, `/shoot` 도 `l.tasks` 를
    *   그대로 돌고 있어서 **둘 다 같이 틀렸고 그래서 테스트가 안 걸렸다.**

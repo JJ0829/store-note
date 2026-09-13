@@ -5,7 +5,7 @@
  *
  * 이번에 실제로 깨져 있던 게 그것이다. `log()` 함수가 컴포넌트 4개에
  * 복사돼 있었고 **교육 모드만 `sessionId`를 안 붙였다.** 그래서
- * `training_complete`(몇 분 걸렸나)와 `survey`(몇 번 물었나)를 이을
+ * `교육_완료`(몇 분 걸렸나)와 `설문_응답`(몇 번 물었나)를 이을
  * 열쇠가 없었다 — 검증하려는 가설이 정확히 그 둘을 붙여 보는 것인데도.
  * → `01_MVP기획서` §8.4 #3
  *
@@ -69,7 +69,7 @@ test("이벤트를 보내는 컴포넌트는 모두 metrics.ts를 쓴다", () =>
   for (const name of fs.readdirSync(dir)) {
     if (!name.endsWith(".tsx")) continue;
     const src = fs.readFileSync(path.join(dir, name), "utf-8");
-    const sends = /\blog(Event)?\(\s*["'][a-z_]+["']/.test(src);
+    const sends = /\blog(Event)?\(\s*["'][a-z_가-힣]+["']/.test(src);
     const imports = /from\s+["']@\/lib\/metrics["']/.test(src);
     if (sends && !imports) bad.push(name);
   }
@@ -94,7 +94,7 @@ function eventNames(): string[] {
   for (const name of fs.readdirSync(dir)) {
     if (!name.endsWith(".tsx")) continue;
     const src = fs.readFileSync(path.join(dir, name), "utf-8");
-    for (const m of src.matchAll(/\blog(?:Event)?\(\s*["']([a-z_]+)["']/g)) {
+    for (const m of src.matchAll(/\blog(?:Event)?\(\s*["']([a-z_가-힣]+)["']/g)) {
       found.add(m[1]);
     }
   }
@@ -109,22 +109,25 @@ function eventNames(): string[] {
  */
 const EXPECTED = [
   // 교육·체크 — 가설 검증의 본체
-  "view",
-  "training_start",
-  "critical_confirm",
-  "training_complete",
-  "survey",
-  "check", // 2026-09-10 신설. 체크리스트에 체크 이벤트가 없었다
+  "체크리스트_열기",
+  "교육_시작",
+  "필수항목_확인",
+  "교육_완료",
+  "설문_응답",
+  "체크", // 2026-09-10 신설. 체크리스트에 체크 이벤트가 없었다
   // 매일 열리는 화면 — "정말 매일 여는가"
-  "prep_view",
-  "prep_check",
-  "prep_scale",
-  "recipe_view",
-  "recipe_scale",
-  "punch", // 2026-09-10 신설
-  "sales_close", // 2026-09-10 신설
-  "order_mark", // 2026-09-10 신설
-  "backup", // 2026-09-10 신설
+  "프렙_열기",
+  "프렙_체크",
+  "프렙_배수",
+  "레시피_열기",
+  "레시피_배수",
+  // ★ 버튼이 둘이면 이름도 둘이다 (2026-09-13)
+  "출근", // 전에는 punch + which:"in"
+  "퇴근", // 전에는 punch + which:"out"
+  "발주_주문함", // 전에는 order_mark + step:"ordered"
+  "발주_들어옴", // 전에는 order_mark + step:"received"
+  "매출_입력", // 전에는 sales_close
+  "백업_내려받기", // 전에는 backup
 ].sort();
 
 test("★ 이벤트 목록이 문서와 맞는지 — 늘리면 이 테스트가 걸린다", () => {
@@ -140,13 +143,54 @@ test("★ 이벤트 목록이 문서와 맞는지 — 늘리면 이 테스트가
   );
 });
 
-test("이벤트 15종 — 매출·출퇴근·발주·백업이 들어 있다", () => {
+test("이벤트 17종 — 매출·출퇴근·발주·백업이 들어 있다", () => {
   const actual = eventNames();
-  assert.equal(actual.length, 15);
+  assert.equal(actual.length, 17);
   // B4 확인 순서 2번("입력이 실제로 채워지는가")을 답할 수 있는 것들
-  for (const e of ["punch", "sales_close", "order_mark", "backup"]) {
+  for (const e of [
+    "출근",
+    "퇴근",
+    "매출_입력",
+    "발주_주문함",
+    "발주_들어옴",
+    "백업_내려받기",
+  ]) {
     assert.ok(actual.includes(e), `${e}가 없다`);
   }
+});
+
+/**
+ * ★ 이름이 화면의 버튼과 같은 말이어야 한다 (2026-09-13).
+ *
+ * 전에는 표에 `punch` / `which: "out"` 이 뜨는데 화면 버튼은 「퇴근」이었다.
+ * 기록을 읽는 사람이 매번 코드를 뒤져야 하면, 실제로 쓸 때 헷갈리고
+ * 결국 아무도 표를 안 본다. **옛 이름이 되살아나면 여기서 걸린다.**
+ */
+test("★ 옛 영어 이름이 되살아나지 않는다", () => {
+  const 옛이름 = [
+    "view",
+    "check",
+    "training_start",
+    "critical_confirm",
+    "training_complete",
+    "survey",
+    "prep_view",
+    "prep_check",
+    "prep_scale",
+    "recipe_view",
+    "recipe_scale",
+    "punch",
+    "sales_close",
+    "order_mark",
+    "backup",
+  ];
+  const actual = eventNames();
+  const 되살아남 = 옛이름.filter((e) => actual.includes(e));
+  assert.deepEqual(
+    되살아남,
+    [],
+    "옛 이름이 다시 들어왔다 — 이벤트 이름은 화면 버튼과 같은 말로 적는다",
+  );
 });
 
 /* ------------------------------------------------------------------ */
@@ -164,10 +208,11 @@ test("이벤트 15종 — 매출·출퇴근·발주·백업이 들어 있다", (
  */
 test("★ 새 이벤트가 이름·금액을 담지 않는다", () => {
   const checks: Array<[string, RegExp]> = [
-    // 출퇴근: 누가·몇 시에 찍었는지 남기지 않는다. in/out만
-    ["AttendanceView.tsx", /logEvent\("punch",\s*\{\s*which\s*\}\)/],
+    // 출퇴근: 누가·몇 시에 찍었는지 남기지 않는다. 이름이 곧 출근/퇴근이라
+    // 담는 값이 아예 없다 (2026-09-13)
+    ["AttendanceView.tsx", /logEvent\("출근"\);\s*else logEvent\("퇴근"\);/],
     // 매출: 날짜와 칸 이름만. 금액 없음
-    ["SalesView.tsx", /logEvent\("sales_close",\s*\{\s*date,\s*field:\s*f\s*\}\)/],
+    ["SalesView.tsx", /logEvent\("매출_입력",\s*\{\s*date,\s*field:\s*f\s*\}\)/],
   ];
 
   for (const [file, re] of checks) {
@@ -184,8 +229,8 @@ test("출퇴근 이벤트에 이름·시각 필드가 없다", () => {
     path.join(process.cwd(), "src", "components", "AttendanceView.tsx"),
     "utf-8",
   );
-  const m = src.match(/logEvent\("punch",[^)]*\)/);
-  assert.ok(m, "punch 이벤트를 못 찾았다");
+  const m = src.match(/logEvent\("출근"\)[\s\S]{0,60}logEvent\("퇴근"\)/);
+  assert.ok(m, "출근·퇴근 이벤트를 못 찾았다");
   assert.ok(!/staffId|name|inAt|outAt/.test(m[0]), `이름·시각이 섞였다: ${m[0]}`);
 });
 
@@ -194,8 +239,8 @@ test("매출 이벤트에 금액 필드가 없다", () => {
     path.join(process.cwd(), "src", "components", "SalesView.tsx"),
     "utf-8",
   );
-  const m = src.match(/logEvent\("sales_close",[^)]*\)/);
-  assert.ok(m, "sales_close 이벤트를 못 찾았다");
+  const m = src.match(/logEvent\("매출_입력",[^)]*\)/);
+  assert.ok(m, "매출_입력 이벤트를 못 찾았다");
   assert.ok(!/total:|material:|count:|won/.test(m[0]), `금액이 섞였다: ${m[0]}`);
 });
 
@@ -244,16 +289,16 @@ test("★ 발주 이벤트는 이전 상태와 비교한다 (파생 켜짐을 �
 /* ------------------------------------------------------------------ */
 
 /**
- * ★ `training_complete`와 `survey`를 잇는 열쇠.
+ * ★ `교육_완료`와 `설문_응답`을 잇는 열쇠.
  *
  * 검증 대상 가설이 *"교육이 얼마나 걸렸나 + 선배에게 몇 번 물었나"*를
- * 붙여 보는 것이다. `survey`에 `runId`가 없으면 그게 안 된다.
+ * 붙여 보는 것이다. `설문_응답`에 `runId`가 없으면 그게 안 된다.
  *
  * 그리고 **끝낼 때 `save(null)`로 `run`을 비우므로**(공용 태블릿이라
  * 진도를 남기면 다음 신입에게 보인다) `run?.runId`로는 못 얻는다.
  * `lastRunId`로 따로 붙들어야 한다.
  */
-test("★ 교육 설문이 runId를 담는다 (training_complete와 잇는 열쇠)", () => {
+test("★ 교육 설문이 runId를 담는다 (교육_완료와 잇는 열쇠)", () => {
   const src = fs.readFileSync(
     path.join(process.cwd(), "src", "components", "TrainingMode.tsx"),
     "utf-8",
@@ -261,8 +306,8 @@ test("★ 교육 설문이 runId를 담는다 (training_complete와 잇는 열�
   // 끝낼 때 붙들고
   assert.match(src, /setLastRunId\(run\.runId\)/, "끝낼 때 runId를 안 붙든다");
   // 설문이 그걸 쓰고
-  const m = src.match(/log\("survey",[\s\S]{0,800}?\}\);/);
-  assert.ok(m, "survey 이벤트를 못 찾았다");
+  const m = src.match(/log\("설문_응답",[\s\S]{0,800}?\}\);/);
+  assert.ok(m, "설문_응답 이벤트를 못 찾았다");
   assert.match(m[0], /runId: lastRunId/, "설문에 runId가 없다 — 가설을 못 잇는다");
   // 새 회차에서 비운다
   assert.ok(
@@ -289,7 +334,7 @@ test("★ 체크리스트 설문이 완주 조건에 매달려 있지 않다", (
     "설문이 다시 finished 조건에 걸렸다 — 중도 이탈자 표본이 사라진다",
   );
   // 분석에서 완주자와 이탈자를 구분할 수 있어야 한다
-  const m = src.match(/log\("survey",[\s\S]{0,800}?\}\);/);
+  const m = src.match(/log\("설문_응답",[\s\S]{0,800}?\}\);/);
   assert.ok(m);
   for (const f of ["finished", "doneCount", "total"]) {
     assert.ok(m[0].includes(f), `설문에 ${f}가 없다 — 완주자·이탈자를 못 나눈다`);
@@ -301,8 +346,8 @@ test("체크 이벤트가 critical을 함께 남긴다 (2차 지표)", () => {
     path.join(process.cwd(), "src", "components", "ChecklistView.tsx"),
     "utf-8",
   );
-  const m = src.match(/log\("check",[\s\S]{0,800}?\}\);/);
-  assert.ok(m, "check 이벤트를 못 찾았다");
+  const m = src.match(/log\("체크",[\s\S]{0,800}?\}\);/);
+  assert.ok(m, "체크 이벤트를 못 찾았다");
   assert.match(m[0], /critical:/, "critical이 없다 — '위생 항목 누락'을 못 센다");
   assert.match(m[0], /doneCount/, "doneCount가 없다 — 중도 이탈 지점을 못 본다");
 });
@@ -326,7 +371,7 @@ test("★ 코드가 쏘는 이벤트를 /api/log 가 전부 받아준다", () =>
   );
   const m = route.match(/const ALLOWED = new Set\(\[([\s\S]*?)\]\)/);
   assert.ok(m, "route.ts 의 ALLOWED 목록을 못 찾았다");
-  const allowed = [...m[1].matchAll(/"([a-z_]+)"/g)].map((x) => x[1]).sort();
+  const allowed = [...m[1].matchAll(/"([a-z_가-힣]+)"/g)].map((x) => x[1]).sort();
 
   const actual = eventNames();
   const rejected = actual.filter((e) => !allowed.includes(e));

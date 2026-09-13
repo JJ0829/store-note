@@ -208,7 +208,7 @@ export default function BackupView({
                  → backup.ts 의 markBackedUp 주석 */
               const marked = markBackedUp();
               /* 재촉이 실제로 먹히는지 보려면 이게 필요하다. 파일 내용은 안 담는다 */
-              logEvent("backup", { counts: backupCounts(file), marked });
+              logEvent("백업_내려받기", { counts: backupCounts(file), marked });
             }}
           >
             💾 전체 백업 (되돌리기용 · JSON)

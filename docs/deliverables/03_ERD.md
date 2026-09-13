@@ -1,5 +1,29 @@
 # 03. 데이터 모델 / ERD
 
+> ## ✅ "이 설계대로 되어 있나?" 에 대한 답 (2026-09-13 실측)
+>
+> **표는 전부 올라갔다. 다만 데이터는 아직 브라우저에 있다.** 둘은 다른 얘기다.
+>
+> | | 설계 | 실제 Supabase |
+> |---|---|---|
+> | 표 | 37개 (`db/schema_v2.sql`) + 지표 1 | ✅ **38개 전부** |
+> | 칸 · 외래키 · 정책 · 인덱스 | 368 · 93 · 40 · 98 | ✅ **완전 일치** |
+> | 적용된 마이그레이션 | — | `0001_events` · `media_bucket` · **`0003_schema_v2`** |
+> | 표 안의 데이터 | — | ⛔ **`units` 6줄 · `events` 23줄이 전부.** 나머지 36개는 0줄 |
+> | 운영 데이터 | 위 37개로 흩어질 예정 | ⛔ **여전히 태블릿 localStorage** (`sop:*` 18개 키) |
+>
+> 즉 **그릇은 다 만들었고 아직 아무것도 안 옮겼다.** 매출·시급·단가·레시피·출퇴근은
+> 그 태블릿 안에 있고, 앱도 계속 localStorage 를 쓴다 — 화면은 아무것도 안 바뀌었다.
+>
+> **왜 아직 안 옮기나:** RLS 정책이 `auth.uid()` 를 보는데 **로그인이 없어서 늘 `null`**
+> 이다. 그래서 지금은 바깥에서 한 줄도 못 읽는다(잠긴 쪽으로 안전하게 틀려 있다).
+> **로그인이 이관의 1번**이고, 순서는 [`24_DB이관순서.md`](24_DB이관순서.md) 에 있다.
+>
+> 검증은 두 번 했다 — `npm run verify:db` 가 **PGlite(PostgreSQL 18)** 에서 제약이
+> 실제로 서는지 보고, 올린 뒤 **실물 Supabase(17.6)** 에서 §12 의 게이트 두 개가
+> 0행인 것을 확인했다. 제약 수만 205 vs 445 로 다른데, PG18 이 NOT NULL 240개를
+> 제약으로 세기 때문이고 나머지(check 27 · 외래키 93 · 기본키 38 · 유니크 45 · 겹침 2)는 같다.
+>
 > **2026-09-04 갱신** — 운영 기능 7종(원가·근태·출퇴근·매출·발주·거래처·근로계약서)이
 > 추가되어 **localStorage 엔티티 9종이 늘었다.** → **3-A절** (3-14 ~ 3-22)
 >
@@ -343,7 +367,7 @@ erDiagram
         string subject_slug "nullable"
         string task_id "FK 안 검. 항목이 지워져도 로그는 남는다"
         int duration_sec "nullable"
-        boolean recoverable "nullable. prep_check 이벤트"
+        boolean recoverable "nullable. 프렙_체크 이벤트"
         string payload "jsonb. 나머지 전부"
     }
 
@@ -442,7 +466,7 @@ erDiagram
 | Ingredient | 13 | 단위는 `g`, `ml` 두 종류만 |
 | PrepList | 3 | `afternoon`(카드 5 + 옵션 6) / `evening`(3) / `cycle`(묶음 3 + 항목 13) |
 | PrepTask | 30 | `recoverable: false` **8개** (숫자 정본: [21_화면명세.md §1-b](21_화면명세.md)) |
-| Shift | 4 | 제빵 05:00–13:00 / 오픈조 07:30–15:30 / 미들 11:00–19:00 / 마감조 14:30–22:30 |
+| Shift | 3 | 제빵 05:00–13:00 / 오픈조 07:30–15:30 / 마감조 14:30–22:30 (2026-09-13 미들 제거. 시각은 기본값 — `sop:shifts` 로 매장이 덮어쓴다) |
 | ShiftFocus | 7 | **training 1 / checklist 2 / prep 2 / recipes 2** (`282c0a9`에서 `position` 3건이 `training` 1 + `checklist` 2로 갈렸다 — 5-2절) |
 | Staff · Assign | 0 | 서버에 없다. 브라우저 저장 |
 | ChecklistCheck · PrepCheck | **—** | **DDL 신설 테이블이라 현재 데이터가 없다.** 체크는 브라우저 날짜 키에만 있다 |
@@ -607,13 +631,13 @@ erDiagram
 | 컬럼 | TS / PG 타입 | 널 | 기본값 | 설명 | 개인정보 |
 |---|---|---|---|---|---|
 | `id` | string / `text` | X | — | `sh-bakery` 등 | |
-| `name` | string / `text` | X | — | 제빵 / 오픈조 / 미들 / 마감조. **근무표 배정값으로 그대로 저장된다** (`RosterView.tsx:346-350`) | |
+| `name` | string / `text` | X | — | 제빵 / 오픈조 / 마감조. **근무표 배정값으로 그대로 저장된다** — 그래서 이름을 바꾸면 `shiftEdit.renameInAssign` 이 배정도 같이 옮긴다 (`RosterView.tsx:346-350`) | |
 | `start_at` | string / `time` | X | — | `"05:00"`. `toMinutes()`가 `split(":")`으로 파싱 — 형식 검증 없음 (`NowPanel.tsx:15`) | |
 | `end_at` | string / `time` | X | — | `"13:00"` | |
 | `note` | string \| null / `text` | O | `null` | NowPanel 비고 | |
 | `sort_order` | (배열 순서) / `int` | X | `0` | **JSON 배열 순서가 겹치는 조 중 대표를 정한다.** `shifts.filter()`가 순서를 보존하고(`NowPanel.tsx:48-50`) 그 결과의 `i === 0`만 주황 강조를 받는다(`NowPanel.tsx:116`). 근무 시간 밖 fallback도 배열 첫 원소다(`NowPanel.tsx:61` `?? shifts[0]`). **DDL에서 신설** | |
 
-**⚠️ 시드 4개 조는 시간이 겹친다.** 측정 확인 — 제빵 05:00–13:00 ∩ 오픈조 07:30–15:30 ∩ 미들 11:00–19:00, 오픈조 ∩ 마감조 14:30–22:30, 미들 ∩ 마감조. 겹치는 5쌍이 나온다. 예컨대 11:00–13:00에는 제빵·오픈조·미들 3개가 동시에 `active`다. **그중 어느 카드가 대표(주황)인지는 배열 순서가 정한다.** 그래서 `shift`의 배열 순서는 표시 순서가 아니라 동작이다 — 8-1절 #1이 `sort_order`를 넣어야 하는 이유가 `shift_focus`뿐이 아니다.
+**⚠️ 시드 조들은 시간이 겹친다** (2026-09-13 미들 제거 전 4개 기준 서술). 측정 확인 — 제빵 05:00–13:00 ∩ 오픈조 07:30–15:30 ∩ 미들 11:00–19:00, 오픈조 ∩ 마감조 14:30–22:30, 미들 ∩ 마감조. 겹치는 5쌍이 나온다. 예컨대 11:00–13:00에는 제빵·오픈조·미들 3개가 동시에 `active`다. **그중 어느 카드가 대표(주황)인지는 배열 순서가 정한다.** 그래서 `shift`의 배열 순서는 표시 순서가 아니라 동작이다 — 8-1절 #1이 `sort_order`를 넣어야 하는 이유가 `shift_focus`뿐이 아니다.
 
 **자정을 넘기는 조를 `toMinutes()` 비교가 처리하지 못한다.** 현재 시드 4개는 전부 같은 날 안에서 끝나므로 드러나지 않는다. ❓ 확인 필요 — 심야 조가 실제로 있는지.
 
@@ -1151,16 +1175,16 @@ await fs.appendFile(file, `${JSON.stringify(record)}\n`, "utf-8");
 
 | event | `sessionId` | `runId` | 고유 필드 | 발생 위치 | 실측 |
 |---|---|---|---|---|---|
-| `view` | ● | — | `positionSlug` | `ChecklistView.tsx:77` | 6 |
-| `survey` | 화면에 따라 갈림 | — | `positionSlug`, `askedSenior`, `mode?` | `ChecklistView.tsx:267` / `TrainingMode.tsx:219` | 4 |
-| `training_start` | **없음** | ● | `positionSlug`, `totalTasks` | `TrainingMode.tsx:101` | 5 |
-| `critical_confirm` | **없음** | ● | `positionSlug`, `taskId` | `TrainingMode.tsx:117` | 13 |
-| `training_complete` | **없음** | ● | `positionSlug`, `durationSec`, `confirmedCount` | `TrainingMode.tsx:132` | 3 |
-| `prep_view` | ● | — | `prepSlug` | `PrepView.tsx:158` | 12 |
-| `prep_check` | ● | — | `prepSlug`, `taskId`, **`recoverable`** | `PrepView.tsx:168` | 2 |
-| `prep_scale` | ● | — | `prepSlug`, `taskId`, `scale` | `PrepView.tsx:188` | 9 |
-| `recipe_view` | ● | — | `recipeSlug` | `RecipeDetail.tsx:54` | 3 |
-| `recipe_scale` | ● | — | `recipeSlug`, `scale` | `RecipeDetail.tsx:90` | 1 |
+| `체크리스트_열기` | ● | — | `positionSlug` | `ChecklistView.tsx:77` | 6 |
+| `설문_응답` | 화면에 따라 갈림 | — | `positionSlug`, `askedSenior`, `mode?` | `ChecklistView.tsx:267` / `TrainingMode.tsx:219` | 4 |
+| `교육_시작` | **없음** | ● | `positionSlug`, `totalTasks` | `TrainingMode.tsx:101` | 5 |
+| `필수항목_확인` | **없음** | ● | `positionSlug`, `taskId` | `TrainingMode.tsx:117` | 13 |
+| `교육_완료` | **없음** | ● | `positionSlug`, `durationSec`, `confirmedCount` | `TrainingMode.tsx:132` | 3 |
+| `프렙_열기` | ● | — | `prepSlug` | `PrepView.tsx:158` | 12 |
+| `프렙_체크` | ● | — | `prepSlug`, `taskId`, **`recoverable`** | `PrepView.tsx:168` | 2 |
+| `프렙_배수` | ● | — | `prepSlug`, `taskId`, `scale` | `PrepView.tsx:188` | 9 |
+| `레시피_열기` | ● | — | `recipeSlug` | `RecipeDetail.tsx:54` | 3 |
+| `레시피_배수` | ● | — | `recipeSlug`, `scale` | `RecipeDetail.tsx:90` | 1 |
 
 값 도메인:
 
@@ -1168,8 +1192,8 @@ await fs.appendFile(file, `${JSON.stringify(record)}\n`, "utf-8");
 |---|---|
 | `askedSenior` | `"0번"`, `"1~2번"`, `"3~5번"`, `"6번 이상"` 4개 리터럴. 두 화면에 **각각 하드코딩** (`ChecklistView.tsx:260`, `TrainingMode.tsx:213`) |
 | `scale` | `SCALES = [0.5, 1, 1.5, 2, 3]` (`scale.ts:8`) |
-| `mode` | 교육 모드 survey에만 `"training"`. **없으면 체크리스트다** |
-| `recoverable` | boolean. `prep_check`에만 실린다 |
+| `mode` | 교육 모드 `설문_응답`에만 `"training"`. **없으면 체크리스트다** |
+| `recoverable` | boolean. `프렙_체크`에만 실린다 |
 
 ### 7-3. ⚠️ 조인이 불가능한 구간 — DB 이전과 같이 고쳐야 한다
 
@@ -1184,15 +1208,15 @@ body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
 
 공용 태블릿에서 기기 단위 추적을 피하려는 의도일 수 있다. 다만 결과가 이렇다:
 
-- 교육 모드 `survey`는 `sessionId`도 없고 `runId`도 안 싣는다 (`TrainingMode.tsx:219-223`은 `positionSlug`, `askedSenior`, `mode`만)
-- 따라서 `training_complete.durationSec`와 `survey.askedSenior`를 잇는 키가 **`positionSlug` + 시각 근접성뿐**이다
-- `CLAUDE.md`의 검증 대상 가설이 "`training_complete.durationSec` + `survey`를 붙여서 본다"인데, **지금 데이터로는 붙일 수 없다**
+- 교육 모드 `설문_응답`는 `sessionId`도 없고 `runId`도 안 싣는다 (`TrainingMode.tsx:219-223`은 `positionSlug`, `askedSenior`, `mode`만)
+- 따라서 `교육_완료.durationSec`와 `설문_응답.askedSenior`를 잇는 키가 **`positionSlug` + 시각 근접성뿐**이다
+- `CLAUDE.md`의 검증 대상 가설이 "`교육_완료.durationSec` + `설문_응답`를 붙여서 본다"인데, **지금 데이터로는 붙일 수 없다**
 
-**조치:** `TrainingMode`의 survey에 `runId`를 실으면 해결된다. 컬럼 추가가 아니라 한 줄 추가다. DB 이전과 동시에 하는 것이 맞다.
+**조치:** `TrainingMode`의 `설문_응답`에 `runId`를 실으면 해결된다. 컬럼 추가가 아니라 한 줄 추가다. DB 이전과 동시에 하는 것이 맞다.
 
 ### 7-4. 현재 데이터의 성격
 
-58줄 = `view` 6 / `survey` 4 / `training_start` 5 / `critical_confirm` 13 / `training_complete` 3 / `prep_view` 12 / `prep_scale` 9 / `prep_check` 2 / `recipe_view` 3 / `recipe_scale` 1.
+58줄 = `체크리스트_열기` 6 / `설문_응답` 4 / `교육_시작` 5 / `필수항목_확인` 13 / `교육_완료` 3 / `프렙_열기` 12 / `프렙_배수` 9 / `프렙_체크` 2 / `레시피_열기` 3 / `레시피_배수` 1.
 
 **전부 로컬 개발 중 본인 조작 기록이다.** 첫 행의 `positionSlug`가 `grill-day1`·`fryer-day1`(교체 전 버거집 시드)다. **실사용 데이터는 0건.** 집계할 때는 `at`(≥ 2026-08-31)이나 slug로 걸러야 한다.
 
@@ -1204,7 +1228,7 @@ body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
 |---|---|
 | `kind`, `at`, `session_id`, `run_id` | 조인·기간 집계의 축 |
 | `subject_kind`, `subject_slug` | `positionSlug`/`prepSlug`/`recipeSlug`를 한 쌍으로 통합. 셋 중 하나만 오므로 컬럼 3개를 둘 필요가 없다 |
-| `task_id` | `critical_confirm`, `prep_check`, `prep_scale` |
+| `task_id` | `필수항목_확인`, `프렙_체크`, `프렙_배수` |
 | `duration_sec` | 가설의 1차 지표 |
 | `recoverable` | **H7("리드타임 항목은 종이로 못 잡는다")의 직접 지표.** 되돌릴 수 없는 항목을 실제로 체크했는지 셀 수 있다 |
 | `payload jsonb` | `totalTasks`, `confirmedCount`, `scale`, `askedSenior`, `mode` 등 |
@@ -1217,7 +1241,7 @@ body: JSON.stringify({ event, sessionId: getSessionId(), ...payload }),
 | `prepSlug` | `prep` |
 | `recipeSlug` | `recipe` |
 
-**⚠️ `subject_slug`에 FK를 걸면 안 된다.** 로컬 레시피는 `slug`가 `my-xxxxxxxx`(브라우저 발급, 3-4절)이고, `RecipeDetail`이 로컬 레시피에도 그대로 쓰이므로 **`recipe_view`·`recipe_scale`이 서버에 존재하지 않는 slug를 `recipeSlug`로 싣는다**(`RecipeDetail.tsx:54`, `90`). 9절 단계 6(레시피 통합)을 마치기 전까지는 매칭되지 않는 `subject_slug` 행이 정상적으로 쌓인다. `task_id`에 FK를 걸지 않은 것과 같은 이유다.
+**⚠️ `subject_slug`에 FK를 걸면 안 된다.** 로컬 레시피는 `slug`가 `my-xxxxxxxx`(브라우저 발급, 3-4절)이고, `RecipeDetail`이 로컬 레시피에도 그대로 쓰이므로 **`레시피_열기`·`레시피_배수`이 서버에 존재하지 않는 slug를 `recipeSlug`로 싣는다**(`RecipeDetail.tsx:54`, `90`). 9절 단계 6(레시피 통합)을 마치기 전까지는 매칭되지 않는 `subject_slug` 행이 정상적으로 쌓인다. `task_id`에 FK를 걸지 않은 것과 같은 이유다.
 
 ---
 
@@ -1574,11 +1598,27 @@ group by pt.id, pt.trigger_every_days;
 
 -- =====================================================================
 --  이벤트 로그 (7-5절)
+--
+--  ⚠️⚠️ 지금 서버에 올라가 있는 것은 **이것이 아니다.** (2026-09-13 확인)
+--
+--    올라간 것 : public.events  — id · at · event · props(jsonb)   ← 칸 4개
+--    아래 설계 : event(단수)    — 자주 쓰는 값을 칸으로 펼친 것     ← 칸 11개
+--
+--    정본은 `db/migrations/0001_events.sql` 이고 `db/schema_v2.sql` §10-B 에도
+--    같은 것이 들어 있다. **아래는 앞으로의 안이다.**
+--
+--    왜 다른가 — 올린 쪽은 이벤트를 하나 더할 때마다 마이그레이션을 하지
+--    않으려고 `props` 에 통째로 넣었다. 아래 설계는 그 반대로 자주 질의하는
+--    값을 칸으로 올려 인덱스를 걸 수 있게 한 것이다. **둘 다 맞는 선택이고,
+--    갈아타는 시점이 다르다** — 지표를 실제로 분석하기 시작할 때다.
+--
+--    ⚠️ 아래를 그대로 돌리면 **표가 둘이 된다**(`events` 와 `event`).
+--       옮길 때는 `events.props` 를 아래 칸으로 펴는 이관이 먼저다.
 -- =====================================================================
 create table event (
   id            bigserial primary key,
   store_id      text references store(id) on delete set null,
-  kind          text not null,               -- view / survey / training_* / prep_* / recipe_*
+  kind          text not null,               -- 체크리스트_열기 / 설문_응답 / 교육_* / 프렙_* / 레시피_*
   at            timestamptz not null default now(),
 
   session_id    text,                        -- △ 교육 모드 4종에는 없다 (7-3절)
@@ -1590,7 +1630,7 @@ create table event (
 
   task_id       text,                        -- FK 를 걸지 않는다: 항목이 삭제돼도 로그는 남아야 한다
   duration_sec  int,
-  recoverable   boolean,                     -- prep_check 이벤트. H7 의 직접 지표
+  recoverable   boolean,                     -- 프렙_체크 이벤트. H7 의 직접 지표
   payload       jsonb not null default '{}'::jsonb
 );
 
@@ -1687,7 +1727,7 @@ create index event_subject_idx on event (subject_kind, subject_slug, at desc);
 | **0** | 준비 | 8절 DDL 적용. 빈 DB | 없음 | 스키마 drop |
 | **1** | 읽기 전용 이관 | `data/seed.json` → `store`·`position`·`section`·`step`·`recipe`·`ingredient`·`prep_list`·`prep_task`·`shift`·`shift_focus`·`media_key`. **`repo.ts` 12개 함수 본문만 쿼리로 교체.** 시그니처 유지 | 없음(같은 화면) | `repo.ts`를 파일 읽기로 되돌린다 |
 | **2** | 이벤트 | `/api/log`를 insert로 교체. `data/events.jsonl` 58줄은 **이관하지 않는다** — 전부 개발 중 본인 조작이고 버거집 slug가 섞여 있다 | 없음 | 파일 append 병행 |
-| **3** | 로그 조인 결함 수정 | `TrainingMode`의 survey에 `runId` 추가 (7-3절). 한 줄 | 없음 | 되돌릴 이유 없음 |
+| **3** | 로그 조인 결함 수정 | `TrainingMode`의 `설문_응답`에 `runId` 추가 (7-3절). 한 줄 | 없음 | 되돌릴 이유 없음 |
 | **4** | 프렙 체크 서버화 | `prep_check` 쓰기. localStorage는 오프라인 캐시로 남긴다 | **교대 인계가 성립한다.** 주기 점검 매일 리셋도 이때 풀린다 | localStorage 단독으로 복귀 |
 | **5** | 체크리스트 서버화 | `checklist_check` 쓰기 | **사장님이 신입 진도를 본다** | 동일 |
 | **6** | 레시피 통합 | `sop:recipes` → **`media_key` + `recipe(origin='store')` + `section` + `step` + `ingredient` 5개 테이블.** 로컬 레시피 1건이 5개 테이블에 흩어진다. `/r/my?id=`를 `/r/{slug}`로 통합 | 기기 밖에서도 보인다 | 로컬 배열 유지 |

@@ -550,10 +550,26 @@ async function mustAccept(db, name, sql) {
   if (naked.length === 0) ok("모든 표에 정책이 걸렸다", `표 ${tables}개 전부`);
   else no("정책 누락", naked.map((r) => r.relname).join(", "));
 
+  /* ★ `force` 는 **매장 격리 표**에 요구한다 (지적 4). 이름이 아니라 근거로 좁힌다.
+   *
+   *   force 가 막는 것은 «표 주인(postgres)도 정책을 우회하지 못하게» 다.
+   *   매장 격리는 주인에게도 서야 하므로 store_id 를 가진 표에는 반드시 건다.
+   *
+   *   `events`(이용 기록)에는 store_id 가 없다 — 매장을 안 나눈다.
+   *   이 표의 정책이 막는 상대는 **익명 키**이고, 익명은 주인이 아니므로
+   *   force 와 무관하게 정책이 선다. 반대로 force 를 걸면 사장님이 대시보드에서
+   *   지표를 읽는 것만 막힌다. **막을 것을 막고, 아닌 것은 안 막는다.**
+   *
+   *   ⚠️ 이름 목록으로 빼지 않는 이유: 표를 하나 더 올리는 날 그 목록을
+   *      아무도 안 고치고 조용히 검사에서 빠진다. store_id 는 그럴 수 없다.
+   */
   const notForced = await q(`
     select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace
-    where n.nspname='public' and c.relkind='r' and c.relrowsecurity and not c.relforcerowsecurity`);
-  if (notForced.length === 0) ok("표 주인에게도 강제 적용된다", "force row level security");
+    where n.nspname='public' and c.relkind='r' and c.relrowsecurity and not c.relforcerowsecurity
+      and exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name=c.relname
+                     and column_name='store_id')`);
+  if (notForced.length === 0) ok("매장 격리 표는 주인에게도 강제 적용된다", "force row level security");
   else no("force 누락", notForced.map((r) => r.relname).join(", "));
 
   // ── 결과 ────────────────────────────────────────────────────────────

@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { minutesOfDay, onDutyNow } from "@/lib/shiftClock";
 import Link from "next/link";
+import {
+  hoursLabel,
+  loadPunches,
+  shiftPunchStates,
+  type ShiftPunchState,
+} from "@/lib/attendance";
+import { loadRoster, ymd } from "@/lib/roster";
+import { applyShiftEdits, loadShiftEdits } from "@/lib/shiftEdit";
 import type { Shift, ShiftFocus } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -26,15 +33,30 @@ function focusHref(f: ShiftFocus): string {
   }
 }
 
-export default function NowPanel({ shifts }: { shifts: Shift[] }) {
+export default function NowPanel({ shifts: seedShifts }: { shifts: Shift[] }) {
   const [now, setNow] = useState<Date | null>(null);
+  const [punched, setPunched] = useState<Record<string, ShiftPunchState>>({});
+  /* ★ 매장이 근무표 화면에서 고친 조 이름·시간이 있으면 그게 이긴다.
+     시드 값은 한 매장의 값이라 기본값으로만 쓴다 → src/lib/shiftEdit.ts */
+  const [shifts, setShifts] = useState<Shift[]>(seedShifts);
 
   useEffect(() => {
-    setNow(new Date());
+    // ★ 찍힌 기록을 같이 읽는다. 근무조 시간은 예정일 뿐이라
+    //   그것만으로 「근무 중」을 붙이면 아무도 안 온 날에도 붙는다
+    const read = () => {
+      const t = new Date();
+      setNow(t);
+      const y = new Date(t.getTime() - 86400000);
+      setShifts(applyShiftEdits(seedShifts, loadShiftEdits()));
+      setPunched(
+        shiftPunchStates(loadRoster().assign, loadPunches(), [ymd(t), ymd(y)]),
+      );
+    };
+    read();
     // 매장에 하루 종일 켜두는 태블릿이라 시간이 흘러도 화면이 따라가야 한다
-    const id = setInterval(() => setNow(new Date()), 60_000);
+    const id = setInterval(read, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [seedShifts]);
 
   // 서버에서 렌더할 때는 시각을 모른다. 자리만 잡아둔다.
   if (!now) {
@@ -43,9 +65,17 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
     );
   }
 
-  const cur = minutesOfDay(now);
-  // ★ 2026-09-12 부터 **하루의 순서대로** 선다 — 오픈 → 미들 → 마감 (`onDutyNow`).
-  const onNow = new Set(onDutyNow(shifts, cur).map((s) => s.id));
+  /* ★ 「근무 중」은 **찍힌 기록**으로만 판정한다 (사장님 지적 2026-09-13).
+   *
+   *   전에는 근무조 시간표(`onDutyNow`)로 붙였다. 그러니 13:48 에 열면
+   *   제빵(05:00~13:00)이 **아무도 출근을 안 찍었는데** 「근무 중」으로 떴다.
+   *   반대로 13:00 을 넘겨 일하는 날은 「끝남」으로 떴다. 조 시간은 **예정**이고
+   *   실제로 누가 일하는지는 출퇴근 기록만 안다.
+   *
+   *   아무도 안 찍은 조는 아무 말도 하지 않는다 — 「아직 전」·「끝남」 도
+   *   예정을 사실처럼 말하는 것이다. 예정 시각만 그대로 둔다. */
+  const stateOf = (shift: Shift): ShiftPunchState | null =>
+    punched[shift.name] ?? null;
 
   /* ★ **근무 중인 조만 보여주지 않는다** (사장님 지적 2026-09-12).
    *
@@ -64,7 +94,8 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
   return (
     <div className="mt-5 flex flex-col gap-3">
       {ordered.map((shift) => {
-        const on = onNow.has(shift.id);
+        const st = stateOf(shift);
+        const on = (st?.working ?? 0) > 0;
         return (
           <div
             key={shift.id}
@@ -83,7 +114,13 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
                   : "text-zinc-400 dark:text-zinc-500",
               ].join(" ")}
             >
-              {on ? "● 근무 중" : cur < minutesOfDay2(shift.start) ? "아직 전" : "끝남"}
+              {on
+                ? `● 근무 중${st && st.working > 1 ? ` · ${st.working}명` : ""}`
+                : st && st.finished > 0
+                  ? `퇴근함${
+                      st.workedMin !== null ? ` · ${hoursLabel(st.workedMin)}` : ""
+                    }`
+                  : "예정"}
             </p>
             <h2
               className={[
@@ -136,7 +173,3 @@ export default function NowPanel({ shifts }: { shifts: Shift[] }) {
   );
 }
 
-/** "07:30" → 450. 근무 전/후를 가르는 데만 쓴다 */
-function minutesOfDay2(hhmm: string): number {
-  return Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
-}

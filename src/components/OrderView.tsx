@@ -121,10 +121,10 @@ export default function OrderView({
      *   켜져 있던 `ordered` 를 또 남긴다.
      */
     if (p.ordered === true && !before.ordered) {
-      logEvent("order_mark", { step: "ordered" });
+      logEvent("발주_주문함");
     }
     if (p.received === true && !before.received) {
-      logEvent("order_mark", { step: "received" });
+      logEvent("발주_들어옴");
     }
     /* ★ 「주문함」이 켜지고 꺼지는 것만 남긴다. 「들어옴」은 그 위에 얹히는
        것이라 같은 칸에 쓰면 주문한 사람이 지워진다 — 주문을 빠뜨린 사람을
@@ -254,7 +254,7 @@ export default function OrderView({
                     onClick={() => {
                       const next = putState(log, p.date, p.taskId, { received: true });
                       // 지난 7일 밀린 것을 뒤늦게 확인한 경우. 늦음을 같이 남긴다
-                      logEvent("order_mark", { step: "received", late: true });
+                      logEvent("발주_들어옴", { late: true });
                       setLog(next);
                       save.report("발주 기록", saveOrderLog(next));
                     }}

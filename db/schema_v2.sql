@@ -110,7 +110,11 @@ alter table users add constraint uq_users_id_store unique (id, store_id);
 -- 영업일 계산. 모든 원장 테이블이 이 함수를 쓴다.
 create or replace function business_date(p_store uuid, p_at timestamptz)
 returns date
-language sql stable as $fn$
+language sql stable
+-- ★ search_path 를 고정하지 않으면 부르는 쪽이 이름을 엉뚱한 표로 풀 수 있다.
+--   아래 current_store_id() 에만 적어뒀던 규칙을 여기에도 적용한다 (2026-09-13).
+set search_path = public, pg_temp
+as $fn$
   select (p_at at time zone s.timezone
           - (s.business_day_start - time '00:00'))::date
     from stores s where s.id = p_store
@@ -253,7 +257,11 @@ create index ix_item_versions_lookup on item_versions (item_id, validity);
 -- 그날의 규격을 꺼낸다. 원가 계산은 전부 이걸 통한다.
 create or replace function item_as_of(p_item uuid, p_on date)
 returns item_versions
-language sql stable as $fn$
+language sql stable
+-- ★ search_path 를 고정하지 않으면 부르는 쪽이 이름을 엉뚱한 표로 풀 수 있다.
+--   아래 current_store_id() 에만 적어뒀던 규칙을 여기에도 적용한다 (2026-09-13).
+set search_path = public, pg_temp
+as $fn$
   select * from item_versions
    where item_id = p_item and validity @> p_on
    limit 1
@@ -797,7 +805,11 @@ group by p.store_id, p.id, p.item_id, p.planned_on, p.expected_on, p.batches, p.
 --   0원으로 세면 원가율이 실제보다 낮게 나오고, 점주가 그 숫자로 판매가를 정한다.
 create or replace function menu_cost_as_of(p_menu uuid, p_on date)
 returns table (material_cost numeric, missing_count int)
-language sql stable as $fn$
+language sql stable
+-- ★ search_path 를 고정하지 않으면 부르는 쪽이 이름을 엉뚱한 표로 풀 수 있다.
+--   아래 current_store_id() 에만 적어뒀던 규칙을 여기에도 적용한다 (2026-09-13).
+set search_path = public, pg_temp
+as $fn$
   with v as (
     select id from menu_recipe_versions
      where menu_id = p_menu
@@ -1247,6 +1259,73 @@ create unique index uq_daily_checks_prep
 alter table stock_counts
   add constraint fk_sc_counter_same_store
   foreign key (counted_by, store_id) references staff (id, store_id);
+
+
+-- ============================================================================
+--  10-B. 이용 기록 — ★ 이 파일에서 **유일하게 실제로 올라가 있는 표**
+-- ============================================================================
+--
+--  ★ 왜 여기 있나 (2026-09-13 · 사장님 지적 "이거대로 설계 되어있는거 맞음?")
+--
+--    위의 37개는 **아직 한 줄도 안 올라갔다.** 운영 데이터(매출 · 시급 · 단가 ·
+--    레시피 · 출퇴근)는 여전히 태블릿 브라우저의 localStorage 에 있다.
+--    그런데 **서버에 딱 하나 올라가 있는 표가 이 파일에는 없었다.**
+--    이 파일만 보고 새 프로젝트에 그대로 돌리면 `events` 가 없는 DB 가 되고,
+--    `/api/log` 는 아무 오류 없이 **한 줄도 안 쌓는다** — 실패를 삼키기 때문이다.
+--    설계도에 현실이 빠져 있으면, 그 설계도를 믿는 사람이 그 함정에 빠진다.
+--
+--  ★ 왜 이것만 먼저 올렸나 (D-002 예외 조항)
+--    "Supabase 연결 중 **이벤트 저장 부분만**은 예외로 먼저 할 수 있다.
+--     현재 /api/log 가 배포 환경에서 동작하지 않아 **가설 검증 자체가
+--     불가능**하기 때문이다. 이것은 기능 추가가 아니라 검증 인프라 복구다."
+--
+--  ★ 정본은 `db/migrations/0001_events.sql` 이다. **고치면 둘 다 고친다.**
+--    `db/counts.js` 가 두 파일의 `events` 칸을 대조해서 어긋나면 실패시킨다.
+--
+--  ★ 위 37개와 규칙이 다르다. 일부러 다르다.
+--    · `store_id` 가 없다 — 매장 구분 없이 "이 화면이 열렸다" 만 센다
+--    · 그래서 §11 의 매장 격리 DO 블록이 이 표를 건드리지 않는다.
+--      RLS 를 여기서 직접 건다
+--    · 칸을 안 늘리고 `props` jsonb 에 통째로 넣는다 — 이벤트를 하나 더할
+--      때마다 마이그레이션을 하지 않으려고
+--    ⚠️ `docs/deliverables/03_ERD.md` §8 에는 이것을 **칸으로 펼친 설계**
+--       (`event` 단수 · `session_id`·`run_id`·`subject_slug`·`duration_sec` …)
+--       가 따로 적혀 있다. **그건 앞으로의 안이고, 지금 올라간 것은 아래다.**
+
+-- Supabase 에는 이미 있는 역할이다. PGlite(검사기)에는 없어서 여기서 만든다
+do $do$ begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then
+    create role anon;
+  end if;
+end $do$;
+
+create table if not exists public.events (
+  id     bigint generated always as identity primary key,
+  at     timestamptz not null default now(),
+  event  text        not null,
+  props  jsonb       not null default '{}'::jsonb,
+
+  -- 공개 엔드포인트가 넣는 표다. 이름 길이는 DB 가 직접 막는다
+  constraint events_event_len check (char_length(event) between 1 and 40)
+);
+
+-- 분석은 "언제"와 "무슨 이벤트"로만 한다
+create index if not exists events_at_idx       on public.events (at desc);
+create index if not exists events_event_at_idx on public.events (event, at desc);
+
+alter table public.events enable row level security;
+
+-- ★ 쌓기만 한다. 익명 키로는 **읽을 수 없다.**
+create policy events_anon_insert on public.events
+  for insert to anon with check (true);
+
+create policy events_auth_select on public.events
+  for select to authenticated using (true);
+
+-- ★★ 정책만으로는 안 된다. 권한(grant)을 빠뜨리면 `permission denied` 가 나는데,
+--    넣는 쪽이 실패를 삼키므로 **표만 영원히 비어 있다** (2026-09-12 실측).
+grant insert on public.events to anon;
+grant select on public.events to authenticated;
 
 
 -- ============================================================================

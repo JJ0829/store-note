@@ -36,6 +36,7 @@ import {
   type OrderLinks,
   type OrderLog,
 } from "./orders.ts";
+import { loadShiftEdits, saveShiftEdits, type ShiftEdits } from "./shiftEdit.ts";
 import type { Recipe } from "./types.ts";
 import {
   loadCycleDone,
@@ -84,6 +85,8 @@ export const BACKUP_VERSION = 3;
  */
 export const BACKUP_KEYS = [
   "sop:roster", // 직원 + 근무표(계획)
+  "sop:shifts", // ★ 매장이 고친 근무조 이름·시간. 빠지면 되돌렸을 때
+  //                 조 이름이 시드로 돌아가고 근무표 배정이 끊어진다
   "sop:punch", // 출퇴근(실제)        ★ 근로기준법 제42조 3년
   "sop:contracts", // 근로계약 조건    ★ 제42조 3년
   "sop:cycleDone", // 주기 점검을 마지막으로 한 날
@@ -171,6 +174,16 @@ export type BackupFile = {
   recipes?: Recipe[];
   orderLog?: OrderLog;
   orderLinks?: OrderLinks;
+
+  /**
+   * ★ v4 부터 — 매장이 고친 근무조 이름·시간 (2026-09-13).
+   *
+   * 잃으면 조 이름이 시드 값으로 돌아간다. 그런데 **근무표는 배정을 조 이름
+   * 문자열로 저장한다** — 「아침조」로 바꿔 쓰던 매장에서 이 칸이 빠지면
+   * 되돌린 뒤 지난 배정이 전부 없는 조를 가리키고, 지각 판정과 인건비가
+   * 조용히 달라진다. 화면에는 아무 오류도 안 뜬다.
+   */
+  shifts?: ShiftEdits;
 };
 
 /* ------------------------------------------------------------------ */
@@ -388,6 +401,7 @@ export function buildBackup(storeName: string): BackupFile {
     recipes: loadLocalRecipes(),
     orderLog: loadOrderLog(),
     orderLinks: loadOrderLinks(),
+    shifts: loadShiftEdits(),
   };
 }
 
@@ -549,6 +563,9 @@ export function applyRestore(file: BackupFile): { ok: boolean; failed: string[] 
   if (file.orderLog !== undefined && !saveOrderLog(file.orderLog)) failed.push("발주 기록");
   if (file.orderLinks !== undefined && !saveOrderLinks(file.orderLinks)) {
     failed.push("발주 거래처 연결");
+  }
+  if (file.shifts !== undefined && !saveShiftEdits(file.shifts)) {
+    failed.push("근무조");
   }
   return { ok: failed.length === 0, failed };
 }

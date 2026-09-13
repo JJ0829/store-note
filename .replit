@@ -1,0 +1,36 @@
+# 매장수첩 — Replit 개발 환경
+#
+# ★ 이건 배포처가 아니다. 배포는 Vercel 이고 순서는 docs/배포.md 다.
+#   여기는 "노트북 없이 브라우저로 손볼 수 있는 개발 환경"이다.
+#
+# ★ 포트는 3000 으로 맞춰 뒀다. 로컬(.claude/launch.json)과 문서가 전부
+#   3000 을 쓰므로, 여기만 5000 으로 두면 안내문이 두 벌이 된다.
+#
+# ★ 0.0.0.0 으로 바인딩해야 한다. Replit 은 컨테이너 밖에서 들어오므로
+#   기본값(localhost)으로 띄우면 웹뷰가 영원히 비어 있다.
+#   그 일을 package.json 의 dev:replit / start:replit 이 한다.
+
+modules = ["nodejs-22"]
+
+run = "npm run dev:replit"
+entrypoint = "src/app/page.tsx"
+
+hidden = [".next", ".config", "node_modules", "next-env.d.ts", "*.tsbuildinfo"]
+
+[nix]
+channel = "stable-24_05"
+
+[env]
+# 텔레메트리는 끈다. 매장 데이터가 나가는 건 아니지만 켜둘 이유도 없다.
+NEXT_TELEMETRY_DISABLED = "1"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+# Replit 에서 직접 띄우고 싶을 때만 쓴다 (정식 배포는 Vercel).
+# autoscale 은 PORT 를 주입하므로 start:replit 이 그걸 받는다.
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start:replit"]

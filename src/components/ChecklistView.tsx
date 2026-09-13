@@ -51,13 +51,13 @@ export default function ChecklistView({
       /* 사파리 사생활 보호 모드 등 — 그냥 빈 상태로 시작 */
     }
     setHydrated(true);
-    log("view", { positionSlug: position.shareSlug });
+    log("체크리스트_열기", { positionSlug: position.shareSlug });
   }, [storageKey, keyPrefix, position.shareSlug]);
 
   /**
    * ★ 체크 한 건도 지표로 남긴다.
    *
-   * 지금까지는 화면을 열었다(`view`)와 끝나고 물었다(`survey`)만 있어서,
+   * 지금까지는 화면을 열었다(`체크리스트_열기`)와 끝나고 물었다(`설문_응답`)만 있어서,
    * **"신입이 항목을 실제로 하나씩 짚어 갔는가 / 어디서 멈췄는가"** 를 셀
    * 경로가 0건이었다.
    *
@@ -84,7 +84,7 @@ export default function ChecklistView({
       }
 
       if (turningOn) {
-        log("check", {
+        log("체크", {
           positionSlug: position.shareSlug,
           taskId,
           critical: allTasks.find((t) => t.id === taskId)?.critical ?? false,
@@ -277,7 +277,7 @@ export default function ChecklistView({
                     type="button"
                     onClick={() => {
                       setAsked(label);
-                      log("survey", {
+                      log("설문_응답", {
                         positionSlug: position.shareSlug,
                         askedSenior: label,
                         // ★ 완주자와 이탈자를 구분할 수 있게 같이 남긴다

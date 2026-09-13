@@ -3,8 +3,8 @@
  *
  * 왜 공통으로 빼는가 — 같은 `log()` 함수가 컴포넌트 4개에 복사돼 있었고
  * (`TrainingMode` `ChecklistView` `PrepView` `RecipeDetail`), 그중 **교육
- * 모드만 `sessionId`를 안 붙이고 있었다.** 그래서 `training_complete`와
- * `survey`를 이을 열쇠가 없었다 — 검증하려는 가설이 정확히 그 둘을 붙여
+ * 모드만 `sessionId`를 안 붙이고 있었다.** 그래서 `교육_완료`와
+ * `설문_응답`을 이을 열쇠가 없었다 — 검증하려는 가설이 정확히 그 둘을 붙여
  * 보는 것인데도. → `01_MVP기획서` §8.4 #3
  *
  * 복사본이 늘어나면 이런 어긋남이 또 생긴다. `ui.tsx`와 `store.ts`를 만든

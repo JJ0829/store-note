@@ -22,6 +22,7 @@ import {
 import { contractOf, loadContracts, type Contract } from "@/lib/contracts";
 import { InlineUnlock, useOwnerOpen } from "@/components/OwnerGate";
 import { loadSettings, type Settings } from "@/lib/settings";
+import { applyShiftEdits, loadShiftEdits } from "@/lib/shiftEdit";
 import type { Shift } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -42,11 +43,14 @@ type Tab = "today" | "week";
 
 export default function AttendanceView({
   storeName,
-  shifts,
+  shifts: seedShifts,
 }: {
   storeName: string;
   shifts: Shift[];
 }) {
+  /* ★ 매장이 고친 조 이름·시간이 있으면 그게 이긴다. 여기서 조 시각은
+     **지각 판정**에 쓰이므로 옛 시간을 쓰면 지각이 아닌데 지각으로 뜬다 */
+  const [shifts, setShifts] = useState<Shift[]>(seedShifts);
   const [tab, setTab] = useState<Tab>("today");
   const [now, setNow] = useState<Date | null>(null);
   const [roster, setRoster] = useState<RosterData | null>(null);
@@ -66,10 +70,11 @@ export default function AttendanceView({
     setPunches(loadPunches());
     setContracts(loadContracts());
     setSettings(loadSettings());
+    setShifts(applyShiftEdits(seedShifts, loadShiftEdits()));
     // ★ 1초마다. 「지금 15:22」 가 30초 늦게 바뀌면 찍은 시각을 의심하게 된다
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [seedShifts]);
 
   function commit(next: PunchData) {
     setPunches(next);
@@ -123,8 +128,14 @@ export default function AttendanceView({
      * 이벤트가 폭주한다. 그리고 재고 싶은 것은 **"하루 2번 찍히는가"** 이므로
      * 버튼 쪽이 맞다. 이름·시각은 담지 않는다 — 개인정보이고, 세는 데
      * 필요하지도 않다.
+     *
+     * ★ 이름이 곧 버튼이다 (2026-09-13). 전에는 `punch` 하나에
+     *   `which: "in"|"out"` 을 붙였는데, 화면 버튼은 「출근」「퇴근」이라
+     *   표를 열어 본 사람이 매번 코드를 뒤져야 했다. 담는 값이 아예 없으니
+     *   **이름·시각이 섞일 자리도 없다.**
      */
-    logEvent("punch", { which });
+    if (which === "in") logEvent("출근");
+    else logEvent("퇴근");
   }
 
   function edit(staffId: string, patch: Partial<ReturnType<typeof newPunch>>) {
@@ -174,6 +185,22 @@ export default function AttendanceView({
         <Chip on={tab === "week"} onClick={() => setTab("week")}>
           이번 주 · 근태
         </Chip>
+      </div>
+
+      {/* ---------- 항상 보이는 고지 (사장님 지시 2026-09-13) ----------
+          ★ **가림막 밖**에 둔다. 전에는 이 두 문장이 「이번 주 · 근태」의
+            인건비 카드 안에 있어서, 잠겨 있으면(=공용 태블릿의 기본 상태)
+            아무도 못 봤다. 그런데 이 화면에서 가장 오해하기 쉬운 것이
+            **여기 금액이 급여가 아니라는 것**이다. 오해는 잠긴 상태에서도
+            생기므로 고지도 잠긴 상태에서 보여야 한다. */}
+      <div className="mt-3 rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-[12px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+        <p>
+          인건비는 <b>추정</b>입니다 — 4대보험·소득세·수습감액·연차수당
+          미포함. <b>급여 대장으로 쓰지 마세요.</b>
+        </p>
+        <p className="mt-1">
+          <b>5인 미만</b>은 연장 가산수당이 없습니다 (근로기준법 제11조).
+        </p>
       </div>
 
       {tab === "today" ? (

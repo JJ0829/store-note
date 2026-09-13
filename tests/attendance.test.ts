@@ -16,6 +16,7 @@ import {
   requiredBreak,
   toMin,
   workedMinutes,
+  shiftPunchStates,
   type DayResult,
   type Punch,
 } from "../src/lib/attendance.ts";
@@ -228,4 +229,98 @@ test("hoursLabel", () => {
   assert.equal(hoursLabel(480), "8시간");
   assert.equal(hoursLabel(45), "45분");
   assert.equal(hoursLabel(0), "0분");
+});
+
+/* ------------------------------------------------------------------ *
+ * 조가 지금 정말 일하고 있는가 (shiftPunchStates)
+ *
+ * ★ 홈 화면의 「근무 중」이 근무조 시간표로 붙던 것을 고친 자리다.
+ *   예정 시간으로 판정하면 아무도 안 온 날에도 붙는다.
+ * ------------------------------------------------------------------ */
+
+const T = "2026-09-13";
+const Y = "2026-09-12";
+
+function pu(staffId: string, date: string, inAt: string, outAt = ""): Punch {
+  return { id: "x", staffId, date, inAt, outAt, breakMin: 0, note: "" };
+}
+
+test("★ 아무도 안 찍었으면 그 조는 아예 안 나온다 (「근무 중」이 안 붙는다)", () => {
+  const st = shiftPunchStates({ s1: { [T]: "제빵" } }, {}, [T, Y]);
+  assert.equal(st["제빵"], undefined);
+});
+
+test("출근만 찍었으면 근무 중", () => {
+  const st = shiftPunchStates(
+    { s1: { [T]: "오픈조" } },
+    { s1: { [T]: pu("s1", T, "07:28") } },
+    [T, Y],
+  );
+  assert.equal(st["오픈조"].working, 1);
+  assert.equal(st["오픈조"].finished, 0);
+  assert.equal(st["오픈조"].firstIn, "07:28");
+  assert.equal(st["오픈조"].workedMin, null);
+});
+
+test("퇴근을 찍으면 근무 중이 떨어지고 일한 시간이 남는다", () => {
+  const st = shiftPunchStates(
+    { s1: { [T]: "오픈조" } },
+    { s1: { [T]: pu("s1", T, "07:28", "15:40") } },
+    [T, Y],
+  );
+  assert.equal(st["오픈조"].working, 0);
+  assert.equal(st["오픈조"].finished, 1);
+  assert.equal(st["오픈조"].workedMin, 492); // 8시간 12분
+});
+
+test("★ 예정 시간을 넘겨 일해도 찍은 대로 센다 — 제빵 05:00~13:00 을 14:10 까지", () => {
+  const st = shiftPunchStates(
+    { s1: { [T]: "제빵" } },
+    { s1: { [T]: pu("s1", T, "04:55", "14:10") } },
+    [T, Y],
+  );
+  assert.equal(st["제빵"].workedMin, 555); // 9시간 15분. 예정 8시간이 아니다
+});
+
+test("한 조에 둘이 찍히면 사람 수와 합계가 같이 쌓인다", () => {
+  const st = shiftPunchStates(
+    { s1: { [T]: "마감조" }, s2: { [T]: "마감조" } },
+    {
+      s1: { [T]: pu("s1", T, "14:30", "22:30") },
+      s2: { [T]: pu("s2", T, "14:40") },
+    },
+    [T, Y],
+  );
+  assert.equal(st["마감조"].working, 1);
+  assert.equal(st["마감조"].finished, 1);
+  assert.equal(st["마감조"].firstIn, "14:30");
+  assert.equal(st["마감조"].workedMin, 480);
+});
+
+test("★ 자정을 넘긴 마감조가 새벽에도 근무 중으로 남는다", () => {
+  // 어제 23:00 에 찍고 아직 안 나갔다. 오늘 날짜만 보면 사라진다
+  const st = shiftPunchStates(
+    { s1: { [Y]: "마감조" } },
+    { s1: { [Y]: pu("s1", Y, "23:00") } },
+    [T, Y],
+  );
+  assert.equal(st["마감조"].working, 1);
+});
+
+test("★ 어제 퇴근까지 찍고 끝난 조는 오늘 화면에 안 남는다", () => {
+  const st = shiftPunchStates(
+    { s1: { [Y]: "마감조" } },
+    { s1: { [Y]: pu("s1", Y, "14:30", "22:30") } },
+    [T, Y],
+  );
+  assert.equal(st["마감조"], undefined);
+});
+
+test("휴무(빈 문자열)는 세지 않는다", () => {
+  const st = shiftPunchStates(
+    { s1: { [T]: "" } },
+    { s1: { [T]: pu("s1", T, "07:00") } },
+    [T, Y],
+  );
+  assert.deepEqual(st, {});
 });

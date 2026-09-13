@@ -53,7 +53,7 @@ export default function TrainingMode({
   const [finished, setFinished] = useState(false);
   const [asked, setAsked] = useState<string | null>(null);
   /**
-   * ★ 끝난 회차의 runId. 설문이 `training_complete` 와 이어지는 열쇠다.
+   * ★ 끝난 회차의 runId. 설문이 `교육_완료` 와 이어지는 열쇠다.
    *
    * 끝낼 때 `save(null)` 로 `run` 을 비우기 때문에(공용 태블릿이라 진도를
    * 남기면 다음 신입에게 보인다) `run?.runId` 로는 못 얻는다. 따로 붙든다.
@@ -94,7 +94,7 @@ export default function TrainingMode({
     setAsked(null);
     setLastRunId(null);
     save(fresh);
-    log("training_start", {
+    log("교육_시작", {
       positionSlug: position.shareSlug,
       runId: fresh.runId,
       totalTasks: total,
@@ -110,7 +110,7 @@ export default function TrainingMode({
     if (!run || !task) return;
     if (run.confirmed.includes(task.id)) return;
     save({ ...run, confirmed: [...run.confirmed, task.id] });
-    log("critical_confirm", {
+    log("필수항목_확인", {
       positionSlug: position.shareSlug,
       runId: run.runId,
       taskId: task.id,
@@ -125,7 +125,7 @@ export default function TrainingMode({
 
       if (next >= total) {
         const durationSec = Math.round((Date.now() - run.startedAt) / 1000);
-        log("training_complete", {
+        log("교육_완료", {
           positionSlug: position.shareSlug,
           runId: run.runId,
           durationSec,
@@ -213,11 +213,11 @@ export default function TrainingMode({
                   type="button"
                   onClick={() => {
                     setAsked(label);
-                    log("survey", {
+                    log("설문_응답", {
                       positionSlug: position.shareSlug,
                       askedSenior: label,
                       mode: "training",
-                      // ★ 이 한 줄이 training_complete 와 이어주는 열쇠다.
+                      // ★ 이 한 줄이 교육_완료 와 이어주는 열쇠다.
                       //   없으면 "몇 분 걸렸나" 와 "몇 번 물었나" 를 못 붙인다
                       runId: lastRunId,
                     });

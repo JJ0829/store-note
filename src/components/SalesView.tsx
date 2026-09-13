@@ -25,6 +25,7 @@ import {
   sumRange,
   type SalesData,
 } from "@/lib/sales";
+import { applyShiftEdits, loadShiftEdits } from "@/lib/shiftEdit";
 import type { Shift } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -49,11 +50,13 @@ import type { Shift } from "@/lib/types";
 
 export default function SalesView({
   storeName,
-  shifts,
+  shifts: seedShifts,
 }: {
   storeName: string;
   shifts: Shift[];
 }) {
+  /* ★ 인건비가 조 시각에 딸려 있다. 매장이 고친 값을 써야 한다 */
+  const [shifts, setShifts] = useState<Shift[]>(seedShifts);
   const [tab, setTab] = useState<"day" | "week">("day");
   const [today, setToday] = useState<Date | null>(null);
   const [pick, setPick] = useState<string>("");
@@ -73,7 +76,8 @@ export default function SalesView({
     setPunches(loadPunches());
     setContracts(loadContracts());
     setSettings(loadSettings());
-  }, []);
+    setShifts(applyShiftEdits(seedShifts, loadShiftEdits()));
+  }, [seedShifts]);
 
   /** 그날 인건비 — 출퇴근 × 시급 */
   const laborOn = useMemo(() => {
@@ -135,7 +139,7 @@ export default function SalesView({
      */
     for (const f of ["total", "count", "material"] as const) {
       if (!(cur[f] > 0) && merged[f] > 0) {
-        logEvent("sales_close", { date, field: f });
+        logEvent("매출_입력", { date, field: f });
       }
     }
   }

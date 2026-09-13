@@ -423,6 +423,7 @@ test("★ BACKUP_KEYS 에 적어둔 것을 buildBackup 이 실제로 담는다",
     "sop:recipes": file.recipes,
     "sop:orderLog": file.orderLog,
     "sop:orderLinks": file.orderLinks,
+    "sop:shifts": file.shifts,
   };
 
   // 위 표가 BACKUP_KEYS 와 같은 것을 다루는지부터 본다
