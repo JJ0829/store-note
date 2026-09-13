@@ -107,9 +107,9 @@ tests/                      ← 개수는 docs/00_PROJECT_CURRENT.md 에만 적�
 | Key | 없으면 |
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` | 카카오톡 미리보기가 안 뜬다. **빌드 시점에 박힌다** |
-| `ANTHROPIC_API_KEY` | `/shoot` 의 **찍을 목록 만들기**만 "키가 없습니다" 로 뜬다. 나머지는 그대로 돈다 |
+| `GEMINI_API_KEY` | `/shoot` 의 **찍을 목록 만들기**만 "키가 없습니다" 로 뜬다. 나머지는 그대로 돈다 |
 
-⚠️ **`ANTHROPIC_API_KEY` 에 `NEXT_PUBLIC_` 을 붙이면 안 된다.** 브라우저 번들에 키가 박힌다.
+⚠️ **`GEMINI_API_KEY` 에 `NEXT_PUBLIC_` 을 붙이면 안 된다.** 브라우저 번들에 키가 박힌다.
 
 ⚠️ **Vercel 은 파일 쓰기가 막혀 있어 `data/events.jsonl` 기록이 배포본에서 동작하지 않는다.**
 지금은 조용히 버려지기만 한다. 지표를 실제로 모으려면 Supabase 가 먼저다.

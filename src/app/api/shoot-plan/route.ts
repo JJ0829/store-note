@@ -34,7 +34,7 @@ import {
  *
  * ★ 설계에서 지킨 것
  *
- *   1. **키는 서버에만.** `ANTHROPIC_API_KEY` 는 브라우저에 안 나간다.
+ *   1. **키는 서버에만.** `GEMINI_API_KEY` 는 브라우저에 안 나간다.
  *      `NEXT_PUBLIC_` 접두사를 쓰면 번들에 박히므로 절대 쓰지 않는다.
  *   2. **SDK 를 안 깐다.** REST 라 `fetch` 로 된다.
  *      런타임 의존성 3개(next·react·react-dom)를 유지한다 — CLAUDE.md.
@@ -61,11 +61,20 @@ import {
  *     2) 설정이 없어도 **횟수 제한은 항상 건다.** 사장님 결정("열되 알린다")은
  *        레시피 얘기였고, 이건 돈이라 열어두더라도 상한은 있어야 한다
  *
- *   ⚠️ 둘 다 서버 메모리에 센다. **진짜 상한은 Anthropic 콘솔의 예산 한도**
+ *   ⚠️ 둘 다 서버 메모리에 센다. **진짜 상한은 Google AI Studio 쪽 한도**
  *     에서 걸어야 한다 — `docs/배포.md`.
  * ------------------------------------------------------------------ */
 
-const MODEL = "claude-sonnet-5";
+/* ★ 2026-09-13 — Anthropic 에서 **Google Gemini** 로 바꿨다.
+   바꾼 이유는 값이다: 무료 등급이 있어서 결제 수단 없이 돈다.
+   **나가는 것은 포지션·메뉴 이름과 짧은 메모뿐**이라(아래 `user`)
+   무료 등급이 입력을 학습에 쓰더라도 샐 영업비밀이 없다 —
+   레시피 배합은 이 요청에 실리지 않는다. 그래서 바꿀 수 있었다.
+
+   **모델 이름이 바뀌면 404 가 난다.** 발표장에서 처음 알게 되는 종류라
+   `GEMINI_MODEL` 로 덮어쓸 수 있게 뒀다 — 코드를 고치고 다시 배포하지
+   않아도 환경변수만 바꾸면 된다. */
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 const SYSTEM = `당신은 개인 카페·베이커리의 주방 교육을 돕는다.
 사장님이 포지션 이름(예: 오픈조, 제빵, 마감조)이나 메뉴 이름을 주면,
@@ -127,12 +136,12 @@ export async function POST(req: Request) {
     );
   }
 
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = process.env.GEMINI_API_KEY;
   if (!key) {
     // 없는 기능을 있는 척하지 않는다. 화면이 이 문장을 그대로 띄운다
     refundAiSlot(who); // 부르지도 못했으니 칸을 돌려준다
     return bad(
-      "AI 키가 설정되지 않았습니다. 배포처의 환경변수에 ANTHROPIC_API_KEY 를 넣어주세요.",
+      "AI 키가 설정되지 않았습니다. 배포처의 환경변수에 GEMINI_API_KEY 를 넣어주세요.",
       503,
     );
   }
@@ -158,43 +167,55 @@ export async function POST(req: Request) {
 
   let res: Response;
   try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+      {
       method: "POST",
+      /* ★ 키를 **헤더**로 보낸다. 구글 문서는 `?key=` 쿼리도 되지만 그러면
+         키가 주소에 실려서 중간의 로그·프록시·브라우저 기록에 남는다.
+         헤더는 안 남는다. 하는 일은 같다. */
       headers: {
         "content-type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
+        "x-goog-api-key": key,
       },
       body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 2000,
-        system: SYSTEM,
-        messages: [{ role: "user", content: user }],
+        system_instruction: { parts: [{ text: SYSTEM }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: { maxOutputTokens: 2000 },
       }),
       // 발표장 네트워크가 느릴 수 있다. 무한정 기다리면 화면이 멈춘 것처럼 보인다
       signal: AbortSignal.timeout(30_000),
-    });
+      },
+    );
   } catch {
     return bad("AI 서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.", 504);
   }
 
   if (!res.ok) {
     // 키가 틀렸는지 한도인지는 사람에게 다르게 말해야 한다
+    /* ★ Gemini 는 키가 틀리면 401 이 아니라 **400/403** 을 준다.
+       401 만 보고 있으면 "키가 틀렸다" 를 영영 못 알려주고
+       사장님이 엉뚱한 데를 뒤진다. 404 는 모델 이름이다. */
     const hint =
-      res.status === 401
+      res.status === 400 || res.status === 401 || res.status === 403
         ? "AI 키가 올바르지 않습니다."
-        : res.status === 429
-          ? "AI 사용량 한도에 걸렸습니다. 잠시 뒤 다시 시도해 주세요."
-          : `AI 서버가 응답하지 않았습니다 (${res.status}).`;
+        : res.status === 404
+          ? `AI 모델 이름이 올바르지 않습니다 (${MODEL}). 환경변수 GEMINI_MODEL 을 확인해 주세요.`
+          : res.status === 429
+            ? "AI 사용량 한도에 걸렸습니다. 잠시 뒤 다시 시도해 주세요."
+            : `AI 서버가 응답하지 않았습니다 (${res.status}).`;
     return bad(hint, 502);
   }
 
   let text = "";
   try {
-    const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
-    text = (data.content ?? [])
-      .filter((c) => c.type === "text")
-      .map((c) => c.text ?? "")
+    const data = (await res.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    /* 첫 후보의 조각들을 잇는다. 안전 필터에 걸리면 `candidates` 가 통째로
+       비어 오는데, 그때는 빈 문자열이 되고 아래에서 목록 0개로 걸러진다. */
+    text = (data.candidates?.[0]?.content?.parts ?? [])
+      .map((part) => part.text ?? "")
       .join("");
   } catch {
     return bad("AI 응답을 읽을 수 없습니다.", 502);

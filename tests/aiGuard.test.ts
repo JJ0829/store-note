@@ -141,7 +141,7 @@ async function withEnv<T>(
 
 test("★ 매장 번호가 설정돼 있으면 쿠키 없이는 못 부른다", async () => {
   resetRateLimit();
-  await withEnv({ STORE_PIN: "135790", ANTHROPIC_API_KEY: "sk-ant-fake" }, async () => {
+  await withEnv({ STORE_PIN: "135790", GEMINI_API_KEY: "fake-key" }, async () => {
     const res = await POST(req({ position: "오픈조" }));
     assert.equal(res.status, 401);
     const body = (await res.json()) as { reason: string };
@@ -151,7 +151,7 @@ test("★ 매장 번호가 설정돼 있으면 쿠키 없이는 못 부른다", 
 
 test("★ 틀린 쿠키로도 못 부른다", async () => {
   resetRateLimit();
-  await withEnv({ STORE_PIN: "135790", ANTHROPIC_API_KEY: "sk-ant-fake" }, async () => {
+  await withEnv({ STORE_PIN: "135790", GEMINI_API_KEY: "fake-key" }, async () => {
     const res = await POST(
       req({ position: "오픈조" }, { cookie: `${STORE_COOKIE}=${cookieValue("000000")}` }),
     );
@@ -161,7 +161,7 @@ test("★ 틀린 쿠키로도 못 부른다", async () => {
 
 test("★ 매장 번호가 없어도 횟수 제한은 걸린다 (열어두더라도 상한은 있다)", async () => {
   resetRateLimit();
-  await withEnv({ STORE_PIN: undefined, ANTHROPIC_API_KEY: undefined }, async () => {
+  await withEnv({ STORE_PIN: undefined, GEMINI_API_KEY: undefined }, async () => {
     /* 키가 없으므로 실제 호출은 안 나가고 503 이 온다. 그런데 그건 칸을
        돌려받는 경로다 — 상한 자체가 도는지 보려면 칸을 다 써야 한다.
        그래서 여기서는 **입력이 성한 요청**으로 전체 상한까지 밀어붙인다.
@@ -176,7 +176,7 @@ test("★ 매장 번호가 없어도 횟수 제한은 걸린다 (열어두더라
 
 test("입력이 짧으면 칸을 돌려받는다 (오타로 상한을 깎지 않는다)", async () => {
   resetRateLimit();
-  await withEnv({ STORE_PIN: undefined, ANTHROPIC_API_KEY: "sk-ant-fake" }, async () => {
+  await withEnv({ STORE_PIN: undefined, GEMINI_API_KEY: "fake-key" }, async () => {
     for (let i = 0; i < 5; i++) {
       const res = await POST(req({ position: "가" }, { ip: "8.8.8.8" }));
       assert.equal(res.status, 400);
@@ -192,7 +192,7 @@ test("입력이 짧으면 칸을 돌려받는다 (오타로 상한을 깎지 않
 
 test("AI 키가 없으면 그렇다고 말하고 칸도 돌려받는다", async () => {
   resetRateLimit();
-  await withEnv({ STORE_PIN: undefined, ANTHROPIC_API_KEY: undefined }, async () => {
+  await withEnv({ STORE_PIN: undefined, GEMINI_API_KEY: undefined }, async () => {
     const res = await POST(req({ position: "오픈조" }, { ip: "6.6.6.6" }));
     assert.equal(res.status, 503);
     let ok = 0;
