@@ -759,14 +759,14 @@ const DATA = {
         trigger:"주기 미정", cycle:true, hours:null, days:null, recoverable:true, critical:false, varies:false,
         option:null, optional:false, conseq:"아래 항목을 하나씩 봅니다.", recipe:null },
       { id:"c4", title:"보건증 갱신 확인", desc:"직원 전원. 만료되면 과태료 대상입니다. ★ 유효기간은 업종에 따라 다릅니다 — 발급받은 결과서에 적힌 날짜를 보고 주기를 넣어 주세요.",
-        trigger:"주기 미정", cycle:true, hours:null, days:null, recoverable:true, critical:true, varies:false,
-        option:"clegal", optional:false, conseq:"법정 의무입니다. 적발되면 과태료가 나옵니다.", recipe:null },
+        trigger:"주기 미정", cycle:true, hours:null, days:null, recoverable:false, critical:true, varies:false,
+        option:"clegal", optional:false, conseq:"법정 의무입니다. 적발되면 과태료가 나옵니다. 검사받고 발급되기까지 며칠 걸려서 만료된 걸 안 날 당일에는 못 만듭니다.", recipe:null },
       { id:"c10", title:"소화기·소방시설 점검", desc:"소화기 압력계 바늘이 초록 칸에 있는지, 유도등이 켜지는지. ★ 자체점검 주기와 대상은 건물 규모·용도에 따라 다릅니다 — 관할 소방서에 확인한 값을 넣어 주세요.",
-        trigger:"주기 미정", cycle:true, hours:null, days:null, recoverable:true, critical:true, varies:false,
-        option:"clegal", optional:false, conseq:"법정 의무입니다. 그리고 정작 필요한 순간에 안 나갑니다.", recipe:null },
+        trigger:"주기 미정", cycle:true, hours:null, days:null, recoverable:false, critical:true, varies:false,
+        option:"clegal", optional:false, conseq:"법정 의무입니다. 그리고 정작 필요한 순간에 안 나갑니다. 점검 업체를 불러야 해서 당일에 못 맞춥니다.", recipe:null },
       { id:"c11", title:"위생교육 이수", desc:"영업자와 종업원의 교육이 다릅니다. ★ 대상과 주기는 업종에 따라 다릅니다 — 확인한 값을 넣어 주세요.",
-        trigger:"주기 미정", cycle:true, hours:null, days:null, recoverable:true, critical:true, varies:false,
-        option:"clegal", optional:false, conseq:"법정 의무입니다. 미이수 시 과태료입니다.", recipe:null }
+        trigger:"주기 미정", cycle:true, hours:null, days:null, recoverable:false, critical:true, varies:false,
+        option:"clegal", optional:false, conseq:"법정 의무입니다. 미이수 시 과태료입니다. 교육을 이수하는 데 시간이 걸려서 그날 끝낼 수 없습니다.", recipe:null }
     ]}
   ]
 };

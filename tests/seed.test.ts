@@ -479,7 +479,7 @@ test("★ 숫자 정본 — 프렙 목록의 개수", () => {
   const want: Record<string, { all: number; counted: number; irreversible: number }> = {
     midday: { all: 6, counted: 6, irreversible: 0 },
     afternoon: { all: 11, counted: 5, irreversible: 7 },
-    cycle: { all: 16, counted: 13, irreversible: 1 },
+    cycle: { all: 16, counted: 13, irreversible: 4 },
   };
   assert.equal(listPrepLists().length, 3, `프렙 목록 수가 바뀌었다 — ${정본}`);
   for (const list of listPrepLists()) {
