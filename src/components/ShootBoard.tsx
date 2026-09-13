@@ -4,7 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
 import ShootPlanner from "@/components/ShootPlanner";
-import { expectedNames, forget, probeAll, type Found } from "@/lib/mediaProbe";
+import {
+  expectedNames,
+  forget,
+  nameFromUrl,
+  probeAll,
+  storedWhere,
+  type Found,
+} from "@/lib/mediaProbe";
 
 type Slot = "good" | "bad" | "video";
 
@@ -40,19 +47,61 @@ function Row({
   const [busy, setBusy] = useState<Slot | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  /**
+   * 찍은 것을 보관함에 넣는다.
+   *
+   * ★ 파일을 **우리 서버로 안 보낸다** (2026-09-13). 배포처의 요청 본문
+   *   한도가 4.5MB 라 30~60MB 짜리 폰 영상은 우리를 거쳐서는 못 올라간다.
+   *   그래서 ① 올릴 자리를 열고(`POST /api/media` — 이름만 간다)
+   *   ② 브라우저가 **보관함으로 바로** 올린다.
+   *   폴더 갈래(환경변수 없는 로컬)일 때만 예전처럼 우리가 받는다(`PUT`).
+   */
   async function upload(slot: Slot, file: File) {
     setBusy(slot);
     setErr(null);
-    const fd = new FormData();
-    fd.set("file", file);
-    fd.set("base", item.id);
-    fd.set("slot", slot);
+    const ext = (file.name.split(".").pop() ?? "").toLowerCase();
     try {
-      const r = await fetch("/api/media", { method: "POST", body: fd });
-      const j = (await r.json()) as { ok?: boolean; reason?: string };
+      const open = await fetch("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base: item.id, slot, ext, size: file.size }),
+      });
+      const t = (await open.json()) as {
+        ok?: boolean;
+        reason?: string;
+        mode?: "direct" | "local";
+        url?: string;
+      };
       /* ★ 실패를 삼키지 않는다. 넣은 줄 알고 넘어가면 발표장에서 회색 네모를 본다 */
-      if (!j.ok) setErr(j.reason ?? "넣지 못했습니다");
-      else onChanged();
+      if (!t.ok) {
+        setErr(t.reason ?? "넣지 못했습니다");
+        return;
+      }
+
+      if (t.mode === "direct" && t.url) {
+        const put = await fetch(t.url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        if (!put.ok) {
+          setErr(`보관함이 받지 않았습니다 (${put.status})`);
+          return;
+        }
+      } else {
+        const fd = new FormData();
+        fd.set("file", file);
+        fd.set("base", item.id);
+        fd.set("slot", slot);
+        fd.set("ext", ext);
+        const r = await fetch("/api/media", { method: "PUT", body: fd });
+        const j = (await r.json()) as { ok?: boolean; reason?: string };
+        if (!j.ok) {
+          setErr(j.reason ?? "넣지 못했습니다");
+          return;
+        }
+      }
+      onChanged();
     } catch {
       setErr("서버에 닿지 못했습니다");
     } finally {
@@ -61,7 +110,9 @@ function Row({
   }
 
   async function remove(url: string) {
-    const name = url.split("/").pop() ?? "";
+    /* ★ 서명된 주소에는 `?token=...` 이 붙는다. 그냥 잘라 쓰면 이름에
+       토큰이 딸려 가고 서버가 거절한다 — `nameFromUrl` 이 그걸 막는다 */
+    const name = nameFromUrl(url);
     if (!window.confirm(`${name} 을(를) 지웁니다. 되돌릴 수 없습니다.`)) return;
     setErr(null);
     try {
@@ -283,17 +334,31 @@ export default function ShootBoard({
         </ol>
         {/* ★ 저장되는 곳을 화면이 말해야 한다 (사장님 질문 2026-09-12:
             "여기에 저장되는 폴더 어디 있는데"). 코드 주석에만 있으면
-            쓰는 사람은 영영 모른다 */}
+            쓰는 사람은 영영 모른다. 2026-09-13 부터 보관함이 둘로 갈리므로
+            **어느 쪽으로 갔는지도** 같이 말한다 */}
         <p className="mt-2 rounded-lg bg-white px-2.5 py-2 text-[11px] leading-relaxed text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
-          <b>어디에 저장되나</b> — 이 앱을 띄운 컴퓨터의{" "}
-          <code className="font-mono">store-note/public/media/</code> 폴더입니다.
+          {storedWhere() === "folder" ? (
+            <>
+              <b>어디에 저장되나</b> — 지금은 이 앱을 띄운 컴퓨터의{" "}
+              <code className="font-mono">store-note/public/media/</code> 폴더입니다.
+              <br />
+              ⚠️ <b>배포본에서는 이 길로 저장이 안 됩니다</b>(폴더가 읽기 전용).
+              배포처에 <code className="font-mono">SUPABASE_URL</code> ·{" "}
+              <code className="font-mono">SUPABASE_ANON_KEY</code> 를 넣으면{" "}
+              <b>매장에서 폰으로 찍어 바로 올릴 수 있습니다.</b>
+            </>
+          ) : (
+            <>
+              <b>어디에 저장되나</b> — <b>서버 보관함</b>입니다. 매장에서 폰으로
+              찍으면 바로 올라가고, 다른 기기에서도 같이 보입니다.
+              <br />
+              사진 주소는 <b>한 시간마다 새로 발급</b>됩니다 — 보관함이 공개가
+              아니라서 주소만으로는 남이 못 엽니다.
+            </>
+          )}{" "}
           파일 이름은 <code className="font-mono">항목id-good.jpg</code> ·{" "}
           <code className="font-mono">항목id-bad.jpg</code> ·{" "}
-          <code className="font-mono">항목id.mp4</code> 형태로 저장됩니다.
-          <br />
-          ⚠️ <b>배포본(Vercel)에서는 저장이 안 됩니다</b> — 그쪽은 폴더가 읽기
-          전용입니다. 넣는 것은 <b>매장 컴퓨터에서 띄운 앱</b>으로 하세요.
-          실패하면 화면이 빨간 글씨로 알려줍니다.
+          <code className="font-mono">항목id.mp4</code> 형태입니다.
         </p>
         <p className="mt-2 text-zinc-500 dark:text-zinc-400">
           좋은 예 하나만 있어도 화면에 붙습니다. 나쁜 예는 없으면 안 보이고,

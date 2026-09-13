@@ -1,78 +1,106 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import {
+  MAX_BYTES,
+  isStoredName,
+  listMedia,
+  openUpload,
+  removeMedia,
+  safeName,
+  siblingNames,
+  where,
+  writeLocal,
+  type Slot,
+} from "@/lib/mediaStore";
 
 export const dynamic = "force-dynamic";
 
-/**
- * `public/media/` 안에 어떤 파일이 들어와 있는지 한 번에 알려준다.
+/* ------------------------------------------------------------------ *
+ * 촬영 사진·영상.
  *
- * 처음에는 화면에서 파일마다 있는지 물어봤는데(항목 48개 × 확장자 11개),
- * 요청이 500개 넘게 나가서 개발 서버가 멈췄다. 목록은 한 번만 받으면 된다.
- */
+ * ★ 2026-09-13 — 보관함이 **서버 폴더에서 Supabase Storage 로** 옮겨졌다.
+ *   어디에 쌓이는지는 `src/lib/mediaStore.ts` 가 정하고, 이 파일은 그걸
+ *   화면에 열어주기만 한다.
+ *
+ * GET     들어와 있는 것 + 볼 수 있는 주소 (서명됨, 1시간)
+ * POST    올릴 자리를 연다 — 파일은 **여기로 안 온다** (본문 한도 4.5MB)
+ * PUT     폴더 갈래에서만. 파일을 받아서 직접 쓴다
+ * DELETE  잘못 찍은 것 지우기
+ * ------------------------------------------------------------------ */
+
 export async function GET() {
-  try {
-    const files = (await fs.readdir(DIR)).filter(
-      (n) => !n.startsWith(".") && !n.endsWith(".md"),
-    );
-    return Response.json({ files });
-  } catch {
-    // 폴더가 아직 없으면 빈 목록으로 둔다
-    return Response.json({ files: [] });
-  }
-}
-
-const DIR = path.join(process.cwd(), "public", "media");
-
-/** 넣을 수 있는 확장자. 폰 카메라가 내놓는 것들이다 */
-const IMG = ["jpg", "jpeg", "png", "webp", "heic"];
-const VID = ["mp4", "mov", "webm", "m4v"];
-
-/** 한 파일 50MB. 30초짜리 폰 영상이 보통 30~60MB 다 */
-const MAX = 50 * 1024 * 1024;
-
-type Slot = "good" | "bad" | "video";
-const SLOTS: Slot[] = ["good", "bad", "video"];
-
-/**
- * 넣을 파일 이름을 만든다.
- *
- * ★ 여기서 **경로를 못 벗어나게** 막는다. `base` 는 화면이 보내는 항목 id 인데,
- *   그대로 믿고 이어붙이면 `../../` 같은 것이 들어와 저장소 바깥에 쓴다.
- *   영숫자와 하이픈만 남기고, 확장자는 **목록에 있는 것만** 받는다.
- */
-function safeName(base: string, slot: Slot, ext: string): string | null {
-  const raw = String(base).toLowerCase();
-  const b = raw.replace(/[^a-z0-9-]/g, "");
-  const e = String(ext).toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (!b || b.length > 60) return null;
-  /* ★ 걸러낸 뒤가 원래와 다르면 **거절한다.** 조용히 고쳐서 넣으면
-     `../../evil` 이 `evil` 로 바뀌어 저장되고, 폴더에 아무도 모르는 파일이
-     쌓인다. 경로를 못 벗어나는 것과, 이상한 것을 안 받는 것은 다른 일이다. */
-  if (b !== raw) return null;
-  const ok = slot === "video" ? VID : IMG;
-  if (!ok.includes(e)) return null;
-  return slot === "video" ? `${b}.${e}` : `${b}-${slot}.${e}`;
-}
-
-/** 같은 자리에 이미 다른 확장자로 들어와 있으면 지운다 (두 장이 남지 않게) */
-async function removeSiblings(base: string, slot: Slot) {
-  const b = base.toLowerCase().replace(/[^a-z0-9-]/g, "");
-  const exts = slot === "video" ? VID : IMG;
-  const stem = slot === "video" ? b : `${b}-${slot}`;
-  await Promise.all(
-    exts.map((e) => fs.rm(path.join(DIR, `${stem}.${e}`), { force: true })),
-  );
+  return Response.json({ files: await listMedia(), where: where() });
 }
 
 /**
- * 찍은 사진·영상을 넣는다.
+ * 올릴 자리를 연다.
  *
- * ⚠️ **서버의 파일 시스템에 쓴다.** 로컬(`npm run dev`)과 직접 띄운 서버에서는
- *   되지만, Vercel 같은 곳은 배포본 폴더가 읽기 전용이라 **안 된다.**
- *   그때는 실패를 숨기지 않고 화면이 이유를 말한다 — 조용히 넘어가면
- *   사장님은 넣은 줄 알고 발표장에서 회색 네모를 본다.
+ * 파일이 아니라 **이름만** 받는다. Supabase 갈래에서는 서명된 주소를 돌려주고
+ * 브라우저가 거기로 바로 올린다 — 우리를 거치면 배포처의 본문 한도(4.5MB)에
+ * 걸려서 영상이 **절대 못 올라간다.**
  */
 export async function POST(req: Request) {
+  let body: { base?: string; slot?: string; ext?: string; size?: number };
+  try {
+    body = (await req.json()) as typeof body;
+  } catch {
+    return Response.json({ ok: false, reason: "요청을 못 읽었습니다" }, { status: 400 });
+  }
+
+  const name = safeName(String(body.base ?? ""), body.slot as Slot, String(body.ext ?? ""));
+  if (!name)
+    return Response.json(
+      {
+        ok: false,
+        reason: `이 파일은 못 넣습니다 — 확장자(.${body.ext ?? ""}) 또는 항목 이름이 맞지 않습니다`,
+      },
+      { status: 400 },
+    );
+
+  if (typeof body.size === "number" && body.size > MAX_BYTES)
+    return Response.json(
+      {
+        ok: false,
+        reason: `파일이 너무 큽니다 (${Math.round(body.size / 1e6)}MB · 최대 50MB)`,
+      },
+      { status: 413 },
+    );
+
+  /* ★ 같은 자리의 옛 파일을 **먼저** 치운다. 확장자가 다르면(jpg → png)
+     두 장이 남고, 화면은 그중 하나만 보여주므로 지운 줄 알았던 것이 계속
+     보관함에 남는다. 실패는 무시한다 — 없는 파일을 지우는 경우가 대부분이다. */
+  await Promise.all(
+    siblingNames(String(body.base), body.slot as Slot)
+      .filter((n) => n !== name)
+      .map((n) => removeMedia(n).catch(() => false)),
+  );
+
+  const ticket = await openUpload(name);
+  if (!ticket)
+    return Response.json(
+      {
+        ok: false,
+        reason:
+          "보관함을 열지 못했습니다. 배포처의 SUPABASE_URL · SUPABASE_ANON_KEY 를 확인해 주세요.",
+      },
+      { status: 502 },
+    );
+
+  return Response.json({ ok: true, ...ticket });
+}
+
+/**
+ * 폴더 갈래에서만 온다 (`npm run dev` 에 환경변수가 없을 때).
+ *
+ * ⚠️ 배포본은 여기 오면 실패한다 — 폴더가 읽기 전용이다. 그래서 실패를
+ *   숨기지 않고 이유를 말한다. 조용히 넘어가면 사장님은 넣은 줄 알고
+ *   발표장에서 회색 네모를 본다.
+ */
+export async function PUT(req: Request) {
+  if (where() !== "folder")
+    return Response.json(
+      { ok: false, reason: "이 서버는 보관함에 바로 올립니다 (이 길은 안 씁니다)" },
+      { status: 409 },
+    );
+
   let form: FormData;
   try {
     form = await req.formData();
@@ -81,42 +109,31 @@ export async function POST(req: Request) {
   }
 
   const file = form.get("file");
-  const base = String(form.get("base") ?? "");
-  const slot = String(form.get("slot") ?? "") as Slot;
-
+  const name = safeName(
+    String(form.get("base") ?? ""),
+    String(form.get("slot") ?? "") as Slot,
+    String(form.get("ext") ?? ""),
+  );
   if (!(file instanceof File))
     return Response.json({ ok: false, reason: "파일이 없습니다" }, { status: 400 });
-  if (!SLOTS.includes(slot))
-    return Response.json({ ok: false, reason: "자리가 잘못됐습니다" }, { status: 400 });
-  if (file.size > MAX)
+  if (!name)
+    return Response.json({ ok: false, reason: "이 파일은 못 넣습니다" }, { status: 400 });
+  if (file.size > MAX_BYTES)
     return Response.json(
       { ok: false, reason: `파일이 너무 큽니다 (${Math.round(file.size / 1e6)}MB · 최대 50MB)` },
       { status: 413 },
     );
 
-  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
-  const name = safeName(base, slot, ext);
-  if (!name)
-    return Response.json(
-      {
-        ok: false,
-        reason: `이 파일은 못 넣습니다 — 확장자(.${ext}) 또는 항목 이름이 맞지 않습니다`,
-      },
-      { status: 400 },
-    );
-
   try {
-    await fs.mkdir(DIR, { recursive: true });
-    await removeSiblings(base, slot);
-    await fs.writeFile(path.join(DIR, name), Buffer.from(await file.arrayBuffer()));
+    await writeLocal(name, new Uint8Array(await file.arrayBuffer()));
     return Response.json({ ok: true, name });
   } catch (e) {
     return Response.json(
       {
         ok: false,
         reason:
-          "이 서버에는 파일을 저장할 수 없습니다. 배포본은 폴더가 읽기 전용입니다 — " +
-          "지금은 내 컴퓨터에서 띄운 앱에서만 넣을 수 있습니다.",
+          "이 서버에는 파일을 저장할 수 없습니다 — 폴더가 읽기 전용입니다. " +
+          "배포처에 SUPABASE_URL · SUPABASE_ANON_KEY 를 넣으면 보관함으로 올라갑니다.",
         detail: String(e),
       },
       { status: 500 },
@@ -124,17 +141,13 @@ export async function POST(req: Request) {
   }
 }
 
-/** 잘못 찍은 것을 지운다. 파일 이름은 목록(GET)에서 받은 것만 받는다 */
+/** 잘못 찍은 것을 지운다. 이름은 목록(GET)에서 받은 모양만 받는다 */
 export async function DELETE(req: Request) {
   const name = new URL(req.url).searchParams.get("name") ?? "";
-  /* ★ 이름에 경로가 섞여 있으면 거절한다. `path.basename` 으로 자르는 것만으로는
-     부족하다 — 무엇을 지웠는지 화면에 돌려줘야 하므로 그대로 쓸 이름만 받는다. */
-  if (!/^[a-z0-9-]+\.[a-z0-9]+$/i.test(name))
+  if (!isStoredName(name))
     return Response.json({ ok: false, reason: "이름이 잘못됐습니다" }, { status: 400 });
-  try {
-    await fs.rm(path.join(DIR, name), { force: true });
-    return Response.json({ ok: true, name });
-  } catch (e) {
-    return Response.json({ ok: false, reason: "지우지 못했습니다", detail: String(e) }, { status: 500 });
-  }
+  const ok = await removeMedia(name);
+  return ok
+    ? Response.json({ ok: true, name })
+    : Response.json({ ok: false, reason: "지우지 못했습니다" }, { status: 500 });
 }

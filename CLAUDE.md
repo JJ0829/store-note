@@ -328,6 +328,8 @@ src/lib/settings.ts         ← 최저임금·5인이상·목표원가율·판�
 src/lib/businessDay.ts      ← ★ 매장의 하루. 경계는 자정이 아니라 새벽 4시
 src/lib/cycleDone.ts        ← ★ 주기 점검의 **마지막으로 한 날 + 매장이 정한 주기**
 src/lib/shootPlan.ts        ← ★ AI 응답 거르기. **프롬프트보다 여기가 위험하다**
+src/lib/mediaStore.ts       ← ★ 촬영 보관함. Supabase Storage(비공개) ↔ 폴더 두 갈래
+                              브라우저가 **보관함으로 바로** 올린다 (본문 한도 4.5MB 회피)
 src/app/api/shoot-plan/     ← ★ 유일한 AI 호출. 키는 서버에만
 src/lib/shiftClock.ts       ← ★ 자정을 넘는 근무조 판정 (연장된 날의 마감조)
 src/lib/backup.ts           ← 내보내기·되돌리기. ★ CSV는 BOM 필수 + 수식 주입 차단
