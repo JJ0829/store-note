@@ -8,6 +8,8 @@ import {
   punchToRow,
   rowToContract,
   rowToPunch,
+  oldStyleStaff,
+  pushStaff,
   rowToStaff,
   staffToRow,
 } from "../src/lib/serverSync.ts";
@@ -165,4 +167,27 @@ test("★ 주소로 아무 표나 부를 수 없다", () => {
 test("★ 새로 만드는 id 는 uuid 다 — 서버가 옛 모양을 거절한다", () => {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   for (let i = 0; i < 20; i++) assert.match(newUuid(), uuid);
+});
+
+test("★ 옛 방식 id 로 만든 직원은 «왜 안 되는지» 를 말한다", async () => {
+  /* 2026-09-14 — 직원 3명을 넣었는데 서버에 한 줄도 안 들어갔다.
+     uuid 로 바꾸기 **전에** 만든 직원이라 서버가 400 으로 거절했는데,
+     화면에는 「보내지 못했습니다」 로만 보여서 원인을 알 수 없었다. */
+  const oldOne: Staff = {
+    id: "st-a1b2c3",
+    section: "바",
+    name: "김민수",
+    email: "",
+    phone: "",
+  };
+  const newOne: Staff = { ...oldOne, id: newUuid(), name: "이서연" };
+
+  assert.deepEqual(oldStyleStaff([oldOne, newOne]), [oldOne]);
+  assert.deepEqual(oldStyleStaff([newOne]), []);
+
+  const r = await pushStaff([oldOne, newOne]);
+  assert.equal(r.ok, false);
+  assert.ok(!r.ok && r.reason.includes("김민수"), "누구 때문인지 이름을 말해야 한다");
+  assert.ok(!r.ok && r.reason.includes("다시 넣어"), "무엇을 하라는지 말해야 한다");
+  assert.ok(!r.ok && !r.reason.includes("이서연"), "멀쩡한 직원까지 탓하면 안 된다");
 });

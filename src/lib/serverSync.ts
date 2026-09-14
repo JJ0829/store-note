@@ -38,24 +38,46 @@ export type SyncResult =
 export const SKIP = "skip";
 
 /** 서버 쪽 사정으로 «지금은 안 보낸다» 인 응답들. 사람에게 보일 것이 아니다 */
-const SKIP_REASONS = new Set(["anon", "off", "not-configured", "no-store"]);
+const SKIP_REASONS = new Set(["anon", "off", "not-configured", "no-store", "stale"]);
 
 export function isSkip(r: SyncResult): boolean {
   return !r.ok && r.reason === SKIP;
 }
 
-async function get(table: string): Promise<unknown[] | null> {
+/**
+ * 토큰이 낡았을 때 **한 번만** 갱신시키고 다시 온다.
+ *
+ * ★★ 갱신은 `/api/auth/me` 한 곳에서만 한다 (2026-09-14).
+ *   Supabase 갱신 토큰은 한 번 쓰면 폐기되고 같은 것을 두 번 보내면
+ *   **세션 전체가 끊긴다.** 갱신하는 곳이 둘이면 화면을 열 때 동시에
+ *   갱신을 시도해서 로그인이 풀린다 — 실제로 그렇게 됐다.
+ */
+async function nudge(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/auth/me", { cache: "no-store" });
+    if (!res.ok) return false;
+    const who = (await res.json()) as { state?: string };
+    return who.state === "ok";
+  } catch {
+    return false;
+  }
+}
+
+async function get(table: string, retry = true): Promise<unknown[] | null> {
   try {
     const res = await fetch(`/api/data/${table}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { ok?: boolean; rows?: unknown[] };
-    return body.ok && Array.isArray(body.rows) ? body.rows : null;
+    const body = (await res.json().catch(() => null)) as
+      | { ok?: boolean; rows?: unknown[]; reason?: string }
+      | null;
+    if (res.ok && body?.ok && Array.isArray(body.rows)) return body.rows;
+    if (retry && body?.reason === "stale" && (await nudge())) return get(table, false);
+    return null;
   } catch {
     return null;
   }
 }
 
-async function put(table: string, rows: unknown[]): Promise<SyncResult> {
+async function put(table: string, rows: unknown[], retry = true): Promise<SyncResult> {
   try {
     const res = await fetch(`/api/data/${table}`, {
       method: "PUT",
@@ -67,6 +89,8 @@ async function put(table: string, rows: unknown[]): Promise<SyncResult> {
       | null;
     if (res.ok && body?.ok) return { ok: true, rows: body.wrote ?? rows.length };
     const why = body?.reason ?? "";
+    /* 토큰만 낡았다 — 갱신시키고 한 번 더. 로그아웃이 아니다 */
+    if (retry && why === "stale" && (await nudge())) return put(table, rows, false);
     /* 로그인 안 했거나 설정이 없는 것은 «실패» 가 아니다 — 조용히 넘어간다 */
     if (SKIP_REASONS.has(why)) return { ok: false, reason: SKIP };
     return { ok: false, reason: why || `보내지 못했습니다 (${res.status})` };
@@ -210,7 +234,26 @@ export async function pullStaff(): Promise<Staff[] | null> {
   return rows ? rows.map((r) => rowToStaff(r as Row)) : null;
 }
 
+/** 서버 `staff.id` 가 uuid 라서, 옛 방식(`st-a1b2c3`)으로 만든 직원은 못 올린다 */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function oldStyleStaff(list: Staff[]): Staff[] {
+  return list.filter((s) => !UUID.test(s.id));
+}
+
 export async function pushStaff(list: Staff[]): Promise<SyncResult> {
+  /* ★ 여기서 미리 걸러서 **이유를 말한다.**
+     그냥 보내면 서버가 「400」 만 돌려주고, 화면에는 «보내지 못했습니다» 로만
+     보여서 사장님이 뭘 해야 할지 알 수 없다. id 모양이 옛것이면 고칠 방법은
+     하나뿐이다 — 근무표에서 지우고 다시 넣는 것. 그 문장을 그대로 띄운다. */
+  const old = oldStyleStaff(list);
+  if (old.length > 0) {
+    const who = old.map((s) => s.name || "(이름 없음)").join(", ");
+    return {
+      ok: false,
+      reason: `직원 ${who} 은(는) 예전 방식으로 만들어져 서버에 못 올립니다. 근무표에서 지우고 다시 넣어 주세요.`,
+    };
+  }
   return put("staff", list.map(staffToRow));
 }
 

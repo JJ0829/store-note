@@ -4,8 +4,6 @@ import {
   authConfigured,
   isExpired,
   readCookie,
-  refreshTokens,
-  sessionCookies,
   whoAmI,
   /* ★ `@/` 가 아니라 상대경로다 — 테스트가 이 파일을 서버 없이 그대로 부른다.
    *  `/api/auth/me` · `/api/store-unlock` 과 같은 이유. */
@@ -38,24 +36,35 @@ function bad(reason: string, status = 400) {
   return Response.json({ ok: false, reason }, { status });
 }
 
-/** 쿠키 → 접근 토큰. 만료됐으면 갱신해서 새 쿠키까지 돌려준다 */
+/**
+ * 쿠키 → 접근 토큰.
+ *
+ * ★★ **여기서 갱신하지 않는다** (2026-09-14 에 이것 때문에 로그아웃됐다)
+ *
+ *   Supabase 의 갱신 토큰은 **한 번 쓰면 폐기**되고, 같은 것을 두 번 보내면
+ *   탈취로 보고 **세션 전체를 끊는다**(reuse detection).
+ *
+ *   처음엔 이 라우트도 `/api/auth/me` 처럼 갱신을 했다. 그러자 화면을 열 때
+ *   배지(`/api/auth/me`)와 데이터 받기(`/api/data/punches`)가 **같은 갱신
+ *   토큰으로 동시에** 갱신을 시도하고, 하나는 성공·하나는 재사용으로 걸려
+ *   로그인이 통째로 풀렸다. 증상은 «로그인했는데 anon» 이라 원인을 찾기
+ *   어렵다 — 갱신이 두 곳에 있다는 것이 안 보이기 때문이다.
+ *
+ *   그래서 **갱신하는 곳은 `/api/auth/me` 하나뿐**이다. 여기서는 토큰이
+ *   낡았으면 `stale` 이라고만 말하고, 브라우저가 `me` 를 한 번 부른 뒤
+ *   다시 온다 (`serverSync.ts`).
+ */
 async function session(request: Request) {
   const cookie = request.headers.get("cookie");
-  let access = readCookie(cookie, AT_COOKIE);
+  const access = readCookie(cookie, AT_COOKIE);
   const refresh = readCookie(cookie, RT_COOKIE);
-  let fresh: string[] | null = null;
 
+  /* 낡았지만 갱신 토큰은 있다 = 다시 부르면 된다. 로그아웃이 아니다 */
   if ((!access || isExpired(access)) && refresh) {
-    const t = await refreshTokens(refresh);
-    if (t) {
-      access = t.access;
-      fresh = sessionCookies(t);
-    } else {
-      access = undefined;
-    }
+    return { access: undefined, who: { state: "stale" as const }, fresh: null };
   }
   const who = await whoAmI(access);
-  return { access, who, fresh };
+  return { access, who, fresh: null as string[] | null };
 }
 
 const MAX_BODY = 512 * 1024;
