@@ -9,7 +9,9 @@ const nextConfig: NextConfig = {
   //   Replit 은 앱을 컨테이너 안 3000 번에 띄우고 브라우저는 *.replit.dev 로
   //   들어온다. 출처가 다르므로 Next 15.3+ 는 dev 전용 요청(HMR·소스맵)을
   //   막고, 화면은 뜨는데 고쳐도 안 바뀌는 상태가 된다. 원인을 알기 어렵다.
-  allowedDevOrigins: ["*.replit.dev", "*.repl.co", "*.replit.app"],
+  //   ★ `**` 다. Replit 미리보기 주소는 `<id>.sisko.replit.dev` 처럼 **두 단계**라
+  //   `*.replit.dev` 로는 안 잡힌다 (실측 2026-09-14 · `**` 는 깊이 무관).
+  allowedDevOrigins: ["**.replit.dev", "**.repl.co", "**.replit.app"],
 };
 
 export default nextConfig;

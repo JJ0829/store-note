@@ -1,4 +1,12 @@
-@import "tailwindcss";
+/* ★ Tailwind 는 src/ 만 훑는다 (2026-09-14).
+ *
+ *   Tailwind v4 는 기본으로 프로젝트 **전체**에서 클래스 후보를 긁는다.
+ *   Replit 에서 그게 `.local/skills/*.md`(Replit 이 심어둔 파일) 안의
+ *   `url(...)` 이라는 글자를 후보로 잡아 CSS 에 그대로 넣었고, Next 가
+ *   `./...` 모듈을 찾다가 **모든 화면이 500** 이 났다. 로컬엔 그 폴더가
+ *   없어서 멀쩡했다 — 환경에 따라 다른 결과가 나오는 종류의 결함이다.
+ *   우리 클래스는 전부 src/ 안에 있다. presentation/ 은 자기 CSS 를 쓴다. */
+@import "tailwindcss" source("../");
 
 @theme {
   --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui,

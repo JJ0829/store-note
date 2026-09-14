@@ -48,3 +48,11 @@ storenote_docs/
 _매장수첩-지표백업/
 # 4) 문서를 종이로 뽑은 것. 정본은 docs/제출물/ 의 HTML 이다
 /*.pdf
+
+# Replit 이 작업공간에 스스로 만드는 폴더 (2026-09-14). 저장소 것이 아니다.
+# ★ Tailwind v4 가 .gitignore 를 존중하므로 여기 적어야 클래스 스캔에서도 빠진다.
+.local/
+.agents/
+.migration-backup/
+.cache/
+.config/
