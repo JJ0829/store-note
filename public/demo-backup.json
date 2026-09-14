@@ -1,0 +1,771 @@
+{
+  "kind": "store-note-backup",
+  "version": 3,
+  "exportedAt": "2026-09-14T09:00:00.000Z",
+  "storeName": "○○ 베이커리 카페",
+  "roster": {
+    "staff": [
+      {
+        "id": "s-demo-1",
+        "section": "제빵",
+        "name": "김하늘",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "id": "s-demo-2",
+        "section": "바",
+        "name": "이서준",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "id": "s-demo-3",
+        "section": "홀",
+        "name": "박지우",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "id": "s-demo-4",
+        "section": "바",
+        "name": "최민준",
+        "email": "",
+        "phone": ""
+      }
+    ],
+    "assign": {
+      "s-demo-1": {
+        "2026-09-07": "제빵",
+        "2026-09-08": "제빵",
+        "2026-09-09": "제빵",
+        "2026-09-10": "제빵",
+        "2026-09-11": "제빵",
+        "2026-09-12": "",
+        "2026-09-13": "",
+        "2026-09-14": "제빵",
+        "2026-09-15": "제빵",
+        "2026-09-16": "제빵",
+        "2026-09-17": "제빵",
+        "2026-09-18": "제빵",
+        "2026-09-19": "",
+        "2026-09-20": ""
+      },
+      "s-demo-2": {
+        "2026-09-07": "오픈조",
+        "2026-09-08": "오픈조",
+        "2026-09-09": "오픈조",
+        "2026-09-10": "오픈조",
+        "2026-09-11": "오픈조",
+        "2026-09-12": "",
+        "2026-09-13": "",
+        "2026-09-14": "오픈조",
+        "2026-09-15": "오픈조",
+        "2026-09-16": "오픈조",
+        "2026-09-17": "오픈조",
+        "2026-09-18": "오픈조",
+        "2026-09-19": "",
+        "2026-09-20": ""
+      },
+      "s-demo-3": {
+        "2026-09-07": "",
+        "2026-09-08": "마감조",
+        "2026-09-09": "마감조",
+        "2026-09-10": "마감조",
+        "2026-09-11": "마감조",
+        "2026-09-12": "마감조",
+        "2026-09-13": "",
+        "2026-09-14": "",
+        "2026-09-15": "마감조",
+        "2026-09-16": "마감조",
+        "2026-09-17": "마감조",
+        "2026-09-18": "마감조",
+        "2026-09-19": "마감조",
+        "2026-09-20": ""
+      },
+      "s-demo-4": {
+        "2026-09-07": "마감조",
+        "2026-09-08": "",
+        "2026-09-09": "마감조",
+        "2026-09-10": "",
+        "2026-09-11": "마감조",
+        "2026-09-12": "마감조",
+        "2026-09-13": "마감조",
+        "2026-09-14": "마감조",
+        "2026-09-15": "",
+        "2026-09-16": "마감조",
+        "2026-09-17": "",
+        "2026-09-18": "마감조",
+        "2026-09-19": "마감조",
+        "2026-09-20": "마감조"
+      }
+    }
+  },
+  "punches": {
+    "s-demo-1": {
+      "2026-09-07": {
+        "id": "pu-demo-1",
+        "staffId": "s-demo-1",
+        "date": "2026-09-07",
+        "inAt": "04:52",
+        "outAt": "13:15",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-08": {
+        "id": "pu-demo-2",
+        "staffId": "s-demo-1",
+        "date": "2026-09-08",
+        "inAt": "04:54",
+        "outAt": "13:19",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-09": {
+        "id": "pu-demo-3",
+        "staffId": "s-demo-1",
+        "date": "2026-09-09",
+        "inAt": "04:45",
+        "outAt": "13:12",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-10": {
+        "id": "pu-demo-4",
+        "staffId": "s-demo-1",
+        "date": "2026-09-10",
+        "inAt": "04:47",
+        "outAt": "13:16",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-11": {
+        "id": "pu-demo-5",
+        "staffId": "s-demo-1",
+        "date": "2026-09-11",
+        "inAt": "04:49",
+        "outAt": "13:20",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-14": {
+        "id": "pu-demo-6",
+        "staffId": "s-demo-1",
+        "date": "2026-09-14",
+        "inAt": "04:55",
+        "outAt": "13:10",
+        "breakMin": 30,
+        "note": ""
+      }
+    },
+    "s-demo-2": {
+      "2026-09-07": {
+        "id": "pu-demo-7",
+        "staffId": "s-demo-2",
+        "date": "2026-09-07",
+        "inAt": "07:18",
+        "outAt": "15:43",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-08": {
+        "id": "pu-demo-8",
+        "staffId": "s-demo-2",
+        "date": "2026-09-08",
+        "inAt": "07:20",
+        "outAt": "15:47",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-09": {
+        "id": "pu-demo-9",
+        "staffId": "s-demo-2",
+        "date": "2026-09-09",
+        "inAt": "07:22",
+        "outAt": "15:40",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-10": {
+        "id": "pu-demo-10",
+        "staffId": "s-demo-2",
+        "date": "2026-09-10",
+        "inAt": "07:24",
+        "outAt": "15:44",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-11": {
+        "id": "pu-demo-11",
+        "staffId": "s-demo-2",
+        "date": "2026-09-11",
+        "inAt": "07:15",
+        "outAt": "15:48",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-14": {
+        "id": "pu-demo-12",
+        "staffId": "s-demo-2",
+        "date": "2026-09-14",
+        "inAt": "07:32",
+        "outAt": "",
+        "breakMin": 30,
+        "note": ""
+      }
+    },
+    "s-demo-3": {
+      "2026-09-08": {
+        "id": "pu-demo-13",
+        "staffId": "s-demo-3",
+        "date": "2026-09-08",
+        "inAt": "14:16",
+        "outAt": "22:45",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-09": {
+        "id": "pu-demo-14",
+        "staffId": "s-demo-3",
+        "date": "2026-09-09",
+        "inAt": "14:18",
+        "outAt": "22:49",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-10": {
+        "id": "pu-demo-15",
+        "staffId": "s-demo-3",
+        "date": "2026-09-10",
+        "inAt": "14:34",
+        "outAt": "22:42",
+        "breakMin": 30,
+        "note": "버스 지연"
+      },
+      "2026-09-11": {
+        "id": "pu-demo-16",
+        "staffId": "s-demo-3",
+        "date": "2026-09-11",
+        "inAt": "14:22",
+        "outAt": "22:35",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-12": {
+        "id": "pu-demo-17",
+        "staffId": "s-demo-3",
+        "date": "2026-09-12",
+        "inAt": "14:24",
+        "outAt": "22:39",
+        "breakMin": 30,
+        "note": ""
+      }
+    },
+    "s-demo-4": {
+      "2026-09-07": {
+        "id": "pu-demo-18",
+        "staffId": "s-demo-4",
+        "date": "2026-09-07",
+        "inAt": "14:21",
+        "outAt": "22:50",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-09": {
+        "id": "pu-demo-19",
+        "staffId": "s-demo-4",
+        "date": "2026-09-09",
+        "inAt": "14:25",
+        "outAt": "22:36",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-11": {
+        "id": "pu-demo-20",
+        "staffId": "s-demo-4",
+        "date": "2026-09-11",
+        "inAt": "14:18",
+        "outAt": "22:37",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-12": {
+        "id": "pu-demo-21",
+        "staffId": "s-demo-4",
+        "date": "2026-09-12",
+        "inAt": "14:20",
+        "outAt": "22:37",
+        "breakMin": 30,
+        "note": ""
+      },
+      "2026-09-13": {
+        "id": "pu-demo-22",
+        "staffId": "s-demo-4",
+        "date": "2026-09-13",
+        "inAt": "14:33",
+        "outAt": "22:40",
+        "breakMin": 30,
+        "note": ""
+      }
+    }
+  },
+  "contracts": [
+    {
+      "id": "ct-demo-1",
+      "staffId": "s-demo-1",
+      "startDate": "2026-03-02",
+      "endDate": "",
+      "hourlyWage": 11500,
+      "weeklyHours": 40,
+      "workDays": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "startTime": "05:00",
+      "endTime": "13:00",
+      "handedOver": true,
+      "insured": true,
+      "note": ""
+    },
+    {
+      "id": "ct-demo-2",
+      "staffId": "s-demo-2",
+      "startDate": "2026-05-11",
+      "endDate": "",
+      "hourlyWage": 10500,
+      "weeklyHours": 40,
+      "workDays": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "startTime": "07:30",
+      "endTime": "15:30",
+      "handedOver": true,
+      "insured": true,
+      "note": ""
+    },
+    {
+      "id": "ct-demo-3",
+      "staffId": "s-demo-3",
+      "startDate": "2026-07-01",
+      "endDate": "",
+      "hourlyWage": 10320,
+      "weeklyHours": 40,
+      "workDays": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "startTime": "14:30",
+      "endTime": "22:30",
+      "handedOver": true,
+      "insured": false,
+      "note": ""
+    },
+    {
+      "id": "ct-demo-4",
+      "staffId": "s-demo-4",
+      "startDate": "2026-08-18",
+      "endDate": "",
+      "hourlyWage": 10800,
+      "weeklyHours": 40,
+      "workDays": [
+        0,
+        1,
+        3,
+        5,
+        6
+      ],
+      "startTime": "14:30",
+      "endTime": "22:30",
+      "handedOver": true,
+      "insured": false,
+      "note": ""
+    }
+  ],
+  "cycleDone": {
+    "c-1": "2026-05-11",
+    "c-2": "2026-08-05",
+    "c-3": "2026-09-01",
+    "c-4": "2026-03-02",
+    "c-5": "2026-09-13",
+    "c-6": "2026-09-07",
+    "c-7": "2026-06-01",
+    "c-9": "2026-06-20",
+    "c-10": "2026-04-15",
+    "c-11": "2026-02-10",
+    "c-12": "2026-08-20",
+    "c-13": "2026-07-01"
+  },
+  "cycleEvery": {
+    "c-1": 120,
+    "c-2": 90,
+    "c-3": 30,
+    "c-4": 365,
+    "c-5": 7,
+    "c-6": 7,
+    "c-7": 180,
+    "c-8": 180,
+    "c-9": 180,
+    "c-10": 180,
+    "c-11": 365,
+    "c-12": 30,
+    "c-13": 365
+  },
+  "sales": {
+    "2026-09-01": {
+      "date": "2026-09-01",
+      "total": 392000,
+      "count": 92,
+      "material": 125400,
+      "note": ""
+    },
+    "2026-09-02": {
+      "date": "2026-09-02",
+      "total": 428000,
+      "count": 99,
+      "material": 132700,
+      "note": ""
+    },
+    "2026-09-03": {
+      "date": "2026-09-03",
+      "total": 444000,
+      "count": 105,
+      "material": 133200,
+      "note": ""
+    },
+    "2026-09-04": {
+      "date": "2026-09-04",
+      "total": 520000,
+      "count": 121,
+      "material": 150800,
+      "note": ""
+    },
+    "2026-09-05": {
+      "date": "2026-09-05",
+      "total": 641000,
+      "count": 147,
+      "material": 205100,
+      "note": ""
+    },
+    "2026-09-06": {
+      "date": "2026-09-06",
+      "total": 592000,
+      "count": 139,
+      "material": 183500,
+      "note": ""
+    },
+    "2026-09-07": {
+      "date": "2026-09-07",
+      "total": 413000,
+      "count": 95,
+      "material": 123900,
+      "note": ""
+    },
+    "2026-09-08": {
+      "date": "2026-09-08",
+      "total": 399000,
+      "count": 95,
+      "material": 115700,
+      "note": ""
+    },
+    "2026-09-09": {
+      "date": "2026-09-09",
+      "total": 426000,
+      "count": 99,
+      "material": 136300,
+      "note": ""
+    },
+    "2026-09-10": {
+      "date": "2026-09-10",
+      "total": 442000,
+      "count": 101,
+      "material": 137000,
+      "note": ""
+    },
+    "2026-09-11": {
+      "date": "2026-09-11",
+      "total": 518000,
+      "count": 121,
+      "material": 155400,
+      "note": ""
+    },
+    "2026-09-12": {
+      "date": "2026-09-12",
+      "total": 639000,
+      "count": 148,
+      "material": 185300,
+      "note": "단체 12명 (예약)"
+    },
+    "2026-09-13": {
+      "date": "2026-09-13",
+      "total": 590000,
+      "count": 139,
+      "material": 188800,
+      "note": ""
+    }
+  },
+  "vendors": {
+    "vendors": [
+      {
+        "id": "v-demo-roast",
+        "name": "△△ 로스터리",
+        "phone": "",
+        "contact": "",
+        "how": "카톡",
+        "cutoff": "12:00",
+        "deliverDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "leadDays": 2,
+        "note": "원두 5kg 이상이면 배송비 없음"
+      },
+      {
+        "id": "v-demo-food",
+        "name": "□□ 식자재",
+        "phone": "",
+        "contact": "",
+        "how": "전화",
+        "cutoff": "15:00",
+        "deliverDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "leadDays": 1,
+        "note": "금요일에 주말치까지 주문"
+      },
+      {
+        "id": "v-demo-bake",
+        "name": "◇◇ 베이킹몰",
+        "phone": "",
+        "contact": "",
+        "how": "온라인",
+        "cutoff": "14:00",
+        "deliverDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "leadDays": 2,
+        "note": ""
+      }
+    ],
+    "items": [
+      {
+        "id": "vi-demo-원두도징",
+        "vendorId": "v-demo-roast",
+        "name": "원두 (도징)",
+        "packAmount": 1000,
+        "packUnit": "g",
+        "packPrice": 32000,
+        "note": "에스프레소 블렌드 1kg"
+      },
+      {
+        "id": "vi-demo-원두굵게분쇄",
+        "vendorId": "v-demo-roast",
+        "name": "원두 (굵게 분쇄)",
+        "packAmount": 1000,
+        "packUnit": "g",
+        "packPrice": 30000,
+        "note": "콜드브루용"
+      },
+      {
+        "id": "vi-demo-우유",
+        "vendorId": "v-demo-food",
+        "name": "우유",
+        "packAmount": 1000,
+        "packUnit": "ml",
+        "packPrice": 2900,
+        "note": ""
+      },
+      {
+        "id": "vi-demo-생크림",
+        "vendorId": "v-demo-food",
+        "name": "생크림",
+        "packAmount": 1000,
+        "packUnit": "ml",
+        "packPrice": 7800,
+        "note": ""
+      },
+      {
+        "id": "vi-demo-과일과육",
+        "vendorId": "v-demo-food",
+        "name": "과일 과육",
+        "packAmount": 1000,
+        "packUnit": "g",
+        "packPrice": 9000,
+        "note": "냉동 딸기 기준"
+      },
+      {
+        "id": "vi-demo-레몬즙",
+        "vendorId": "v-demo-food",
+        "name": "레몬즙",
+        "packAmount": 1000,
+        "packUnit": "ml",
+        "packPrice": 8500,
+        "note": ""
+      },
+      {
+        "id": "vi-demo-강력분",
+        "vendorId": "v-demo-bake",
+        "name": "강력분",
+        "packAmount": 20000,
+        "packUnit": "g",
+        "packPrice": 38000,
+        "note": "20kg 한 포"
+      },
+      {
+        "id": "vi-demo-설탕",
+        "vendorId": "v-demo-bake",
+        "name": "설탕",
+        "packAmount": 15000,
+        "packUnit": "g",
+        "packPrice": 21000,
+        "note": "15kg 한 포"
+      },
+      {
+        "id": "vi-demo-소금",
+        "vendorId": "v-demo-bake",
+        "name": "소금",
+        "packAmount": 1000,
+        "packUnit": "g",
+        "packPrice": 1500,
+        "note": ""
+      },
+      {
+        "id": "vi-demo-이스트",
+        "vendorId": "v-demo-bake",
+        "name": "이스트",
+        "packAmount": 500,
+        "packUnit": "g",
+        "packPrice": 6500,
+        "note": "인스턴트 드라이"
+      },
+      {
+        "id": "vi-demo-버터",
+        "vendorId": "v-demo-bake",
+        "name": "버터",
+        "packAmount": 1000,
+        "packUnit": "g",
+        "packPrice": 14000,
+        "note": ""
+      },
+      {
+        "id": "vi-demo-찻잎",
+        "vendorId": "v-demo-bake",
+        "name": "찻잎",
+        "packAmount": 100,
+        "packUnit": "g",
+        "packPrice": 12000,
+        "note": "얼그레이"
+      },
+      {
+        "id": "vi-demo-홍차잎",
+        "vendorId": "v-demo-bake",
+        "name": "홍차잎",
+        "packAmount": 500,
+        "packUnit": "g",
+        "packPrice": 28000,
+        "note": "밀크티용 아쌈"
+      },
+      {
+        "id": "vi-demo-바닐라시럽",
+        "vendorId": "v-demo-bake",
+        "name": "바닐라 시럽",
+        "packAmount": 1000,
+        "packUnit": "ml",
+        "packPrice": 12000,
+        "note": ""
+      }
+    ]
+  },
+  "settings": {
+    "minWage": 10320,
+    "fiveOrMore": false,
+    "targetCostRate": 30,
+    "prices": {
+      "rec-americano": 4500,
+      "rec-latte": 5000,
+      "rec-shokupan": 4800
+    },
+    "excluded": [
+      "물",
+      "정수",
+      "추출량",
+      "기존 르방"
+    ],
+    "monthlyFixed": 4200000,
+    "openDaysPerMonth": 26
+  },
+  "recipes": [],
+  "orderLog": {
+    "2026-09-07": {
+      "p-5": {
+        "ordered": true,
+        "received": true,
+        "memo": "우유 12팩 · 생크림 2"
+      }
+    },
+    "2026-09-08": {
+      "p-5": {
+        "ordered": true,
+        "received": true,
+        "memo": "우유 12팩 · 생크림 2"
+      }
+    },
+    "2026-09-09": {
+      "p-5": {
+        "ordered": true,
+        "received": true,
+        "memo": "우유 12팩 · 생크림 2"
+      }
+    },
+    "2026-09-10": {
+      "p-5": {
+        "ordered": true,
+        "received": true,
+        "memo": "우유 12팩 · 생크림 2"
+      },
+      "p-6": {
+        "ordered": true,
+        "received": true,
+        "memo": "원두 5kg"
+      }
+    },
+    "2026-09-11": {
+      "p-5": {
+        "ordered": true,
+        "received": true,
+        "memo": "우유 24팩 · 생크림 4 (주말치)"
+      }
+    },
+    "2026-09-14": {
+      "p-5": {
+        "ordered": true,
+        "received": false,
+        "memo": "우유 12팩 · 생크림 2"
+      }
+    }
+  },
+  "orderLinks": {
+    "p-5": "v-demo-food",
+    "p-6": "v-demo-roast"
+  }
+}

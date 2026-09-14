@@ -352,6 +352,8 @@ src/components/OwnerGate.tsx← 화면 전체 잠금 + InlineUnlock(부분 가�
 src/components/StoreGate.tsx← 레시피 가림막(폴백) + StoreLockButton
 src/components/ServerStoreGate.tsx ← ★ 잠겼으면 children 을 아예 안 그린다
 src/components/BackupView.tsx← 내보내기·되돌리기
+db/demo.js                  ← ★ 시연 데이터 생성 → public/demo-backup.json (전부 가짜).
+                              /backup 의 「시연 데이터 넣기」 가 되돌리기와 같은 길로 넣는다
 tests/                      ← lib 전부 + 시드 숫자 정본 + 단일 파일 구문 검사 + 빌드 산출물
                               (개수는 안 적는다 — 낡는다. 지금 값은 docs/00_PROJECT_CURRENT.md)
 ```

@@ -65,7 +65,7 @@ npm run dev
 | 코드 | 화면 **19개** · 테스트 **전부 통과**(개수는 `npm run check` 가 말한다) · 타입 오류 **0** · 프로덕션 빌드 통과 |
 | 런타임 의존성 | **3개** (`next` · `react` · `react-dom`). AI 도 SDK 없이 REST |
 | 저장 | ⚠️ **표는 다 만들었고 데이터는 아직 브라우저에 있다.** 2026-09-13 에 `db/schema_v2.sql` 을 올려 Supabase 에 **표 38개**가 섰다(게이트 2개 0행). 하지만 **`units` 6줄 · `events` 23줄이 전부**이고 나머지 36개는 0줄이며, **앱은 계속 localStorage 를 쓴다**(`sop:*` 18개 키). 옮기는 순서 → [24_DB이관순서.md](deliverables/24_DB이관순서.md). **1번은 로그인이다** — RLS 가 `auth.uid()` 에 기댄다 |
-| 배포 | ⛔ **아직 안 함.** D-007 은 **"배포한다"로 확정**됐고 게이트는 다 닫혔다 → [배포.md](배포.md) |
+| 배포 | ✅ **Vercel 에 떠 있다** — `store-note.vercel.app`, `main` 에 push 하면 자동 배포 (2026-09-14 확인). 환경변수(`STORE_PIN`·`GEMINI_API_KEY`·`SUPABASE_*`)가 들어갔는지는 [배포.md](배포.md) §3 으로 사장님이 확인. Replit 은 개발 환경일 뿐이다 → [replit.md](replit.md) |
 | 브랜치 | **2026-09-11 `main` 에 머지·푸시 완료.** ⚠️ `Desktop/store-note` 폴더의 로컬 `main` 은 뒤처져 있을 수 있다 — 거기서 `git pull` 먼저 |
 | 단일 파일 | `presentation/매장수첩.html` — 인터넷·설치 없이 열리는 시연본 (**외부 요청 0건**) |
 | 문서 | `docs/deliverables/` **25개** (번호 01~22 + 진행표 + 부속 2) + `docs/wireframes/` |

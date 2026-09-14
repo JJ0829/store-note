@@ -77,6 +77,34 @@ export default function BackupView({
   const [ready, setReady] = useState(false);
   const [snap, setSnap] = useState<BackupFile | null>(null);
   const [stage, setStage] = useState<Stage>({ s: "idle" });
+  const [demoBusy, setDemoBusy] = useState(false);
+
+  /** 시연 데이터를 되돌리기와 같은 길로 올린다 — 확인 화면을 건너뛰지 않는다 */
+  async function loadDemo() {
+    setDemoBusy(true);
+    try {
+      const res = await fetch("/demo-backup.json", { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      const r = checkRestore(await res.text());
+      setStage(
+        r.ok
+          ? {
+              s: "checked",
+              file: r.file,
+              counts: r.counts,
+              losing: backupCounts(buildBackup(storeName)),
+            }
+          : { s: "error", reason: r.reason },
+      );
+    } catch {
+      setStage({
+        s: "error",
+        reason: "시연 데이터를 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요.",
+      });
+    } finally {
+      setDemoBusy(false);
+    }
+  }
   const fileRef = useRef<HTMLInputElement>(null);
 
   function reload() {
@@ -260,13 +288,38 @@ export default function BackupView({
         />
 
         {stage.s === "idle" && (
-          <button
-            type="button"
-            className={`${BTN} mt-3`}
-            onClick={() => fileRef.current?.click()}
-          >
-            백업 파일 고르기
-          </button>
+          <>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={BTN}
+                onClick={() => fileRef.current?.click()}
+              >
+                백업 파일 고르기
+              </button>
+              <button
+                type="button"
+                className={BTN}
+                disabled={demoBusy}
+                onClick={loadDemo}
+              >
+                {demoBusy ? "불러오는 중…" : "시연 데이터 넣기"}
+              </button>
+            </div>
+            {/* ★ 시연 데이터 — 발표·연습용 가짜 데이터 (2026-09-14).
+                직원·출퇴근·시급·매출·거래처 단가·판매가·고정비·점검 기록은
+                전부 브라우저에만 살아서 새 기기는 그 화면이 다 비어 있다.
+                되돌리기와 **같은 길**(checkRestore → 확인 → applyRestore)로
+                넣으므로 아래 확인 화면이 그대로 뜬다 — 실매장 기록이 있는
+                태블릿이면 거기서 「그만두기」 를 누르면 된다.
+                → db/demo.js · public/demo-backup.json · tests/demoBackup.test.ts */}
+            <p className="mt-2 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              <b>시연 데이터</b>는 발표·연습용 <b>가짜</b>입니다 — 직원 4명 ·
+              지난주 출퇴근 · 근로계약 · 13일치 매출 · 거래처 3곳과 단가 ·
+              판매가·고정비 · 점검 기록. 넣기 전에 지금 것이 얼마나 사라지는지
+              한 번 더 보여줍니다.
+            </p>
+          </>
         )}
 
         {stage.s === "error" && (
