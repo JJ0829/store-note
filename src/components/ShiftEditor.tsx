@@ -7,6 +7,7 @@ import {
   saveShiftEdits,
   type ShiftEdits,
 } from "@/lib/shiftEdit";
+import { ro } from "@/lib/store";
 import type { Shift } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -121,7 +122,10 @@ export default function ShiftEditor({
               aria-live="polite"
               className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-[13px] font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
             >
-              지난 근무표 {moved.n}칸도 「{moved.name}」으로 같이 바꿨습니다.
+              {/* 조사는 이름의 받침을 본다 — 「아침조」로 / 「오픈」으로.
+                  괄호까지 넘기면 ro() 가 `」` 를 보고 늘 「로」를 낸다 */}
+              지난 근무표 {moved.n}칸도 「{moved.name}」
+              {ro(moved.name).slice(moved.name.length)} 같이 바꿨습니다.
             </p>
           )}
 
