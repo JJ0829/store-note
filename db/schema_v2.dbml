@@ -381,6 +381,7 @@ Table daily_sales {
   business_date date [not null, note: '★ 달력 날짜가 아니라 영업일 (새벽 4시 경계)']
   total_amount  numeric [note: 'POS 합계 — 대조용']
   ticket_count  int
+  material_cost numeric [note: '★ 사장님이 직접 적은 그날 재료비. 입고 합산이 아니라 사람이 적은 값이다 (2026-09-14)']
   memo          text
   created_at    timestamptz [not null, default: `now()`]
 

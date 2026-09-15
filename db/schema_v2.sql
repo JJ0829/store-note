@@ -502,6 +502,13 @@ create table daily_sales (
   business_date date not null,             -- ★ 달력 날짜가 아니라 영업일
   total_amount numeric(14,2),              -- POS 합계 (대조용)
   ticket_count int,
+
+  -- ★ 사장님이 **직접 적는** 그날 재료비. 입고 합산이 아니다 (2026-09-14).
+  --   설계는 received_lines 에서 뽑을 생각이었는데, 품목별 입고를 매일 찍는
+  --   매장이 없어서 앱은 한 칸으로 받는다. 칸이 없으면 화면이
+  --   "서버에 저장됐다" 면서 재료비만 빠뜨리고, 「남은 돈」이 커 보인다.
+  material_cost numeric(14,2),
+
   memo     text,
   created_at timestamptz not null default now(),
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { SKIP, pullSales, pushSales } from "@/lib/serverSync";
 import { BTN, Card, Caveat, Chip, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { pct, won } from "@/lib/store";
 import { logEvent } from "@/lib/metrics";
@@ -77,7 +78,22 @@ export default function SalesView({
     setContracts(loadContracts());
     setSettings(loadSettings());
     setShifts(applyShiftEdits(seedShifts, loadShiftEdits()));
+
+    /* ★ 서버에 사본이 있으면 그것으로 덮어쓴다 (출퇴근과 같은 규칙).
+       로그인 안 했으면 `null` 이 와서 아무 일도 안 일어난다 */
+    void pullSales().then((server) => {
+      if (!server || Object.keys(server).length === 0) return;
+      saveSales(server);
+      setSales(server);
+    });
   }, [seedShifts]);
+
+  /* ★ 매출은 **글자마다** 바뀐다 (`patch` 가 `onChange` 다).
+     출퇴근은 버튼이라 바로 보내도 되지만, 여기서 그러면 "1250000" 하나에
+     요청이 7개 나가고 **중간 값이 최종값을 덮을 수 있다.**
+     그래서 마지막 입력에서 잠깐 조용해지면 한 번만 보낸다. */
+  const upTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (upTimer.current) clearTimeout(upTimer.current); }, []);
 
   /** 그날 인건비 — 출퇴근 × 시급 */
   const laborOn = useMemo(() => {
@@ -122,6 +138,7 @@ export default function SalesView({
     save.report("매출 기록", saveSales(next), () =>
       save.report("매출 기록", saveSales(next)),
     );
+    sendUp(next);
     /**
      * ★ 0 에서 값이 들어오는 **전이**만 남긴다.
      *
@@ -142,6 +159,19 @@ export default function SalesView({
         logEvent("매출_입력", { date, field: f });
       }
     }
+  }
+
+  /* ★ 서버에도 보낸다. **태블릿 저장과 따로 알린다** — 둘을 한 줄로 묶으면
+     «태블릿에는 남았는데 서버에 못 갔다» 를 구분 못 한다 (출퇴근과 같다).
+     로그인 안 했으면 `SKIP` 이 와서 아무 말도 안 한다. */
+  function sendUp(next: SalesData) {
+    if (upTimer.current) clearTimeout(upTimer.current);
+    upTimer.current = setTimeout(() => {
+      void pushSales(next).then((r) => {
+        if (!r.ok && r.reason === SKIP) return;
+        save.report("매출 기록(서버 보관)", r.ok, () => sendUp(next));
+      });
+    }, 1200);
   }
 
   const day = getDay(sales, pick);

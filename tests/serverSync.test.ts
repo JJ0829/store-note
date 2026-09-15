@@ -11,9 +11,13 @@ import {
   oldStyleStaff,
   pushStaff,
   rowToStaff,
+  rowToSales,
+  salesToRow,
   staffToRow,
 } from "../src/lib/serverSync.ts";
-import { ALLOWED_TABLES, isAllowedTable } from "../src/lib/serverData.ts";
+import { ALLOWED_TABLES, CONFLICT_KEY, isAllowedTable } from "../src/lib/serverData.ts";
+import fs from "node:fs";
+import path from "node:path";
 import type { Punch, PunchData } from "../src/lib/attendance.ts";
 import type { Contract } from "../src/lib/contracts.ts";
 import type { Staff } from "../src/lib/roster.ts";
@@ -190,4 +194,58 @@ test("★ 옛 방식 id 로 만든 직원은 «왜 안 되는지» 를 말한다
   assert.ok(!r.ok && r.reason.includes("김민수"), "누구 때문인지 이름을 말해야 한다");
   assert.ok(!r.ok && r.reason.includes("다시 넣어"), "무엇을 하라는지 말해야 한다");
   assert.ok(!r.ok && !r.reason.includes("이서연"), "멀쩡한 직원까지 탓하면 안 된다");
+});
+
+/* ------------------------------------------------------------------ *
+ * 매출 (2026-09-14)
+ *
+ * ★ 다른 표와 다른 점 — **줄에 id 가 없다.** 화면의 매출은 «날짜 → 하루치»다.
+ *   그래서 같은 줄인지 보는 열쇠가 `id` 가 아니라 `(store_id, business_date)` 다.
+ *   `id` 로 맞추면 마감을 고칠 때마다 줄이 쌓이고 유일 제약에 걸려
+ *   **조용히 실패한다.**
+ * ------------------------------------------------------------------ */
+
+test("★ 매출은 매장+영업일로 같은 줄을 찾는다 (id 가 아니다)", () => {
+  assert.equal(CONFLICT_KEY.daily_sales, "store_id,business_date");
+  /* 나머지는 줄마다 id 가 있으므로 id 로 맞춘다 */
+  for (const t of ["staff", "punches", "contracts"] as const) {
+    assert.equal(CONFLICT_KEY[t], "id");
+  }
+});
+
+test("★ 매출의 네 숫자가 하나도 안 빠진다 (재료비 포함)", () => {
+  const row = salesToRow({
+    date: "2026-09-14",
+    total: 1_250_000,
+    count: 87,
+    material: 410_000,
+    note: "비",
+  });
+  assert.equal(row.business_date, "2026-09-14");
+  assert.equal(row.total_amount, 1_250_000);
+  assert.equal(row.ticket_count, 87);
+  /* ★ 빠지면 서버의 「남은 돈」이 실제보다 커진다 */
+  assert.equal(row.material_cost, 410_000, "재료비가 빠졌다");
+  assert.equal(row.memo, "비");
+});
+
+test("매출 왕복해도 값이 안 변한다", () => {
+  const d = { date: "2026-09-14", total: 990_000, count: 60, material: 300_000, note: "메모" };
+  assert.deepEqual(rowToSales(salesToRow(d)), d);
+});
+
+test("매출: 빈 칸은 0 · 빈 메모는 null", () => {
+  assert.equal(salesToRow({ date: "2026-09-14", total: 0, count: 0, material: 0, note: "  " }).memo, null);
+  assert.deepEqual(
+    rowToSales({ business_date: "2026-09-14", total_amount: null, ticket_count: null, material_cost: null, memo: null }),
+    { date: "2026-09-14", total: 0, count: 0, material: 0, note: "" },
+  );
+});
+
+test("★ 매출 화면이 글자마다 서버로 보내지 않는다", () => {
+  const view = fs
+    .readFileSync(path.join(process.cwd(), "src/components/SalesView.tsx"), "utf-8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(view, /setTimeout/, "기다리지 않고 바로 보낸다 — 중간 값이 최종값을 덮는다");
+  assert.match(view, /clearTimeout/, "이전 예약을 취소하지 않는다");
 });

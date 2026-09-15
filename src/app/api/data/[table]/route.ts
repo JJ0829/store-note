@@ -8,7 +8,7 @@ import {
   /* ★ `@/` 가 아니라 상대경로다 — 테스트가 이 파일을 서버 없이 그대로 부른다.
    *  `/api/auth/me` · `/api/store-unlock` 과 같은 이유. */
 } from "../../../../lib/serverSession.ts";
-import { isAllowedTable } from "../../../../lib/serverData.ts";
+import { CONFLICT_KEY, isAllowedTable } from "../../../../lib/serverData.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -139,7 +139,7 @@ export async function PUT(request: Request, ctx: Ctx) {
 
   let res: Response;
   try {
-    res = await fetch(`${url}/rest/v1/${table}?on_conflict=id`, {
+    res = await fetch(`${url}/rest/v1/${table}?on_conflict=${CONFLICT_KEY[table]}`, {
       method: "POST",
       headers: {
         apikey: key,

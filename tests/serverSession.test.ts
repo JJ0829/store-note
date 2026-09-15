@@ -175,7 +175,9 @@ test("★ 토큰을 화면으로 돌려보내지 않는다 (httpOnly 로 둔 뜻
   );
   const lib = 소스("src/lib/serverSession.ts");
   // Who 타입에 토큰 칸이 없어야 한다
-  const who = /export type Who =([\s\S]*?)\n\n/.exec(lib)?.[1] ?? "";
+  /* ★ `\r?` 를 빼면 안 된다. 이 저장소는 체크아웃할 때 CRLF 로 바뀌어서,
+     `\n\n` 만 찾으면 **파일이 멀쩡한데 "못 찾았다" 로 실패한다** (2026-09-14). */
+  const who = /export type Who =([\s\S]*?)\r?\n\r?\n/.exec(lib)?.[1] ?? "";
   assert.ok(who.length > 0, "Who 타입을 못 찾았다");
   assert.ok(
     !/token/i.test(who),

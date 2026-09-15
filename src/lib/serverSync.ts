@@ -1,6 +1,7 @@
 import type { Punch, PunchData } from "./attendance.ts";
 import type { Contract } from "./contracts.ts";
 import type { Staff } from "./roster.ts";
+import type { DaySales, SalesData } from "./sales.ts";
 
 /* ------------------------------------------------------------------ *
  * 브라우저 ↔ 서버 — 매장 데이터를 옮기는 층
@@ -302,4 +303,53 @@ export async function pushContractSet(
   const s = await pushStaff(staff);
   if (!s.ok && s.reason !== SKIP) return s;
   return pushContracts(list);
+}
+
+/* ------------------------------------------------------------------ *
+ * 매출 (2026-09-14)
+ *
+ * ★ 다른 것들과 다른 점 하나 — **줄에 id 가 없다.**
+ *   화면의 매출 기록은 «날짜 → 하루치» 라서 id 를 들고 다니지 않는다.
+ *   그래서 서버에서 같은 줄인지 보는 열쇠가 `id` 가 아니라
+ *   `(store_id, business_date)` 다 → `serverData.ts` 의 `CONFLICT_KEY`.
+ *
+ * ★ 재료비(`material_cost`)를 빠뜨리면 서버의 「남은 돈」이 실제보다
+ *   커 보인다. 칸이 없어서 `0007_daily_sales_material.sql` 로 더했다.
+ * ------------------------------------------------------------------ */
+
+export function salesToRow(d: DaySales): Row {
+  return {
+    business_date: d.date,
+    total_amount: d.total,
+    ticket_count: d.count,
+    material_cost: d.material,
+    /* 빈 메모는 null — «비웠다» 와 «안 적었다» 를 굳이 나눌 이유가 없다 */
+    memo: d.note.trim() === "" ? null : d.note,
+  };
+}
+
+export function rowToSales(r: Row): DaySales {
+  const n = (v: unknown) => (v === null || v === undefined ? 0 : Number(v));
+  return {
+    date: String(r.business_date ?? ""),
+    total: n(r.total_amount),
+    count: n(r.ticket_count),
+    material: n(r.material_cost),
+    note: typeof r.memo === "string" ? r.memo : "",
+  };
+}
+
+export async function pullSales(): Promise<SalesData | null> {
+  const rows = await get("daily_sales");
+  if (!rows) return null;
+  const out: SalesData = {};
+  for (const r of rows as Row[]) {
+    const d = rowToSales(r);
+    if (d.date) out[d.date] = d;
+  }
+  return out;
+}
+
+export async function pushSales(data: SalesData): Promise<SyncResult> {
+  return put("daily_sales", Object.values(data).map(salesToRow));
 }
