@@ -25,6 +25,7 @@ import {
   type ShiftEdits,
 } from "@/lib/shiftEdit";
 import type { Shift } from "@/lib/types";
+import { maskEmail, maskPhone } from "@/lib/maskContact";
 
 /* ------------------------------------------------------------------ *
  * 근무표 작성 + 발송.
@@ -33,13 +34,6 @@ import type { Shift } from "@/lib/types";
  * 보내는 사람이 내용을 눈으로 확인하고 본인 계정으로 보내야,
  * 직원이 받았을 때 누가 보낸 건지 분명하고 답장도 사장님에게 간다.
  * ------------------------------------------------------------------ */
-
-/** 공용 태블릿이라 기본으로 가린다. 앞뒤 몇 글자만 남겨 누구 것인지는 알아보게 */
-function mask(v: string): string {
-  const t = v.trim();
-  if (t.length <= 4) return "•".repeat(t.length);
-  return t.slice(0, 2) + "•".repeat(Math.max(3, t.length - 4)) + t.slice(-2);
-}
 
 const inputBase =
   "rounded-xl border-2 border-zinc-300 bg-white px-3 py-2.5 text-[15px] outline-none focus:border-orange-500 dark:border-zinc-700 dark:bg-zinc-900";
@@ -129,7 +123,23 @@ export default function RosterView({
 
   const withEmail = data.staff.filter((s) => s.email);
 
-  function sendMail() {
+  /**
+   * 메일 앱을 연다.
+   *
+   * ★★ **본문을 주소에 안 싣는다** (2026-09-15 · 「아무 작동 안 하노」의 원인)
+   *
+   *   예전에는 `mailto:?...&body=<근무표 전체>` 를 만들었다. 본문이 649자면
+   *   한글이 URL 인코딩되면서 주소가 **2,764자**가 된다(한 글자가 `%EC%9B%94`
+   *   처럼 9바이트). Windows 의 mailto 한계는 대략 2,000자라 **넘으면 메일 앱이
+   *   그냥 안 열린다 — 오류도 안 뜬다.** 눌러도 아무 일이 없던 게 이것이다.
+   *
+   *   그래서 주소에는 **받는 사람과 제목만** 싣고, 본문은 **클립보드에 담아
+   *   붙여넣게** 한다. 길이에 상관없이 항상 열린다.
+   *
+   * ★ 복사를 **먼저** 하고 그 다음에 메일 앱을 연다. 순서를 바꾸면 창이
+   *   넘어가면서 복사가 취소되는 브라우저가 있다.
+   */
+  async function sendMail() {
     if (days.length === 0) return;
     const body = buildEmailBody(storeName, days, data, {
       includeContacts: mailContacts,
@@ -137,10 +147,16 @@ export default function RosterView({
     const subject = `[${storeName}] 근무표 ${label(days[0])}~${label(days[6])}`;
     // 받는 사람을 숨은참조로 넣는다. 직원끼리 서로의 주소가 노출되지 않게.
     const bcc = withEmail.map((s) => s.email).join(",");
-    const url = `mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(body)}`;
-    window.location.href = url;
+
+    const copied = await copyText(body, "아래 근무표를 메일에 붙여넣으세요");
+    window.location.href = `mailto:?bcc=${encodeURIComponent(
+      bcc,
+    )}&subject=${encodeURIComponent(subject)}`;
+    window.alert(
+      copied === "copied"
+        ? "메일 앱을 엽니다.\n근무표를 복사해 뒀으니 본문에 붙여넣기(Ctrl+V) 하세요."
+        : "메일 앱을 엽니다.\n근무표는 아래 [복사] 를 눌러 붙여넣어 주세요.",
+    );
   }
 
   function copyForChat() {
@@ -349,7 +365,7 @@ export default function RosterView({
                       s.email ? "" : "text-zinc-400",
                     ].join(" ")}
                   >
-                    {s.email ? (showContacts ? s.email : mask(s.email)) : "없음"}
+                    {s.email ? (showContacts ? s.email : maskEmail(s.email)) : "없음"}
                   </td>
                   <td
                     className={[
@@ -357,7 +373,7 @@ export default function RosterView({
                       s.phone ? "" : "text-zinc-400",
                     ].join(" ")}
                   >
-                    {s.phone ? (showContacts ? s.phone : mask(s.phone)) : "없음"}
+                    {s.phone ? (showContacts ? s.phone : maskPhone(s.phone)) : "없음"}
                   </td>
                 </tr>
               ))}
@@ -473,7 +489,7 @@ export default function RosterView({
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={sendMail}
+              onClick={() => void sendMail()}
               disabled={withEmail.length === 0}
               className="rounded-xl bg-zinc-900 px-5 py-3 text-[15px] font-bold text-white active:bg-zinc-700 disabled:bg-zinc-300 dark:bg-zinc-100 dark:text-zinc-900 dark:disabled:bg-zinc-700"
             >
