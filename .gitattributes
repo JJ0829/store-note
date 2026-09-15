@@ -1,1 +1,6 @@
 docs/제출물/*.html -diff
+
+# JSON 은 어디서 받아도 LF 로 둔다. db/demo.js --print 가 LF 로 찍고 tests/demoBackup.test.ts 가
+# public/demo-backup.json 과 글자 단위로 비교하는데, Windows 의 core.autocrlf=true 가 체크아웃 시 CRLF 로
+# 바꿔 놓아 새로 클론한 곳에서만 검사기가 죽었다 (2026-09-15).
+*.json text eol=lf
