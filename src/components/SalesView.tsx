@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { SKIP, pullSales, pushSales } from "@/lib/serverSync";
+import { SKIP, hasRows, pullSales, pushSales } from "@/lib/serverSync";
 import { BTN, Card, Caveat, Chip, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { pct, won } from "@/lib/store";
 import { logEvent } from "@/lib/metrics";
@@ -81,10 +81,17 @@ export default function SalesView({
 
     /* ★ 서버에 사본이 있으면 그것으로 덮어쓴다 (출퇴근과 같은 규칙).
        로그인 안 했으면 `null` 이 와서 아무 일도 안 일어난다 */
+    /* ★★ 빈 서버로 태블릿을 덮지 않는다. 비어 있으면 반대로 올린다 —
+       출퇴근·계약과 같은 규칙이다 (`hasRows` 주석 참조) */
     void pullSales().then((server) => {
-      if (!server || Object.keys(server).length === 0) return;
-      saveSales(server);
-      setSales(server);
+      if (server === null) return; // 로그인 안 함
+      if (hasRows(server)) {
+        saveSales(server);
+        setSales(server);
+        return;
+      }
+      const mine = loadSales();
+      if (hasRows(mine)) sendUp(mine);
     });
   }, [seedShifts]);
 

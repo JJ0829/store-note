@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
-import { loadRoster, WEEKDAY, type RosterData } from "@/lib/roster";
-import { SKIP, pullContracts, pushContractSet } from "@/lib/serverSync";
+import { loadRoster, WEEKDAY, type RosterData, type Staff } from "@/lib/roster";
+import { SKIP, hasRows, pullContracts, pushContractSet } from "@/lib/serverSync";
 import {
   checkContract,
   contractOf,
@@ -46,10 +46,19 @@ export default function ContractView({ storeName }: { storeName: string }) {
     /* ★ 서버에 사본이 있으면 그것으로 덮어쓴다 (2026-09-13).
        근로계약은 근로기준법 제42조로 3년 보존 대상인데 태블릿 안에만 있었다.
        로그인 안 했으면 `null` 이 와서 아무 일도 안 일어난다. */
+    /* ★★ 빈 서버로 태블릿을 덮지 않는다 (2026-09-15 · 출퇴근에서 실제로 지워졌다).
+       빈 배열도 참이라 `if (!server)` 를 통과한다 → `saveContracts([])` 가 돌고
+       **법정 3년 보존 대상인 근로계약이 통째로 사라진다.**
+       비어 있으면 반대로 이 태블릿 것을 올린다 — 첫 로그인에 올라가야 한다. */
     void pullContracts().then((server) => {
-      if (!server) return;
-      saveContracts(server);
-      setList(server);
+      if (server === null) return; // 로그인 안 함
+      if (hasRows(server)) {
+        saveContracts(server);
+        setList(server);
+        return;
+      }
+      const mine = loadContracts();
+      if (hasRows(mine)) sendUp(mine, loadRoster().staff);
     });
   }, []);
 
@@ -64,11 +73,14 @@ export default function ContractView({ storeName }: { storeName: string }) {
 
   /* ★ 서버 보관은 **따로 알린다.** 태블릿에는 남았는데 서버에 못 간 경우를
      구분하지 못하면, 기기를 바꾼 날에야 없다는 걸 알게 된다. */
-  function sendUp(next: Contract[]) {
-    if (!roster) return;
-    void pushContractSet(roster.staff, next).then((r) => {
+  /* ★ `staffList` — 첫 로그인에 올릴 때는 `roster` 상태가 아직 안 채워져 있다
+     (같은 effect 안에서 부른다). 그때는 방금 읽은 것을 넘긴다. */
+  function sendUp(next: Contract[], staffList?: Staff[]) {
+    const staff = staffList ?? roster?.staff;
+    if (!staff) return;
+    void pushContractSet(staff, next).then((r) => {
       if (!r.ok && r.reason === SKIP) return;
-      save.report("계약 내용(서버 보관)", r.ok, () => sendUp(next));
+      save.report("계약 내용(서버 보관)", r.ok, () => sendUp(next, staff));
     });
   }
 

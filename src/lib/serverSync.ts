@@ -353,3 +353,29 @@ export async function pullSales(): Promise<SalesData | null> {
 export async function pushSales(data: SalesData): Promise<SyncResult> {
   return put("daily_sales", Object.values(data).map(salesToRow));
 }
+
+/* ------------------------------------------------------------------ *
+ * ★★ 빈 서버로 태블릿을 덮지 않는다 (2026-09-15 · 실제로 기록이 지워졌다)
+ *
+ *   `pullPunches()` 는 서버가 비어 있으면 `{}` 를 돌려준다. `{}` 는
+ *   **참이라서** `if (!server) return;` 를 통과한다. 그래서 로그인한 순간
+ *   `savePunches({})` 가 돌고 **태블릿에 있던 출퇴근이 통째로 지워졌다.**
+ *
+ *   증상이 고약하다 — 사장님 눈에는 «로그인했더니 기록이 사라지고 서버도
+ *   여전히 비어 있다» 로 보인다. 실제로 2026-09-14 에 찍은 출근·퇴근 6건이
+ *   이렇게 날아갔다.
+ *
+ *   그래서 두 가지를 같이 고친다.
+ *     1. 서버가 비어 있으면 **덮지 않는다**
+ *     2. 서버가 비어 있으면 **태블릿 것을 올린다** — 첫 로그인에 올라가야
+ *        폴더가 채워지기 시작한다. 안 그러면 로그인한 뒤에 버튼을 한 번 더
+ *        눌러야만 올라가고, 그 전까지 서버는 영영 빈 깡통이다
+ * ------------------------------------------------------------------ */
+
+/** 서버에서 받은 것에 **줄이 있는가**. 빈 것으로 덮어쓰면 안 된다 */
+export function hasRows(v: unknown): boolean {
+  if (v === null || v === undefined) return false;
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v === "object") return Object.keys(v as object).length > 0;
+  return false;
+}

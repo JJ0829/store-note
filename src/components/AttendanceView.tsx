@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BTN, BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
 import { logEvent } from "@/lib/metrics";
-import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData } from "@/lib/roster";
+import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData, type Staff } from "@/lib/roster";
 import {
   estimatePay,
   getPunch,
@@ -20,7 +20,7 @@ import {
   type PunchData,
 } from "@/lib/attendance";
 import { contractOf, loadContracts, type Contract } from "@/lib/contracts";
-import { SKIP, pullPunches, pushAttendance } from "@/lib/serverSync";
+import { SKIP, hasRows, pullPunches, pushAttendance } from "@/lib/serverSync";
 import { InlineUnlock, useOwnerOpen } from "@/components/OwnerGate";
 import { loadSettings, type Settings } from "@/lib/settings";
 import { applyShiftEdits, loadShiftEdits } from "@/lib/shiftEdit";
@@ -76,10 +76,21 @@ export default function AttendanceView({
     /* ★ 서버에 사본이 있으면 그것으로 덮어쓴다 (2026-09-13).
        출퇴근은 태블릿 안에만 있으면 기기를 바꾸는 날 통째로 사라진다.
        로그인 안 했으면 `null` 이 와서 아무 일도 안 일어난다 — 지금까지와 같다. */
+    /* ★★ 빈 서버로 태블릿을 덮지 않는다 (2026-09-15 · 실제로 지워졌다).
+       `{}` 는 참이라 `if (!server)` 를 통과한다 → `savePunches({})` 가 돌고
+       어제 찍은 출퇴근이 통째로 사라졌다. 서버도 여전히 비어 있어서
+       «로그인했더니 기록만 없어졌다» 로 보였다.
+       비어 있으면 반대로 **이 태블릿 것을 올린다** — 첫 로그인에 올라가야
+       폴더가 채워지기 시작한다. */
     void pullPunches().then((server) => {
-      if (!server) return;
-      savePunches(server);
-      setPunches(server);
+      if (server === null) return; // 로그인 안 함 — 지금까지와 같다
+      if (hasRows(server)) {
+        savePunches(server);
+        setPunches(server);
+        return;
+      }
+      const mine = loadPunches();
+      if (hasRows(mine)) sendUp(mine, loadRoster().staff);
     });
 
     // ★ 1초마다. 「지금 15:22」 가 30초 늦게 바뀌면 찍은 시각을 의심하게 된다
@@ -98,11 +109,14 @@ export default function AttendanceView({
      둘을 한 줄로 묶으면 «태블릿에는 남았는데 서버에 못 갔다» 를 구분 못 하고,
      그러면 기기를 바꾼 날에야 빈 칸을 보게 된다.
      로그인 안 했으면 `SKIP` 이 와서 아무 말도 안 한다. */
-  function sendUp(next: PunchData) {
-    if (!roster) return;
-    void pushAttendance(roster.staff, next).then((r) => {
+  /* ★ `staffList` 를 받는 이유 — 첫 로그인에 올릴 때는 `roster` 상태가 아직
+     안 채워져 있다(같은 effect 안에서 부르므로). 그때는 방금 읽은 것을 넘긴다. */
+  function sendUp(next: PunchData, staffList?: Staff[]) {
+    const staff = staffList ?? roster?.staff;
+    if (!staff) return;
+    void pushAttendance(staff, next).then((r) => {
       if (!r.ok && r.reason === SKIP) return;
-      save.report("출퇴근 기록(서버 보관)", r.ok, () => sendUp(next));
+      save.report("출퇴근 기록(서버 보관)", r.ok, () => sendUp(next, staff));
     });
   }
 

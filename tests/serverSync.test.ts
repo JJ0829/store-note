@@ -11,6 +11,7 @@ import {
   oldStyleStaff,
   pushStaff,
   rowToStaff,
+  hasRows,
   rowToSales,
   salesToRow,
   staffToRow,
@@ -248,4 +249,61 @@ test("★ 매출 화면이 글자마다 서버로 보내지 않는다", () => {
     .replace(/\/\*[\s\S]*?\*\//g, "");
   assert.match(view, /setTimeout/, "기다리지 않고 바로 보낸다 — 중간 값이 최종값을 덮는다");
   assert.match(view, /clearTimeout/, "이전 예약을 취소하지 않는다");
+});
+
+/* ------------------------------------------------------------------ *
+ * ★★ 빈 서버로 태블릿을 덮지 않는다 (2026-09-15 · 실제로 기록이 지워졌다)
+ *
+ *   `pullPunches()` 는 서버가 비면 `{}` 를 돌려주는데 `{}` 는 **참**이라
+ *   `if (!server) return;` 를 통과했다. 그래서 로그인한 순간
+ *   `savePunches({})` 가 돌고 어제 찍은 출퇴근 6건이 통째로 날아갔다.
+ *   서버도 여전히 비어서 «로그인했더니 기록만 없어졌다» 로 보였다.
+ * ------------------------------------------------------------------ */
+
+test("★ 빈 것을 «있다» 로 보지 않는다 — 이것 때문에 기록이 지워졌다", () => {
+  assert.equal(hasRows({}), false, "빈 객체가 참이라 덮어쓰기가 돌았다");
+  assert.equal(hasRows([]), false, "빈 배열도 마찬가지다");
+  assert.equal(hasRows(null), false);
+  assert.equal(hasRows(undefined), false);
+  assert.equal(hasRows({ "s-1": {} }), true);
+  assert.equal(hasRows([{ id: "x" }]), true);
+});
+
+test("★ 세 화면 모두 빈 서버로 덮어쓰지 않는다", () => {
+  for (const [file, saveFn] of [
+    ["src/components/AttendanceView.tsx", "savePunches"],
+    ["src/components/ContractView.tsx", "saveContracts"],
+    ["src/components/SalesView.tsx", "saveSales"],
+  ] as const) {
+    const src = fs
+      .readFileSync(path.join(process.cwd(), file), "utf-8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    /* 덮어쓰기는 반드시 `hasRows(server)` 안에서만 일어나야 한다 */
+    assert.match(src, /if \(hasRows\(server\)\)/, `${file} 에 빈 서버 방어가 없다`);
+    assert.match(
+      src,
+      /server === null/,
+      `${file} 이 «로그인 안 함(null)» 과 «비어 있음» 을 안 나눈다`,
+    );
+    assert.ok(src.includes(saveFn), `${file} 에서 ${saveFn} 를 못 찾았다`);
+  }
+});
+
+test("★ 서버가 비어 있으면 태블릿 것을 올린다 (첫 로그인에 채워져야 한다)", () => {
+  /* 이게 없으면 로그인한 뒤 버튼을 한 번 더 눌러야만 올라가고,
+     그 전까지 서버는 영영 빈 깡통이다 — 사장님이 본 그 상태다 */
+  for (const file of [
+    "src/components/AttendanceView.tsx",
+    "src/components/ContractView.tsx",
+    "src/components/SalesView.tsx",
+  ]) {
+    const src = fs
+      .readFileSync(path.join(process.cwd(), file), "utf-8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    assert.match(
+      src,
+      /if \(hasRows\(mine\)\) sendUp\(mine/,
+      `${file} 이 «서버가 비면 올리기» 를 안 한다`,
+    );
+  }
 });
