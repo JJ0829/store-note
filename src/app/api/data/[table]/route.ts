@@ -23,7 +23,8 @@ export const dynamic = "force-dynamic";
  *   매장에 태블릿이 두 대 있을 수 있다. 「내가 가진 것으로 전부 갈아끼우기」로
  *   만들면 **늦게 연 기기가 다른 기기의 기록을 지운다.** 출퇴근·근로계약은
  *   법정 3년 보존 대상이라 그 사고가 나면 복구할 방법이 없다.
- *   그래서 **넣고 고치기만 하고 지우지는 않는다.** 지우는 길은 따로 만든다.
+ *   그래서 **넣고 고치기만 하고 지우지는 않는다.** 지우는 길은 하나뿐이다 —
+ *   맨 아래 `DELETE`(표 하나를 통째로 비우기). **되돌리기(덮어쓰기) 버튼만 부른다.**
  *
  * ★ store_id 는 **서버가 붙인다.** 브라우저가 보낸 값은 무시한다 —
  *   믿으면 남의 매장에 줄을 넣을 수 있다. RLS 가 한 겹 더 막지만
@@ -162,4 +163,57 @@ export async function PUT(request: Request, ctx: Ctx) {
   const out = Response.json({ ok: true, wrote: safe.length });
   if (fresh) for (const c of fresh) out.headers.append("Set-Cookie", c);
   return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * 비우기 — 이 매장의 표 하나를 통째로. **되돌리기(덮어쓰기) 전용** (2026-09-16)
+ *
+ * ★ 위 「지우지 않는다」 규율의 유일한 예외다. 되돌리기는 정의가 «덮어쓰기» 다
+ *   (`BackupView`: 「합치지 않고 덮어씁니다」). 태블릿만 덮어쓰고 서버를 그대로
+ *   두면 다음 화면을 열 때 「서버에 줄이 있으면 서버가 이긴다」(pull) 규칙이
+ *   **방금 되돌린 것을 도로 지운다.** 시연 데이터를 넣어도 근무표에 옛 직원이
+ *   되살아나는 것이 그 증상이다.
+ *
+ * ★ 이 매장 것만 지운다 — `store_id` 를 서버가 붙이고 RLS 가 한 번 더 본다.
+ *   본문은 받지 않는다. «어느 줄» 을 고를 수 없고 «이 표 전부» 만 된다.
+ * ★ 화면을 열 때 자동으로 부르는 곳은 없다. 확인 화면 뒤의 버튼 하나뿐이다
+ *   (`tests/serverSync.test.ts` 가 화면 넷이 안 부르는지 본다).
+ * ------------------------------------------------------------------ */
+export async function DELETE(request: Request, ctx: Ctx) {
+  if (!authConfigured()) return bad("not-configured", 409);
+  const { table } = await ctx.params;
+  if (!isAllowedTable(table)) return bad("unknown-table", 404);
+
+  const { access, who } = await session(request);
+  if (who.state !== "ok") return bad(who.state, 401);
+
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return bad("not-configured", 409);
+
+  let res: Response;
+  try {
+    res = await fetch(
+      `${url}/rest/v1/${table}?store_id=eq.${encodeURIComponent(who.storeId)}&select=store_id`,
+      {
+        method: "DELETE",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${access}`,
+          Accept: "application/json",
+          /* 지운 줄을 돌려받아 몇 줄인지 센다 — 화면이 그 숫자를 보여준다 */
+          Prefer: "return=representation",
+        },
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+  } catch {
+    return bad("서버에 연결하지 못했습니다.", 504);
+  }
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    return bad(`서버가 거절했습니다 (${res.status}). ${detail.slice(0, 200)}`, 502);
+  }
+  const gone = (await res.json().catch(() => [])) as unknown;
+  return Response.json({ ok: true, deleted: Array.isArray(gone) ? gone.length : 0 });
 }

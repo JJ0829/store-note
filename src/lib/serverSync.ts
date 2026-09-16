@@ -397,3 +397,89 @@ export function hasRows(v: unknown): boolean {
   if (typeof v === "object") return Object.keys(v as object).length > 0;
   return false;
 }
+
+/* ------------------------------------------------------------------ *
+ * ★ 되돌리기는 서버도 덮어쓴다 (2026-09-16)
+ *
+ *   되돌리기(`applyRestore`)는 태블릿을 «합치지 않고 덮어쓴다». 그런데 서버를
+ *   그대로 두면 다음 화면을 열 때 위의 「서버에 줄이 있으면 서버가 이긴다」 규칙이
+ *   **방금 되돌린 것을 도로 지운다.** 시연 데이터를 넣고 근무표를 열면 옛 직원
+ *   넷이 되살아나는 것이 그 증상이었다 — 그러니 되돌리기는 서버까지 가야 한다.
+ *
+ *   순서:  비우기(출퇴근 → 계약 → 직원 → 매출)  →  올리기(직원 → 출퇴근 → 계약 → 매출)
+ *   ★ 비우는 순서가 거꾸로면 FK 에 걸린다 — 출퇴근·계약이 직원을 가리킨다.
+ *     올리는 순서도 같은 이유로 직원이 먼저다.
+ *
+ *   중간에 실패하면 서버가 반쯤 비어 있을 수 있다. 그때는 숨기지 않고
+ *   «어느 단계에서 왜» 를 돌려주고, 화면이 처음부터 다시 하라고 말한다.
+ *   태블릿 쪽은 이미 들어가 있으니 다시 누르면 처음부터 다시 간다.
+ * ------------------------------------------------------------------ */
+
+export const REPLACE_DELETE_ORDER = ["punches", "contracts", "staff", "daily_sales"] as const;
+
+const TABLE_LABEL: Record<(typeof REPLACE_DELETE_ORDER)[number], string> = {
+  punches: "출퇴근",
+  contracts: "근로계약",
+  staff: "직원",
+  daily_sales: "매출",
+};
+
+/** 표 하나를 통째로 비운다 — `replaceAll` 만 부른다 */
+async function del(table: string, retry = true): Promise<SyncResult> {
+  try {
+    const res = await fetch(`/api/data/${table}`, { method: "DELETE" });
+    const body = (await res.json().catch(() => null)) as
+      | { ok?: boolean; deleted?: number; reason?: string }
+      | null;
+    if (res.ok && body?.ok) return { ok: true, rows: body.deleted ?? 0 };
+    const why = body?.reason ?? "";
+    if (retry && why === "stale" && (await nudge())) return del(table, false);
+    if (SKIP_REASONS.has(why)) return { ok: false, reason: SKIP };
+    return { ok: false, reason: why || `비우지 못했습니다 (${res.status})` };
+  } catch {
+    return { ok: false, reason: "서버에 연결하지 못했습니다" };
+  }
+}
+
+export type ReplaceResult =
+  /** 로그인 안 함·서버 설정 없음 — 태블릿에만 넣었다. 오류가 아니다 */
+  | { state: "skip" }
+  | { state: "ok"; staff: number; punches: number; contracts: number; sales: number }
+  | { state: "fail"; step: string; reason: string };
+
+/** 백업 파일 중 서버 표로 가는 부분. `BackupFile` 이 그대로 들어간다 */
+export type ReplaceInput = {
+  roster: { staff: Staff[] };
+  punches: PunchData;
+  contracts: Contract[];
+  sales?: SalesData;
+};
+
+export async function replaceAll(file: ReplaceInput): Promise<ReplaceResult> {
+  if (!(await signedIn())) return { state: "skip" };
+
+  for (const t of REPLACE_DELETE_ORDER) {
+    const r = await del(t);
+    if (!r.ok) {
+      if (isSkip(r)) return { state: "skip" };
+      return { state: "fail", step: `${TABLE_LABEL[t]} 비우기`, reason: r.reason };
+    }
+  }
+
+  const steps: Array<[string, () => Promise<SyncResult>]> = [
+    ["직원 올리기", () => pushStaff(file.roster.staff)],
+    ["출퇴근 올리기", () => pushPunches(file.punches)],
+    ["근로계약 올리기", () => pushContracts(file.contracts)],
+    ["매출 올리기", () => pushSales(file.sales ?? {})],
+  ];
+  const n: number[] = [];
+  for (const [step, run] of steps) {
+    const r = await run();
+    if (!r.ok) {
+      if (isSkip(r)) return { state: "skip" };
+      return { state: "fail", step, reason: r.reason };
+    }
+    n.push(r.rows);
+  }
+  return { state: "ok", staff: n[0], punches: n[1], contracts: n[2], sales: n[3] };
+}

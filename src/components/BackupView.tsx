@@ -16,6 +16,7 @@ import {
   type BackupFile,
 } from "@/lib/backup";
 import { logEvent } from "@/lib/metrics";
+import { replaceAll, type ReplaceResult } from "@/lib/serverSync";
 import StorageUsage from "@/components/StorageUsage";
 
 /* ------------------------------------------------------------------ *
@@ -49,7 +50,17 @@ type Stage =
       losing: ReturnType<typeof backupCounts>;
     }
   | { s: "error"; reason: string }
-  | { s: "done"; failed: string[] };
+  | {
+      s: "done";
+      failed: string[];
+      /**
+       * ★ 서버 쪽 결과 (2026-09-16). 태블릿만 덮어쓰면 다음 화면에서
+       * 「서버가 이긴다」 규칙이 되돌린 것을 도로 지운다. 그래서 서버도 같이
+       * 덮어쓰고, 어떻게 됐는지 여기 적어 화면에 보인다. `skip` 은 로그인
+       * 안 한 것 — 오류가 아니라서 아무 말도 안 한다.
+       */
+      server: ReplaceResult | { state: "sending" };
+    };
 
 /** 브라우저에서 파일로 내려준다 */
 function download(name: string, text: string, mime: string) {
@@ -369,10 +380,13 @@ export default function BackupView({
               <button
                 type="button"
                 className={`${BTN_PRIMARY} flex-1`}
-                onClick={() => {
+                onClick={async () => {
                   const r = applyRestore(stage.file);
-                  setStage({ s: "done", failed: r.failed });
+                  setStage({ s: "done", failed: r.failed, server: { state: "sending" } });
                   reload();
+                  /* ★ 서버도 덮어쓴다 — 안 그러면 다음 화면에서 서버 것이 되살아난다 */
+                  const server = await replaceAll(stage.file);
+                  setStage({ s: "done", failed: r.failed, server });
                 }}
               >
                 덮어쓰기
@@ -398,6 +412,31 @@ export default function BackupView({
               <p role="alert" className="rounded-xl bg-red-50 px-3 py-2.5 text-[13px] font-semibold leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300">
                 일부를 저장하지 못했습니다: {stage.failed.join(" · ")}. 이
                 태블릿의 저장공간이 꽉 찼거나 사생활 보호 모드일 수 있습니다.
+              </p>
+            )}
+            {stage.server.state === "sending" && (
+              <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
+                서버에도 올리는 중…
+              </p>
+            )}
+            {stage.server.state === "ok" && (
+              <p
+                role="status"
+                className="mt-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-[12px] leading-relaxed text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+              >
+                서버에도 올렸습니다 — 직원 {stage.server.staff}명 · 출퇴근{" "}
+                {stage.server.punches}건 · 계약 {stage.server.contracts}건 · 매출{" "}
+                {stage.server.sales}일치. 다른 기기에서 열어도 이대로 보입니다.
+              </p>
+            )}
+            {stage.server.state === "fail" && (
+              <p
+                role="alert"
+                className="mt-2 rounded-xl bg-red-50 px-3 py-2.5 text-[12px] leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300"
+              >
+                <b>서버에는 올리지 못했습니다</b> ({stage.server.step}:{" "}
+                {stage.server.reason}). 이 태블릿에는 들어갔지만, 다음 화면을 열면
+                서버 것이 되살아날 수 있습니다. <b>「확인」을 누르고 처음부터 다시 해 주세요.</b>
               </p>
             )}
             <button

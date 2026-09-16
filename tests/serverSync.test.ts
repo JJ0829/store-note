@@ -14,6 +14,7 @@ import {
   readyContracts,
   rowToStaff,
   hasRows,
+  REPLACE_DELETE_ORDER,
   rowToSales,
   salesToRow,
   staffToRow,
@@ -366,4 +367,39 @@ test("★ 초안만 있으면 «보냈다 0줄» 로 조용히 넘어간다 (실
   };
   const r = await pushContracts([draft]);
   assert.deepEqual(r, { ok: true, rows: 0 });
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 되돌리기는 서버도 덮어쓴다 (2026-09-16)
+ *   태블릿만 덮어쓰면 다음 화면에서 「서버가 이긴다」 규칙이 되돌린 것을 도로 지운다.
+ *   시연 데이터를 넣고 근무표를 열면 옛 직원이 되살아나는 것이 그 증상이었다.
+ * ------------------------------------------------------------------ */
+test("★ 비우는 순서 — 직원을 가리키는 표(출퇴근·계약)가 직원보다 먼저다 (거꾸로면 FK 에 걸린다)", () => {
+  const order: string[] = [...REPLACE_DELETE_ORDER];
+  assert.ok(order.indexOf("punches") < order.indexOf("staff"));
+  assert.ok(order.indexOf("contracts") < order.indexOf("staff"));
+  /* 서버에 올리는 표 넷을 하나도 안 빠뜨린다 — 빠뜨린 표는 옛 것이 남는다 */
+  assert.deepEqual([...order].sort(), [...ALLOWED_TABLES].sort());
+});
+
+test("★ 되돌리기 「덮어쓰기」 가 서버까지 간다 — 태블릿에 넣은 뒤 replaceAll 을 부른다", () => {
+  const src = fs.readFileSync(path.join(process.cwd(), "src/components/BackupView.tsx"), "utf-8");
+  const a = src.indexOf("applyRestore(stage.file)");
+  const b = src.indexOf("replaceAll(stage.file)");
+  assert.ok(a > 0 && b > a, "태블릿에 넣은 뒤 서버로 가야 한다");
+  /* 실패를 삼키지 않는다 — 어느 단계에서 왜 인지 화면에 쓴다 */
+  assert.ok(src.includes("stage.server.step") && src.includes("stage.server.reason"));
+});
+
+test("★ 비우기 길은 되돌리기 전용이다 — 화면을 열 때 부르는 곳이 없다", () => {
+  for (const v of ["RosterView", "AttendanceView", "ContractView", "SalesView"]) {
+    const src = fs.readFileSync(path.join(process.cwd(), `src/components/${v}.tsx`), "utf-8");
+    assert.ok(!src.includes("replaceAll"), `${v} 가 서버를 비운다`);
+  }
+  const route = fs.readFileSync(
+    path.join(process.cwd(), "src/app/api/data/[table]/route.ts"),
+    "utf-8",
+  );
+  assert.ok(route.includes("export async function DELETE"), "비우기 길이 없다");
+  assert.ok(route.includes("store_id=eq."), "이 매장 것만 지워야 한다");
 });

@@ -77,11 +77,22 @@ const SHIFTS = {
  * 직원 4명 — 전부 가짜 이름, 연락처 없음.
  * workDays 는 계약서의 요일(0 일 … 6 토)이고 근무표 배정도 이걸로 만든다.
  */
+/**
+ * ★ 서버 표(`staff`·`punches`·`contracts`)의 id 는 **uuid** 다 (2026-09-16).
+ *   전에는 `s-demo-1`·`pu-demo-7` 꼴이었는데, 서버가 그 모양을 거절해서
+ *   시연 데이터가 **브라우저에만 남고 서버로는 한 건도 안 올라갔다.**
+ *   결과가 결정적이어야 하므로(테스트가 파일과 비교한다) 난수 대신
+ *   자리에 번호를 박은 uuid 를 만든다. 첫 마디가 종류다 — aa 직원 · bb 출퇴근 · cc 계약.
+ *   거래처(`v-demo-*`)는 서버로 안 가므로 그대로 둔다.
+ */
+const demoId = (kind, n) =>
+  `${kind.repeat(4)}-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
+
 const STAFF = [
-  { id: "s-demo-1", section: "제빵", name: "김하늘", shift: "제빵", wage: 11_500, workDays: [1, 2, 3, 4, 5], start: "2026-03-02", insured: true },
-  { id: "s-demo-2", section: "바", name: "이서준", shift: "오픈조", wage: 10_500, workDays: [1, 2, 3, 4, 5], start: "2026-05-11", insured: true },
-  { id: "s-demo-3", section: "홀", name: "박지우", shift: "마감조", wage: 10_320, workDays: [2, 3, 4, 5, 6], start: "2026-07-01", insured: false },
-  { id: "s-demo-4", section: "바", name: "최민준", shift: "마감조", wage: 10_800, workDays: [0, 1, 3, 5, 6], start: "2026-08-18", insured: false },
+  { id: demoId("aa", 1), section: "제빵", name: "김하늘", shift: "제빵", wage: 11_500, workDays: [1, 2, 3, 4, 5], start: "2026-03-02", insured: true },
+  { id: demoId("aa", 2), section: "바", name: "이서준", shift: "오픈조", wage: 10_500, workDays: [1, 2, 3, 4, 5], start: "2026-05-11", insured: true },
+  { id: demoId("aa", 3), section: "홀", name: "박지우", shift: "마감조", wage: 10_320, workDays: [2, 3, 4, 5, 6], start: "2026-07-01", insured: false },
+  { id: demoId("aa", 4), section: "바", name: "최민준", shift: "마감조", wage: 10_800, workDays: [0, 1, 3, 5, 6], start: "2026-08-18", insured: false },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -122,7 +133,7 @@ export function buildDemo(base = BASE_DAY) {
     for (let i = -7; i <= 0; i++) {
       const day = dayOf(base, i);
       if (!assign[s.id][day]) continue;
-      const late = s.id === "s-demo-3" && i === -4 ? 14 : 0; // 한 번은 지각
+      const late = si === 2 && i === -4 ? 14 : 0; // 박지우가 한 번은 지각
       const inAt = hm(toMin(sh.start) + wobble(si, i) + late);
       let outAt = hm(toMin(sh.end) + Math.abs(wobble(i, si)) + 5);
       if (i === 0) {
@@ -131,7 +142,7 @@ export function buildDemo(base = BASE_DAY) {
       }
       punchSeq += 1;
       punches[s.id][day] = {
-        id: `pu-demo-${punchSeq}`,
+        id: demoId("bb", punchSeq),
         staffId: s.id,
         date: day,
         inAt,
@@ -146,7 +157,7 @@ export function buildDemo(base = BASE_DAY) {
   const contracts = STAFF.map((s, i) => {
     const sh = SHIFTS[s.shift];
     return {
-      id: `ct-demo-${i + 1}`,
+      id: demoId("cc", i + 1),
       staffId: s.id,
       startDate: s.start,
       endDate: "",
