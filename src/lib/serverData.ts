@@ -20,6 +20,11 @@ export const ALLOWED_TABLES = [
   "suppliers",
   "items",
   "item_versions",
+  /* 근무표 (2026-09-16). `shifts` 는 조 이름·시간, `shift_assignments` 는
+     «누가 언제 어느 조» 다. 조는 매장이 이름·시간만 고치고 새로 못 만든다
+     (`shiftEdit.ts`) — 그래서 시드의 셋이 전부다. */
+  "shifts",
+  "shift_assignments",
 ] as const;
 
 export type AllowedTable = (typeof ALLOWED_TABLES)[number];
@@ -50,4 +55,8 @@ export const CONFLICT_KEY: Record<AllowedTable, string> = {
   suppliers: "id",
   items: "id",
   item_versions: "id",
+  shifts: "id",
+  /* ★ 배정에는 id 가 없다. 기본키가 «매장+직원+날짜» 다 —
+     id 로 맞추면 근무표를 고칠 때마다 같은 날 같은 사람이 두 줄이 된다 */
+  shift_assignments: "store_id,staff_id,business_date",
 };

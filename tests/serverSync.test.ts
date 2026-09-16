@@ -23,6 +23,9 @@ import {
   pushVendors,
   unknownUnitItems,
   vendorToRow,
+  SHIFT_UUID,
+  assignToRows,
+  rowsToAssign,
   salesToRow,
   staffToRow,
 } from "../src/lib/serverSync.ts";
@@ -335,16 +338,21 @@ test("★ 서버가 비어 있으면 태블릿 것을 올린다 (첫 로그인�
  *   출퇴근도 계약도 0건인 매장은 직원 4명이 있어도 서버 `staff` 가 영영
  *   비어 있었다 — «폴더가 다 깡통» 의 절반이 이것이었다.
  * ------------------------------------------------------------------ */
-test("★ 근무표 화면이 직원을 직접 올린다 (출퇴근·계약에 딸려서만이 아니라)", () => {
+test("★ 근무표 화면이 직원과 배정을 직접 올린다 (출퇴근·계약에 딸려서만이 아니라)", () => {
+  /* ★ 2026-09-16 — 배정(`assign`)까지 같이 올리게 바뀌었다. 근무표는 주에
+     한 번 짜는 것이라 잃으면 그 주를 통째로 다시 짜야 하고, 배정이 없으면
+     근태(계획 − 실제)를 아예 못 만든다. 그래서 `pullStaff` → `pullRoster`. */
   const src = fs
     .readFileSync(path.join(process.cwd(), "src/components/RosterView.tsx"), "utf-8")
     .replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.match(src, /pullStaff\(\)/, "화면을 열 때 서버 직원을 받지 않는다");
-  assert.match(src, /if \(hasRows\(server\)\)/, "빈 서버로 직원 명단을 덮어쓸 수 있다");
-  assert.match(src, /if \(hasRows\(mine\)\) sendStaff\(mine\)/, "서버가 비면 태블릿 직원을 올리지 않는다");
-  /* 직원을 더하거나 지울 때도 올라가야 한다 */
-  const calls = src.match(/sendStaff\(/g) ?? [];
-  assert.ok(calls.length >= 3, `sendStaff 호출이 ${calls.length}곳 — 열 때·더할 때·지울 때 세 곳은 있어야 한다`);
+  assert.match(src, /pullRoster\(\)/, "화면을 열 때 서버에서 근무표를 받지 않는다");
+  assert.match(src, /hasRows\(server\.staff\)/, "빈 서버로 직원 명단을 덮어쓸 수 있다");
+  assert.match(src, /hasRows\(server\.assign\)/, "빈 서버로 배정을 덮어쓸 수 있다");
+  assert.match(src, /sendUp\(mine\)/, "서버가 비면 태블릿 것을 올리지 않는다");
+  /* 저장하는 길이 하나로 모였다 — `persist` 가 서버까지 보낸다.
+     두 곳에서 부르면 같은 것을 두 번 보낸다 */
+  assert.match(src, /saveRoster\(next\),[\s\S]{0,120}sendUp\(next\)/, "persist 가 서버로 안 보낸다");
+  assert.doesNotMatch(src, /sendStaff\(/, "옛 sendStaff 가 남아 있다");
 });
 
 /* ------------------------------------------------------------------ *
@@ -512,4 +520,63 @@ test("★ 시연 데이터의 거래처·품목 id 가 uuid 다", () => {
   for (const x of v.vendors) assert.match(x.id, uuid, "거래처 id");
   for (const x of v.items) assert.match(x.id, uuid, "품목 id");
   assert.ok(v.vendors.length > 0 && v.items.length > 0);
+});
+
+/* ------------------------------------------------------------------ *
+ * 근무표 (2026-09-16)
+ * ------------------------------------------------------------------ */
+
+test("★ 시드의 조가 전부 붙박이 uuid 를 갖는다", () => {
+  /* 하나라도 빠지면 **그 조의 배정만 통째로 안 올라간다.**
+     화면은 멀쩡하고, 기기를 바꾼 날에야 그 조가 비어 있다 */
+  const raw = fs.readFileSync(path.join(process.cwd(), "data/seed.json"), "utf8");
+  const seed = JSON.parse(raw) as { shifts: { id: string; name: string }[] };
+  const missing = seed.shifts.filter((s) => !SHIFT_UUID[s.id]);
+  assert.deepEqual(missing, [], "붙박이 uuid 가 없는 조가 있다 — SHIFT_UUID 에 더할 것");
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  for (const id of Object.values(SHIFT_UUID)) assert.match(id, uuid);
+  assert.equal(new Set(Object.values(SHIFT_UUID)).size, Object.keys(SHIFT_UUID).length, "겹치는 uuid");
+});
+
+test("★ 배정 — 왕복해도 그대로다 (휴무 포함)", () => {
+  const a = newUuid();
+  const b = newUuid();
+  const shifts = [
+    { id: "sh-open", name: "오픈조", start: "07:30", end: "15:30", note: "", focus: [] },
+    { id: "sh-close", name: "마감조", start: "14:30", end: "22:30", note: "", focus: [] },
+  ] as unknown as Parameters<typeof assignToRows>[1];
+
+  const assign: Record<string, Record<string, string>> = {
+    [a]: { "2026-09-16": "오픈조", "2026-09-17": "" },
+    [b]: { "2026-09-16": "마감조" },
+  };
+  assert.deepEqual(rowsToAssign(assignToRows(assign, shifts)), assign);
+});
+
+test("★★ 휴무도 줄을 남긴다 — 빼면 «아직 안 짰다» 와 구별이 안 된다", () => {
+  const a = newUuid();
+  const shifts = [
+    { id: "sh-open", name: "오픈조", start: "07:30", end: "15:30", note: "", focus: [] },
+  ] as unknown as Parameters<typeof assignToRows>[1];
+  const rows = assignToRows({ [a]: { "2026-09-17": "" } }, shifts);
+  assert.equal(rows.length, 1, "휴무 줄이 사라졌다");
+  assert.equal(rows[0].shift_id, null, "휴무는 조가 없다");
+  assert.equal(rows[0].memo, null);
+});
+
+test("★ 배정은 매장+직원+날짜로 같은 줄을 찾는다 (id 가 없다)", () => {
+  assert.equal(CONFLICT_KEY.shift_assignments, "store_id,staff_id,business_date");
+  assert.equal(CONFLICT_KEY.shifts, "id");
+});
+
+test("★ 비우는 순서 — 배정이 직원·조보다 먼저다", () => {
+  const order = [...REPLACE_DELETE_ORDER];
+  assert.ok(
+    order.indexOf("shift_assignments") < order.indexOf("staff"),
+    "배정을 직원보다 나중에 비우면 외래키에 걸린다",
+  );
+  assert.ok(
+    order.indexOf("shift_assignments") < order.indexOf("shifts"),
+    "배정을 근무조보다 나중에 비우면 외래키에 걸린다",
+  );
 });

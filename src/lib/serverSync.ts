@@ -1,6 +1,7 @@
 import type { Punch, PunchData } from "./attendance.ts";
 import type { Contract } from "./contracts.ts";
-import type { Staff } from "./roster.ts";
+import type { Assign, RosterData, Staff } from "./roster.ts";
+import type { Shift } from "./types.ts";
 import type { DaySales, SalesData } from "./sales.ts";
 import type { Vendor, VendorData, VendorItem } from "./vendors.ts";
 import { familyOf } from "./units.ts";
@@ -420,9 +421,11 @@ export function hasRows(v: unknown): boolean {
 /* ★ 가리키는 쪽(자식)이 먼저다. 거꾸로면 외래키가 거부한다.
    거래처는 세 겹이다 — 단가가 품목을, 품목이 거래처를 가리킨다. */
 export const REPLACE_DELETE_ORDER = [
+  "shift_assignments",
   "punches",
   "contracts",
   "staff",
+  "shifts",
   "daily_sales",
   "item_versions",
   "items",
@@ -437,6 +440,8 @@ const TABLE_LABEL: Record<(typeof REPLACE_DELETE_ORDER)[number], string> = {
   item_versions: "단가",
   items: "품목",
   suppliers: "거래처",
+  shift_assignments: "근무 배정",
+  shifts: "근무조",
 };
 
 /** 표 하나를 통째로 비운다 — `replaceAll` 만 부른다 */
@@ -654,4 +659,120 @@ export async function pushVendors(data: VendorData): Promise<SyncResult> {
   if (!i.ok) return i;
 
   return put("item_versions", data.items.map(itemVersionToRow));
+}
+
+/* ------------------------------------------------------------------ *
+ * 근무표 (2026-09-16)
+ *
+ * ★ 조(shift)의 id 는 시드 값이라 uuid 가 아니다 (`sh-open` …).
+ *   그런데 서버 `shifts.id` 는 uuid 다. 직원 때처럼 시드를 통째로 바꾸면
+ *   `shiftEdit` · 단일 파일 시연본 · 숫자 정본까지 줄줄이 따라와야 한다.
+ *
+ *   **조는 매장이 새로 만들 수 없다** — 이름과 시간만 고친다(`shiftEdit.ts`).
+ *   즉 **개수와 종류가 시드에 고정**돼 있다. 그래서 시드 id 마다 **붙박이
+ *   uuid** 를 하나씩 둔다. 바뀌지 않는 값이므로 매번 같은 줄을 찾는다.
+ *
+ *   ⚠️ 시드에 조를 더하면 여기도 같이 더해야 한다. 안 그러면 그 조의
+ *     배정만 통째로 안 올라간다 — `tests/serverSync.test.ts` 가 잡는다.
+ *
+ * ★ 배정은 «누가 언제 어느 조» 이고 앱은 그것을 **조 이름**으로 들고 있다
+ *   (`assign[staffId][날짜] = "오픈조"`). 서버는 `shift_id` 를 쓰므로
+ *   이름 → id 로 바꿔서 보낸다. 휴무("")는 `shift_id: null` 이다.
+ * ------------------------------------------------------------------ */
+
+export const SHIFT_UUID: Record<string, string> = {
+  "sh-bakery": "5b1f7000-0000-4000-8000-000000000001",
+  "sh-open": "5b1f7000-0000-4000-8000-000000000002",
+  "sh-close": "5b1f7000-0000-4000-8000-000000000003",
+};
+
+export function shiftToRow(s: Shift, order: number): Row | null {
+  const id = SHIFT_UUID[s.id];
+  if (!id) return null; // 모르는 조 — 위 주석 참고
+  return {
+    id,
+    name: s.name,
+    start_at: s.start,
+    end_at: s.end,
+    note: s.note || null,
+    sort_order: order,
+  };
+}
+
+/** 시드에 있는데 붙박이 uuid 가 없는 조 — 있으면 그 조의 배정이 안 올라간다 */
+export function unmappedShifts(shifts: Shift[]): Shift[] {
+  return shifts.filter((s) => !SHIFT_UUID[s.id]);
+}
+
+export function assignToRows(assign: Assign, shifts: Shift[]): Row[] {
+  /* 화면이 들고 있는 것은 **조 이름**이다. 이름이 바뀌어도(매장이 고친다)
+     같은 조를 가리키도록 지금 목록에서 이름 → id 를 만든다 */
+  const byName = new Map<string, string>();
+  for (const s of shifts) {
+    const id = SHIFT_UUID[s.id];
+    if (id) byName.set(s.name, id);
+  }
+
+  const out: Row[] = [];
+  for (const [staffId, byDate] of Object.entries(assign)) {
+    for (const [date, shiftName] of Object.entries(byDate)) {
+      out.push({
+        staff_id: staffId,
+        business_date: date,
+        /* 휴무는 «배정이 없다» 가 아니라 «쉰다고 정했다» 이다.
+           줄을 빼면 «아직 안 짰다» 와 구별이 안 된다 */
+        shift_id: shiftName ? (byName.get(shiftName) ?? null) : null,
+        memo: shiftName || null,
+      });
+    }
+  }
+  return out;
+}
+
+export function rowsToAssign(rows: Row[]): Assign {
+  const out: Assign = {};
+  for (const r of rows) {
+    const staffId = str(r.staff_id);
+    const date = str(r.business_date);
+    if (!staffId || !date) continue;
+    (out[staffId] ??= {})[date] = str(r.memo);
+  }
+  return out;
+}
+
+export async function pullRoster(): Promise<RosterData | null> {
+  const [sRows, aRows] = await Promise.all([get("staff"), get("shift_assignments")]);
+  if (!sRows || !aRows) return null;
+  return {
+    staff: (sRows as Row[]).map(rowToStaff),
+    assign: rowsToAssign(aRows as Row[]),
+  };
+}
+
+/**
+ * 직원 → 조 → 배정 **순서로** 보낸다.
+ *
+ * ★ `shift_assignments` 가 직원과 조를 **둘 다** 가리킨다. 하나라도 서버에
+ *   없으면 배정이 통째로 거부되고, 화면에는 「보내지 못했습니다」 로만 보인다.
+ */
+export async function pushRoster(
+  data: RosterData,
+  shifts: Shift[],
+): Promise<SyncResult> {
+  const missing = unmappedShifts(shifts);
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      reason: `조 ${missing.map((s) => s.name).join(", ")} 을(를) 서버가 모릅니다. 개발자에게 알려 주세요.`,
+    };
+  }
+
+  const st = await pushStaff(data.staff);
+  if (!st.ok) return st;
+
+  const rows = shifts.map((s, i) => shiftToRow(s, i)).filter((r): r is Row => r !== null);
+  const sh = await put("shifts", rows);
+  if (!sh.ok) return sh;
+
+  return put("shift_assignments", assignToRows(data.assign, shifts));
 }

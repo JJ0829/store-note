@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
 import MonthPicker from "@/components/MonthPicker";
@@ -19,6 +19,7 @@ import {
   type RosterData,
 } from "@/lib/roster";
 import ShiftEditor from "@/components/ShiftEditor";
+import { pullRoster, pushRoster } from "@/lib/serverSync";
 import {
   applyShiftEdits,
   loadShiftEdits,
@@ -61,6 +62,11 @@ export default function RosterView({
     () => applyShiftEdits(seedShifts, shiftEdits),
     [seedShifts, shiftEdits],
   );
+  /* ★ 조 목록은 `shiftEdits` 가 채워진 뒤에야 최종값이 된다. 첫 effect 안에서
+     쓰려면 클로저에 잡힌 옛 값이 아니라 **지금 값**이 필요하다 */
+  const shiftsRef = useRef(shifts);
+  shiftsRef.current = shifts;
+
   const [monday, setMonday] = useState<Date | null>(null);
   /* 달력은 접혀 있다가 날짜를 누르면 열린다 — 늘 펴 두면 근무표가 아래로 밀린다 */
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -85,27 +91,35 @@ export default function RosterView({
        출퇴근도 계약도 0건인 매장은 직원 4명이 있어도 서버 `staff` 가 영영
        비어 있었다 — 사장님이 «폴더가 다 깡통» 이라고 본 상태의 절반이 이것이다.
        서버에 있으면 서버가 이기고(기기 바꿈), 비어 있으면 이 태블릿 것을 올린다.
-       근무표 배정(`assign`)은 아직 서버에 없으므로 그대로 둔다. */
-    void pullStaff().then((server) => {
+
+       ★ 2026-09-16 — **배정(`assign`)도 같이** 받는다. 근무표는 주에 한 번
+         짜는 것이라 잃으면 그 주를 통째로 다시 짜야 하고, 배정이 없으면
+         근태(계획 − 실제)를 아예 못 만든다. */
+    void pullRoster().then((server) => {
       if (server === null) return; // 로그인 안 함 — 지금까지와 같다
-      if (hasRows(server)) {
+      if (hasRows(server.staff) || hasRows(server.assign)) {
         const local = loadRoster();
-        const merged = { ...local, staff: server };
+        /* 서버에 있는 것만 이긴다. 배정이 비어 있는데 덮으면
+           **이 태블릿에서 짠 이번 주가 통째로 사라진다** */
+        const merged: RosterData = {
+          staff: hasRows(server.staff) ? server.staff : local.staff,
+          assign: hasRows(server.assign) ? server.assign : local.assign,
+        };
         saveRoster(merged);
         setData(merged);
         return;
       }
-      const mine = loadRoster().staff;
-      if (hasRows(mine)) sendStaff(mine);
+      const mine = loadRoster();
+      if (hasRows(mine.staff) || hasRows(mine.assign)) sendUp(mine);
     });
   }, []);
 
   /* ★ 서버 보관은 태블릿 저장과 **따로 알린다** (출퇴근·계약과 같은 규칙).
      로그인 안 했으면 `SKIP` 이 와서 아무 말도 안 한다. */
-  function sendStaff(list: typeof data.staff) {
-    void pushStaff(list).then((r) => {
+  function sendUp(next: RosterData) {
+    void pushRoster(next, shiftsRef.current).then((r) => {
       if (!r.ok && r.reason === SKIP) return;
-      save.report("직원 명단(서버 보관)", r.ok, () => sendStaff(list));
+      save.report("근무표(서버 보관)", r.ok, () => sendUp(next));
     });
   }
 
@@ -118,6 +132,7 @@ export default function RosterView({
       save.report("근무표", saveRoster(next), () =>
         save.report("근무표", saveRoster(next)),
       );
+      sendUp(next);
     },
     [save],
   );
@@ -139,7 +154,8 @@ export default function RosterView({
     setEmail("");
     setPhone("");
     // 섹션은 남겨둔다. 같은 섹션 사람을 연달아 넣는 경우가 많다
-    sendStaff(next);
+    /* 서버로 보내는 것은 `persist` 가 한다 — 여기서 또 부르면 같은 것을
+       두 번 보낸다 (2026-09-16 에 배정까지 같이 보내면서 한곳으로 모았다) */
   }
 
   function removeStaff(id: string) {
@@ -148,8 +164,8 @@ export default function RosterView({
     const staff = data.staff.filter((s) => s.id !== id);
     persist({ staff, assign });
     /* ⚠️ 서버 쪽 줄은 지우지 않는다 — `/api/data` 는 덮어쓰기만 한다.
-       (늦게 연 기기가 다른 기기의 기록을 지우는 사고를 막기 위해서다) */
-    sendStaff(staff);
+       (늦게 연 기기가 다른 기기의 기록을 지우는 사고를 막기 위해서다)
+       올리는 것은 위의 `persist` 가 이미 했다. */
   }
 
   function setShift(staffId: string, date: string, shift: string) {
