@@ -439,7 +439,6 @@ export default function RosterView({
                 <th scope="col" className="px-3 py-2 text-left font-semibold">이름</th>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">이메일</th>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">전화번호</th>
-                <th scope="col" className="px-3 py-2 text-left font-semibold">고치기</th>
               </tr>
             </thead>
             <tbody>
@@ -464,7 +463,33 @@ export default function RosterView({
                       s.section || "—"
                     )}
                   </td>
-                  <td className="px-3 py-2 font-bold">{s.name}</td>
+                  {/* ★ 고치기·삭제를 **이름 아래**에 둔다 (2026-09-16).
+                      칸을 하나 더 만들었더니 표가 넘쳐서 가로로 밀어야 보였다 —
+                      사장님이 «삭제가 없다» 고 한 것과 똑같은 일이 다시 났다.
+                      이름 옆이면 누구를 고치는지도 분명하다. */}
+                  <td className="px-3 py-2">
+                    <div className="font-bold">{s.name}</div>
+                    <div className="mt-1 flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setEditing(editing === s.id ? null : s.id)}
+                        className="rounded-lg border border-zinc-300 px-2 py-0.5 text-[12px] font-semibold active:bg-zinc-100 dark:border-zinc-700 dark:active:bg-zinc-800"
+                      >
+                        {editing === s.id ? "끝" : "고치기"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`${s.name} 님을 명단에서 뺄까요?
+근무표 배정도 같이 지워집니다.`))
+                            removeStaff(s.id);
+                        }}
+                        className="rounded-lg border border-red-300 px-2 py-0.5 text-[12px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400 dark:active:bg-red-950/40"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </td>
                   <td
                     className={[
                       "px-3 py-2",
@@ -506,29 +531,6 @@ export default function RosterView({
                     ) : (
                       "없음"
                     )}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditing(editing === s.id ? null : s.id)}
-                      className="rounded-lg border border-zinc-300 px-2.5 py-1 text-[13px] font-semibold active:bg-zinc-100 dark:border-zinc-700 dark:active:bg-zinc-800"
-                    >
-                      {editing === s.id ? "끝" : "고치기"}
-                    </button>
-                    {/* ★ 삭제는 원래 근무표 격자 맨 오른쪽의 작은 × 하나뿐이었다.
-                        사장님이 «삭제가 없다» 고 한 이유다 — 있긴 한데 안 보였다.
-                        사람을 빼는 일이니 이름이 나오는 이 표에도 둔다. */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.confirm(`${s.name} 님을 명단에서 뺄까요?
-근무표 배정도 같이 지워집니다.`))
-                          removeStaff(s.id);
-                      }}
-                      className="ml-1.5 rounded-lg border border-red-300 px-2.5 py-1 text-[13px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400 dark:active:bg-red-950/40"
-                    >
-                      삭제
-                    </button>
                   </td>
                 </tr>
               ))}
