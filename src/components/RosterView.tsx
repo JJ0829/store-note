@@ -26,7 +26,15 @@ import {
 } from "@/lib/shiftEdit";
 import type { Shift } from "@/lib/types";
 import { maskEmail, maskPhone } from "@/lib/maskContact";
+import { sendViaServer, type Failed } from "@/lib/rosterMail";
 import { SKIP, hasRows, pullStaff, pushStaff } from "@/lib/serverSync";
+
+/** 「메일로 보내기」 의 진행 상태. 서버 메일(Resend)이 설정돼 있을 때만 움직인다 */
+type MailState =
+  | { s: "idle" }
+  | { s: "sending" }
+  | { s: "sent"; sent: string[]; failed: Failed[] }
+  | { s: "error"; reason: string };
 
 /* ------------------------------------------------------------------ *
  * 근무표 작성 + 발송.
@@ -65,6 +73,7 @@ export default function RosterView({
   const [showContacts, setShowContacts] = useState(false);
   // 메일 본문에 연락처를 넣을지. 기본은 넣지 않는다 (bcc로 가린 의미를 지키려고)
   const [mailContacts, setMailContacts] = useState(false);
+  const [mailState, setMailState] = useState<MailState>({ s: "idle" });
 
   useEffect(() => {
     setData(loadRoster());
@@ -177,8 +186,25 @@ export default function RosterView({
       includeContacts: mailContacts,
     });
     const subject = `[${storeName}] 근무표 ${label(days[0])}~${label(days[6])}`;
-    // 받는 사람을 숨은참조로 넣는다. 직원끼리 서로의 주소가 노출되지 않게.
-    const bcc = withEmail.map((s) => s.email).join(",");
+    const to = withEmail.map((s) => s.email);
+
+    /* 1) 서버 메일(Resend)이 설정돼 있으면 여기서 바로 나간다 — 한 사람에 한 통씩.
+     *    결과(몇 명 갔고 누가 왜 못 받았나)는 아래 글상자에 그대로 쓴다 (2026-09-16) */
+    setMailState({ s: "sending" });
+    const r = await sendViaServer({ to, subject, text: body });
+    if (r.kind === "sent") {
+      setMailState({ s: "sent", sent: r.sent, failed: r.failed });
+      return;
+    }
+    if (r.kind === "error") {
+      setMailState({ s: "error", reason: r.reason });
+      return;
+    }
+
+    /* 2) 설정이 없다 → 예전 길: 메일 앱을 연다.
+     *    받는 사람을 숨은참조로 넣는다. 직원끼리 서로의 주소가 노출되지 않게. */
+    setMailState({ s: "idle" });
+    const bcc = to.join(",");
 
     const copied = await copyText(body, "아래 근무표를 메일에 붙여넣으세요");
     window.location.href = `mailto:?bcc=${encodeURIComponent(
@@ -512,10 +538,11 @@ export default function RosterView({
         <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-[15px] font-bold">보내기</h2>
           <p className="mt-1 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            메일 한 통에 <b>직원 명단(섹션·이름·이메일·전화번호)</b>과{" "}
-            <b>이번 주 근무표</b>가 함께 들어가고, 전 직원에게 한꺼번에
-            나갑니다. 메일 앱이 내용까지 채워진 채로 열리고,{" "}
-            <b>보내기는 직접 누르셔야 합니다.</b>
+            메일 한 통에 <b>직원 명단(섹션·이름)</b>과 <b>이번 주 근무표</b>가
+            들어가고, 이메일이 있는 직원 전원에게 나갑니다. 서버 메일(Resend)이
+            설정돼 있으면 <b>여기서 바로, 한 사람에 한 통씩</b> 보냅니다 — 직원
+            이메일이 Resend 를 거쳐 나갑니다. 설정이 없으면 메일 앱이 열리고 본문은
+            복사해 두니 <b>붙여넣어 직접 보내세요.</b>
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -552,6 +579,38 @@ export default function RosterView({
               </span>
             </span>
           </label>
+
+          {mailState.s === "sending" && (
+            <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
+              보내는 중… (한 사람에 한 통씩)
+            </p>
+          )}
+          {mailState.s === "sent" && (
+            <p
+              role="status"
+              className={
+                mailState.sent.length > 0
+                  ? "mt-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-[12px] leading-relaxed text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  : "mt-2 rounded-xl bg-red-50 px-3 py-2.5 text-[12px] leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300"
+              }
+            >
+              {mailState.sent.length > 0 && <>직원 {mailState.sent.length}명에게 보냈습니다. </>}
+              {mailState.failed.length > 0 && (
+                <>
+                  못 보낸 사람 {mailState.failed.length}명 —{" "}
+                  {mailState.failed.map((f) => `${f.to} (${f.reason})`).join(" · ")}
+                </>
+              )}
+            </p>
+          )}
+          {mailState.s === "error" && (
+            <p
+              role="alert"
+              className="mt-2 rounded-xl bg-red-50 px-3 py-2.5 text-[12px] leading-relaxed text-red-700 dark:bg-red-950/40 dark:text-red-300"
+            >
+              보내지 못했습니다 — {mailState.reason}
+            </p>
+          )}
 
           {withEmail.length === 0 && (
             <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
