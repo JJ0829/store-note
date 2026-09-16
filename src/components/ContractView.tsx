@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
@@ -37,6 +37,12 @@ export default function ContractView({ storeName }: { storeName: string }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const save = useSaveState();
+  /* ★ 서버로 보내는 것은 잠깐 기다렸다 한 번만 (2026-09-16 · 실측).
+     시급 칸은 글자마다 `patch` 가 불린다. 그대로 보내면 "10320" 하나에 PUT 이
+     다섯 개 나가고, **먼저 보낸 것이 나중에 도착하면 서버에 옛 값이 남는다** —
+     실제로 태블릿은 10,320 인데 서버는 0.00 이었다. 매출 화면과 같은 1.2초. */
+  const upTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (upTimer.current) clearTimeout(upTimer.current); }, []);
 
   useEffect(() => {
     setRoster(loadRoster());
@@ -78,10 +84,13 @@ export default function ContractView({ storeName }: { storeName: string }) {
   function sendUp(next: Contract[], staffList?: Staff[]) {
     const staff = staffList ?? roster?.staff;
     if (!staff) return;
-    void pushContractSet(staff, next).then((r) => {
-      if (!r.ok && r.reason === SKIP) return;
-      save.report("계약 내용(서버 보관)", r.ok, () => sendUp(next, staff));
-    });
+    if (upTimer.current) clearTimeout(upTimer.current);
+    upTimer.current = setTimeout(() => {
+      void pushContractSet(staff, next).then((r) => {
+        if (!r.ok && r.reason === SKIP) return;
+        save.report("계약 내용(서버 보관)", r.ok, () => sendUp(next, staff));
+      });
+    }, 1200);
   }
 
   function patchSettings(patch: Partial<Settings>) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { BTN, BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
@@ -62,6 +62,12 @@ export default function AttendanceView({
   const save = useSaveState();
   // 출퇴근은 직원이 찍는 화면이라 잠글 수 없다. 돈만 가린다
   const owner = useOwnerOpen();
+  /* ★ 서버로 보내는 것은 잠깐 기다렸다 한 번만 (2026-09-16).
+     시각 칸(`edit`)은 글자마다 `commit` 이 불린다. 그대로 보내면 요청이 겹쳐
+     나가고 **먼저 것이 나중에 도착하면 서버에 옛 값이 남는다** — 계약 화면에서
+     실제로 났다(태블릿 10,320 · 서버 0.00). 버튼 한 번이 1.2초 늦게 가는 건 상관없다. */
+  const upTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (upTimer.current) clearTimeout(upTimer.current); }, []);
 
   useEffect(() => {
     const d = new Date();
@@ -114,10 +120,13 @@ export default function AttendanceView({
   function sendUp(next: PunchData, staffList?: Staff[]) {
     const staff = staffList ?? roster?.staff;
     if (!staff) return;
-    void pushAttendance(staff, next).then((r) => {
-      if (!r.ok && r.reason === SKIP) return;
-      save.report("출퇴근 기록(서버 보관)", r.ok, () => sendUp(next, staff));
-    });
+    if (upTimer.current) clearTimeout(upTimer.current);
+    upTimer.current = setTimeout(() => {
+      void pushAttendance(staff, next).then((r) => {
+        if (!r.ok && r.reason === SKIP) return;
+        save.report("출퇴근 기록(서버 보관)", r.ok, () => sendUp(next, staff));
+      });
+    }, 1200);
   }
 
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);

@@ -9,7 +9,9 @@ import {
   rowToContract,
   rowToPunch,
   oldStyleStaff,
+  pushContracts,
   pushStaff,
+  readyContracts,
   rowToStaff,
   hasRows,
   rowToSales,
@@ -243,12 +245,21 @@ test("매출: 빈 칸은 0 · 빈 메모는 null", () => {
   );
 });
 
-test("★ 매출 화면이 글자마다 서버로 보내지 않는다", () => {
-  const view = fs
-    .readFileSync(path.join(process.cwd(), "src/components/SalesView.tsx"), "utf-8")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.match(view, /setTimeout/, "기다리지 않고 바로 보낸다 — 중간 값이 최종값을 덮는다");
-  assert.match(view, /clearTimeout/, "이전 예약을 취소하지 않는다");
+test("★ 서버로 보내는 화면 셋 모두 글자마다 보내지 않는다 (먼저 것이 나중에 도착하면 옛 값이 남는다)", () => {
+  /* 2026-09-16 실측 — 계약 화면에서 시작일·시급을 잇따라 치자 PUT 둘이 거의 동시에
+     나가서 먼저 것이 나중에 도착했다. 태블릿은 10,320 · 서버는 0.00.
+     매출에만 있던 1.2초 기다리기를 셋 다에 둔다. */
+  for (const file of [
+    "src/components/SalesView.tsx",
+    "src/components/ContractView.tsx",
+    "src/components/AttendanceView.tsx",
+  ]) {
+    const view = fs
+      .readFileSync(path.join(process.cwd(), file), "utf-8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    assert.match(view, /setTimeout\(/, `${file}: 기다리지 않고 바로 보낸다`);
+    assert.match(view, /clearTimeout\(upTimer\.current\)/, `${file}: 이전 예약을 취소하지 않는다`);
+  }
 });
 
 /* ------------------------------------------------------------------ *
@@ -325,4 +336,34 @@ test("★ 근무표 화면이 직원을 직접 올린다 (출퇴근·계약에 �
   /* 직원을 더하거나 지울 때도 올라가야 한다 */
   const calls = src.match(/sendStaff\(/g) ?? [];
   assert.ok(calls.length >= 3, `sendStaff 호출이 ${calls.length}곳 — 열 때·더할 때·지울 때 세 곳은 있어야 한다`);
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 시작일 없는 계약 초안은 보내지 않는다 (2026-09-16 · 실측으로 잡힘)
+ *
+ *   「+ 정영호」 를 누른 순간 `startDate: ""` 인 초안이 서버로 갔고
+ *   `start_date date not null` 이 거절했다 — `invalid input syntax for type date: ""`.
+ *   화면에는 「저장에 실패했습니다」. 아무것도 안 적은 초안에 실패 경고는 소음이다.
+ * ------------------------------------------------------------------ */
+test("★ 시작일 없는 계약 초안은 걸러진다 — 서버가 빈 날짜를 거절한다", () => {
+  const draft: Contract = {
+    id: newUuid(), staffId: newUuid(), startDate: "", endDate: "",
+    hourlyWage: 0, weeklyHours: 0, workDays: [], startTime: "", endTime: "",
+    handedOver: false, insured: false, note: "",
+  };
+  const done: Contract = { ...draft, id: newUuid(), startDate: "2026-09-01", hourlyWage: 10320 };
+  assert.deepEqual(readyContracts([draft, done]), [done]);
+  assert.deepEqual(readyContracts([draft]), []);
+  /* 공백만 있는 것도 없는 것이다 */
+  assert.deepEqual(readyContracts([{ ...draft, startDate: "   " }]), []);
+});
+
+test("★ 초안만 있으면 «보냈다 0줄» 로 조용히 넘어간다 (실패 경고를 띄우지 않는다)", async () => {
+  const draft: Contract = {
+    id: newUuid(), staffId: newUuid(), startDate: "", endDate: "",
+    hourlyWage: 0, weeklyHours: 0, workDays: [], startTime: "", endTime: "",
+    handedOver: false, insured: false, note: "",
+  };
+  const r = await pushContracts([draft]);
+  assert.deepEqual(r, { ok: true, rows: 0 });
 });

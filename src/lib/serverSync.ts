@@ -272,8 +272,26 @@ export async function pullContracts(): Promise<Contract[] | null> {
   return rows ? rows.map((r) => rowToContract(r as Row)) : null;
 }
 
+/**
+ * ★ 시작일이 없는 계약은 **아직 보내지 않는다** (2026-09-16 · 실측).
+ *
+ *   화면의 「+ 정영호」 는 빈 초안을 만든다 — `startDate: ""`. 그걸 그대로
+ *   보내면 표의 `start_date date not null` 이 거절한다:
+ *     `invalid input syntax for type date: ""`  (PostgREST 400 → 화면에 502)
+ *   그래서 사장님이 초안을 만든 그 순간 **「저장에 실패했습니다」** 가 떴다.
+ *   아직 아무것도 안 적은 초안에 실패 경고는 소음이다.
+ *
+ *   시작일이 들어오면 그때 올라간다. 시작일 없는 근로계약은 법적으로도
+ *   성립하지 않으므로, 서버에 없어도 잃는 것이 없다.
+ */
+export function readyContracts(list: Contract[]): Contract[] {
+  return list.filter((c) => c.startDate.trim() !== "");
+}
+
 export async function pushContracts(list: Contract[]): Promise<SyncResult> {
-  return put("contracts", list.map(contractToRow));
+  const ready = readyContracts(list);
+  if (ready.length === 0) return { ok: true, rows: 0 };
+  return put("contracts", ready.map(contractToRow));
 }
 
 /* ------------------------------------------------------------------ *
