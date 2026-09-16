@@ -20,6 +20,7 @@ import {
   type PunchData,
 } from "@/lib/attendance";
 import { contractOf, loadContracts, type Contract } from "@/lib/contracts";
+import WorkSwitch from "@/components/WorkSwitch";
 import { SKIP, hasRows, pullPunches, pushAttendance } from "@/lib/serverSync";
 import { InlineUnlock, useOwnerOpen } from "@/components/OwnerGate";
 import { loadSettings, type Settings } from "@/lib/settings";
@@ -224,6 +225,10 @@ export default function AttendanceView({
       saveFailed={save.failures}
       wide
     >
+      {/* ★ 근무표와 한 몸이다 — 계획(근무표) − 실제(출퇴근) = 근태.
+          홈을 거치지 않고 바로 오간다 */}
+      <WorkSwitch current="punch" />
+
       {/* ---------- 탭 ---------- */}
       <div className="mt-4 flex gap-2">
         <Chip on={tab === "today"} onClick={() => setTab("today")}>

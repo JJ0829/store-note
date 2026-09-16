@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { copyText } from "@/lib/copyText";
 import BackButton from "@/components/BackButton";
 import MonthPicker from "@/components/MonthPicker";
-import { SaveFailed, useSaveState } from "@/components/ui";
+import { INPUT, SaveFailed, useSaveState } from "@/components/ui";
 import {
   buildEmailBody,
   label,
@@ -19,6 +19,7 @@ import {
   type RosterData,
 } from "@/lib/roster";
 import ShiftEditor from "@/components/ShiftEditor";
+import WorkSwitch from "@/components/WorkSwitch";
 import { pullRoster, pushRoster } from "@/lib/serverSync";
 import {
   applyShiftEdits,
@@ -66,6 +67,10 @@ export default function RosterView({
      쓰려면 클로저에 잡힌 옛 값이 아니라 **지금 값**이 필요하다 */
   const shiftsRef = useRef(shifts);
   shiftsRef.current = shifts;
+
+  /* 어느 직원 줄을 고치는 중인가. 한 번에 하나만 — 공용 태블릿이라
+     여러 줄이 동시에 입력 상태면 누가 무엇을 고쳤는지 알 수 없다 */
+  const [editing, setEditing] = useState<string | null>(null);
 
   const [monday, setMonday] = useState<Date | null>(null);
   /* 달력은 접혀 있다가 날짜를 누르면 열린다 — 늘 펴 두면 근무표가 아래로 밀린다 */
@@ -156,6 +161,14 @@ export default function RosterView({
     // 섹션은 남겨둔다. 같은 섹션 사람을 연달아 넣는 경우가 많다
     /* 서버로 보내는 것은 `persist` 가 한다 — 여기서 또 부르면 같은 것을
        두 번 보낸다 (2026-09-16 에 배정까지 같이 보내면서 한곳으로 모았다) */
+  }
+
+  /** 직원 한 명의 칸 하나를 고친다 (연락처·섹션) */
+  function patchStaff(id: string, patch: Partial<(typeof data.staff)[number]>) {
+    persist({
+      ...data,
+      staff: data.staff.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    });
   }
 
   function removeStaff(id: string) {
@@ -278,6 +291,9 @@ export default function RosterView({
           </span>
         )}
       </div>
+
+      {/* ★ 출퇴근과 한 몸이다 (WorkSwitch 주석 참고) */}
+      <WorkSwitch current="roster" />
 
       <SaveFailed failures={save.failures} />
 
@@ -423,6 +439,7 @@ export default function RosterView({
                 <th scope="col" className="px-3 py-2 text-left font-semibold">이름</th>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">이메일</th>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">전화번호</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">고치기</th>
               </tr>
             </thead>
             <tbody>
@@ -431,7 +448,22 @@ export default function RosterView({
                   key={s.id}
                   className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
                 >
-                  <td className="px-3 py-2 font-semibold">{s.section || "—"}</td>
+                  <td className="px-3 py-2 font-semibold">
+                    {editing === s.id ? (
+                      <select
+                        value={s.section}
+                        aria-label={`${s.name} 섹션`}
+                        onChange={(e) => patchStaff(s.id, { section: e.target.value })}
+                        className={`${INPUT} py-1 text-[13px]`}
+                      >
+                        {SECTIONS.map((x) => (
+                          <option key={x} value={x}>{x}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      s.section || "—"
+                    )}
+                  </td>
                   <td className="px-3 py-2 font-bold">{s.name}</td>
                   <td
                     className={[
@@ -439,7 +471,20 @@ export default function RosterView({
                       s.email ? "" : "text-zinc-400",
                     ].join(" ")}
                   >
-                    {s.email ? (showContacts ? s.email : maskEmail(s.email)) : "없음"}
+                    {editing === s.id ? (
+                      <input
+                        type="email"
+                        value={s.email}
+                        aria-label={`${s.name} 이메일`}
+                        placeholder="a@b.c"
+                        onChange={(e) => patchStaff(s.id, { email: e.target.value })}
+                        className={`${INPUT} py-1 text-[13px]`}
+                      />
+                    ) : s.email ? (
+                      showContacts ? s.email : maskEmail(s.email)
+                    ) : (
+                      "없음"
+                    )}
                   </td>
                   <td
                     className={[
@@ -447,7 +492,43 @@ export default function RosterView({
                       s.phone ? "" : "text-zinc-400",
                     ].join(" ")}
                   >
-                    {s.phone ? (showContacts ? s.phone : maskPhone(s.phone)) : "없음"}
+                    {editing === s.id ? (
+                      <input
+                        type="tel"
+                        value={s.phone}
+                        aria-label={`${s.name} 전화번호`}
+                        placeholder="010-0000-0000"
+                        onChange={(e) => patchStaff(s.id, { phone: e.target.value })}
+                        className={`${INPUT} py-1 text-[13px]`}
+                      />
+                    ) : s.phone ? (
+                      showContacts ? s.phone : maskPhone(s.phone)
+                    ) : (
+                      "없음"
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(editing === s.id ? null : s.id)}
+                      className="rounded-lg border border-zinc-300 px-2.5 py-1 text-[13px] font-semibold active:bg-zinc-100 dark:border-zinc-700 dark:active:bg-zinc-800"
+                    >
+                      {editing === s.id ? "끝" : "고치기"}
+                    </button>
+                    {/* ★ 삭제는 원래 근무표 격자 맨 오른쪽의 작은 × 하나뿐이었다.
+                        사장님이 «삭제가 없다» 고 한 이유다 — 있긴 한데 안 보였다.
+                        사람을 빼는 일이니 이름이 나오는 이 표에도 둔다. */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`${s.name} 님을 명단에서 뺄까요?
+근무표 배정도 같이 지워집니다.`))
+                          removeStaff(s.id);
+                      }}
+                      className="ml-1.5 rounded-lg border border-red-300 px-2.5 py-1 text-[13px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400 dark:active:bg-red-950/40"
+                    >
+                      삭제
+                    </button>
                   </td>
                 </tr>
               ))}
