@@ -26,6 +26,7 @@ import {
 } from "@/lib/shiftEdit";
 import type { Shift } from "@/lib/types";
 import { maskEmail, maskPhone } from "@/lib/maskContact";
+import { SKIP, hasRows, pullStaff, pushStaff } from "@/lib/serverSync";
 
 /* ------------------------------------------------------------------ *
  * 근무표 작성 + 발송.
@@ -69,7 +70,35 @@ export default function RosterView({
     setData(loadRoster());
     setShiftEdits(loadShiftEdits());
     setMonday(mondayOf(new Date()));
+
+    /* ★★ 직원을 **여기서 직접** 올린다 (2026-09-16).
+       전에는 직원이 출퇴근·계약을 보낼 때 **딸려서만** 올라갔다. 그래서
+       출퇴근도 계약도 0건인 매장은 직원 4명이 있어도 서버 `staff` 가 영영
+       비어 있었다 — 사장님이 «폴더가 다 깡통» 이라고 본 상태의 절반이 이것이다.
+       서버에 있으면 서버가 이기고(기기 바꿈), 비어 있으면 이 태블릿 것을 올린다.
+       근무표 배정(`assign`)은 아직 서버에 없으므로 그대로 둔다. */
+    void pullStaff().then((server) => {
+      if (server === null) return; // 로그인 안 함 — 지금까지와 같다
+      if (hasRows(server)) {
+        const local = loadRoster();
+        const merged = { ...local, staff: server };
+        saveRoster(merged);
+        setData(merged);
+        return;
+      }
+      const mine = loadRoster().staff;
+      if (hasRows(mine)) sendStaff(mine);
+    });
   }, []);
+
+  /* ★ 서버 보관은 태블릿 저장과 **따로 알린다** (출퇴근·계약과 같은 규칙).
+     로그인 안 했으면 `SKIP` 이 와서 아무 말도 안 한다. */
+  function sendStaff(list: typeof data.staff) {
+    void pushStaff(list).then((r) => {
+      if (!r.ok && r.reason === SKIP) return;
+      save.report("직원 명단(서버 보관)", r.ok, () => sendStaff(list));
+    });
+  }
 
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);
 
@@ -86,29 +115,32 @@ export default function RosterView({
 
   function addStaff() {
     if (!name.trim()) return;
-    persist({
-      ...data,
-      staff: [
-        ...data.staff,
-        {
-          id: newStaffId(),
-          section: section.trim(),
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-        },
-      ],
-    });
+    const next = [
+      ...data.staff,
+      {
+        id: newStaffId(),
+        section: section.trim(),
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+      },
+    ];
+    persist({ ...data, staff: next });
     setName("");
     setEmail("");
     setPhone("");
     // 섹션은 남겨둔다. 같은 섹션 사람을 연달아 넣는 경우가 많다
+    sendStaff(next);
   }
 
   function removeStaff(id: string) {
     const assign = { ...data.assign };
     delete assign[id];
-    persist({ staff: data.staff.filter((s) => s.id !== id), assign });
+    const staff = data.staff.filter((s) => s.id !== id);
+    persist({ staff, assign });
+    /* ⚠️ 서버 쪽 줄은 지우지 않는다 — `/api/data` 는 덮어쓰기만 한다.
+       (늦게 연 기기가 다른 기기의 기록을 지우는 사고를 막기 위해서다) */
+    sendStaff(staff);
   }
 
   function setShift(staffId: string, date: string, shift: string) {

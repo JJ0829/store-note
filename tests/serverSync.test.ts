@@ -307,3 +307,22 @@ test("★ 서버가 비어 있으면 태블릿 것을 올린다 (첫 로그인�
     );
   }
 });
+
+/* ------------------------------------------------------------------ *
+ * ★★ 직원은 근무표 화면이 **스스로** 올린다 (2026-09-16)
+ *
+ *   전에는 직원이 출퇴근·계약을 보낼 때 딸려서만 올라갔다. 그래서
+ *   출퇴근도 계약도 0건인 매장은 직원 4명이 있어도 서버 `staff` 가 영영
+ *   비어 있었다 — «폴더가 다 깡통» 의 절반이 이것이었다.
+ * ------------------------------------------------------------------ */
+test("★ 근무표 화면이 직원을 직접 올린다 (출퇴근·계약에 딸려서만이 아니라)", () => {
+  const src = fs
+    .readFileSync(path.join(process.cwd(), "src/components/RosterView.tsx"), "utf-8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(src, /pullStaff\(\)/, "화면을 열 때 서버 직원을 받지 않는다");
+  assert.match(src, /if \(hasRows\(server\)\)/, "빈 서버로 직원 명단을 덮어쓸 수 있다");
+  assert.match(src, /if \(hasRows\(mine\)\) sendStaff\(mine\)/, "서버가 비면 태블릿 직원을 올리지 않는다");
+  /* 직원을 더하거나 지울 때도 올라가야 한다 */
+  const calls = src.match(/sendStaff\(/g) ?? [];
+  assert.ok(calls.length >= 3, `sendStaff 호출이 ${calls.length}곳 — 열 때·더할 때·지울 때 세 곳은 있어야 한다`);
+});
