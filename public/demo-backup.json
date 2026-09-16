@@ -516,7 +516,7 @@
   "vendors": {
     "vendors": [
       {
-        "id": "v-demo-roast",
+        "id": "dddddddd-0000-4000-8000-000000000001",
         "name": "△△ 로스터리",
         "phone": "",
         "contact": "",
@@ -533,7 +533,7 @@
         "note": "원두 5kg 이상이면 배송비 없음"
       },
       {
-        "id": "v-demo-food",
+        "id": "dddddddd-0000-4000-8000-000000000002",
         "name": "□□ 식자재",
         "phone": "",
         "contact": "",
@@ -550,7 +550,7 @@
         "note": "금요일에 주말치까지 주문"
       },
       {
-        "id": "v-demo-bake",
+        "id": "dddddddd-0000-4000-8000-000000000003",
         "name": "◇◇ 베이킹몰",
         "phone": "",
         "contact": "",
@@ -569,8 +569,8 @@
     ],
     "items": [
       {
-        "id": "vi-demo-원두도징",
-        "vendorId": "v-demo-roast",
+        "id": "eeeeeeee-0000-4000-8000-000000000001",
+        "vendorId": "dddddddd-0000-4000-8000-000000000001",
         "name": "원두 (도징)",
         "packAmount": 1000,
         "packUnit": "g",
@@ -578,8 +578,8 @@
         "note": "에스프레소 블렌드 1kg"
       },
       {
-        "id": "vi-demo-원두굵게분쇄",
-        "vendorId": "v-demo-roast",
+        "id": "eeeeeeee-0000-4000-8000-000000000002",
+        "vendorId": "dddddddd-0000-4000-8000-000000000001",
         "name": "원두 (굵게 분쇄)",
         "packAmount": 1000,
         "packUnit": "g",
@@ -587,8 +587,8 @@
         "note": "콜드브루용"
       },
       {
-        "id": "vi-demo-우유",
-        "vendorId": "v-demo-food",
+        "id": "eeeeeeee-0000-4000-8000-000000000003",
+        "vendorId": "dddddddd-0000-4000-8000-000000000002",
         "name": "우유",
         "packAmount": 1000,
         "packUnit": "ml",
@@ -596,8 +596,8 @@
         "note": ""
       },
       {
-        "id": "vi-demo-생크림",
-        "vendorId": "v-demo-food",
+        "id": "eeeeeeee-0000-4000-8000-000000000004",
+        "vendorId": "dddddddd-0000-4000-8000-000000000002",
         "name": "생크림",
         "packAmount": 1000,
         "packUnit": "ml",
@@ -605,8 +605,8 @@
         "note": ""
       },
       {
-        "id": "vi-demo-과일과육",
-        "vendorId": "v-demo-food",
+        "id": "eeeeeeee-0000-4000-8000-000000000005",
+        "vendorId": "dddddddd-0000-4000-8000-000000000002",
         "name": "과일 과육",
         "packAmount": 1000,
         "packUnit": "g",
@@ -614,8 +614,8 @@
         "note": "냉동 딸기 기준"
       },
       {
-        "id": "vi-demo-레몬즙",
-        "vendorId": "v-demo-food",
+        "id": "eeeeeeee-0000-4000-8000-000000000006",
+        "vendorId": "dddddddd-0000-4000-8000-000000000002",
         "name": "레몬즙",
         "packAmount": 1000,
         "packUnit": "ml",
@@ -623,8 +623,8 @@
         "note": ""
       },
       {
-        "id": "vi-demo-강력분",
-        "vendorId": "v-demo-bake",
+        "id": "eeeeeeee-0000-4000-8000-000000000007",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
         "name": "강력분",
         "packAmount": 20000,
         "packUnit": "g",
@@ -632,8 +632,8 @@
         "note": "20kg 한 포"
       },
       {
-        "id": "vi-demo-설탕",
-        "vendorId": "v-demo-bake",
+        "id": "eeeeeeee-0000-4000-8000-000000000008",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
         "name": "설탕",
         "packAmount": 15000,
         "packUnit": "g",
@@ -641,8 +641,8 @@
         "note": "15kg 한 포"
       },
       {
-        "id": "vi-demo-소금",
-        "vendorId": "v-demo-bake",
+        "id": "eeeeeeee-0000-4000-8000-000000000009",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
         "name": "소금",
         "packAmount": 1000,
         "packUnit": "g",
@@ -650,8 +650,8 @@
         "note": ""
       },
       {
-        "id": "vi-demo-이스트",
-        "vendorId": "v-demo-bake",
+        "id": "eeeeeeee-0000-4000-8000-00000000000a",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
         "name": "이스트",
         "packAmount": 500,
         "packUnit": "g",
@@ -659,8 +659,8 @@
         "note": "인스턴트 드라이"
       },
       {
-        "id": "vi-demo-버터",
-        "vendorId": "v-demo-bake",
+        "id": "eeeeeeee-0000-4000-8000-00000000000b",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
         "name": "버터",
         "packAmount": 1000,
         "packUnit": "g",
@@ -668,8 +668,8 @@
         "note": ""
       },
       {
-        "id": "vi-demo-찻잎",
-        "vendorId": "v-demo-bake",
+        "id": "eeeeeeee-0000-4000-8000-00000000000c",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
         "name": "찻잎",
         "packAmount": 100,
         "packUnit": "g",
@@ -677,8 +677,8 @@
         "note": "얼그레이"
       },
       {
-        "id": "vi-demo-홍차잎",
-        "vendorId": "v-demo-bake",
+        "id": "eeeeeeee-0000-4000-8000-00000000000d",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
         "name": "홍차잎",
         "packAmount": 500,
         "packUnit": "g",
@@ -686,8 +686,8 @@
         "note": "밀크티용 아쌈"
       },
       {
-        "id": "vi-demo-바닐라시럽",
-        "vendorId": "v-demo-bake",
+        "id": "eeeeeeee-0000-4000-8000-00000000000e",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
         "name": "바닐라 시럽",
         "packAmount": 1000,
         "packUnit": "ml",
@@ -765,7 +765,7 @@
     }
   },
   "orderLinks": {
-    "p-5": "v-demo-food",
-    "p-6": "v-demo-roast"
+    "p-5": "dddddddd-0000-4000-8000-000000000002",
+    "p-6": "dddddddd-0000-4000-8000-000000000001"
   }
 }

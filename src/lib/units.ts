@@ -55,6 +55,18 @@ function lookup(unit: string): Unit {
 }
 
 /** 두 단위를 같은 계산에 쓸 수 있는가 */
+/**
+ * 그 단위가 어느 계열인가 — `weight` · `volume` · `count` · `as:장` …
+ *
+ * ★ 서버로 보낼 때 필요하다 (2026-09-16). `items.base_family` 와
+ *   `item_versions.pack_family` 가 **같아야 한다**는 외래키가 걸려 있고,
+ *   `units(code, family)` 에 없는 계열은 통째로 거절당한다.
+ *   앱과 서버가 서로 다른 계열 이름을 쓰면 그 품목만 조용히 안 올라간다.
+ */
+export function familyOf(unit: string): Family {
+  return lookup(unit).family;
+}
+
 export function sameFamily(a: string, b: string): boolean {
   return lookup(a).family === lookup(b).family;
 }

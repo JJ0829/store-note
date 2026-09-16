@@ -2,6 +2,8 @@ import type { Punch, PunchData } from "./attendance.ts";
 import type { Contract } from "./contracts.ts";
 import type { Staff } from "./roster.ts";
 import type { DaySales, SalesData } from "./sales.ts";
+import type { Vendor, VendorData, VendorItem } from "./vendors.ts";
+import { familyOf } from "./units.ts";
 
 /* ------------------------------------------------------------------ *
  * 브라우저 ↔ 서버 — 매장 데이터를 옮기는 층
@@ -415,13 +417,26 @@ export function hasRows(v: unknown): boolean {
  *   태블릿 쪽은 이미 들어가 있으니 다시 누르면 처음부터 다시 간다.
  * ------------------------------------------------------------------ */
 
-export const REPLACE_DELETE_ORDER = ["punches", "contracts", "staff", "daily_sales"] as const;
+/* ★ 가리키는 쪽(자식)이 먼저다. 거꾸로면 외래키가 거부한다.
+   거래처는 세 겹이다 — 단가가 품목을, 품목이 거래처를 가리킨다. */
+export const REPLACE_DELETE_ORDER = [
+  "punches",
+  "contracts",
+  "staff",
+  "daily_sales",
+  "item_versions",
+  "items",
+  "suppliers",
+] as const;
 
 const TABLE_LABEL: Record<(typeof REPLACE_DELETE_ORDER)[number], string> = {
   punches: "출퇴근",
   contracts: "근로계약",
   staff: "직원",
   daily_sales: "매출",
+  item_versions: "단가",
+  items: "품목",
+  suppliers: "거래처",
 };
 
 /** 표 하나를 통째로 비운다 — `replaceAll` 만 부른다 */
@@ -453,6 +468,10 @@ export type ReplaceInput = {
   punches: PunchData;
   contracts: Contract[];
   sales?: SalesData;
+  /* ★ 거래처가 빠지면 되돌린 뒤 **서버의 옛 거래처가 되살아난다** —
+     위에서 비웠는데 다시 안 올리기 때문이다. 그러면 단가가 어긋나고
+     원가율이 조용히 딴 값이 된다. */
+  vendors?: VendorData;
 };
 
 export async function replaceAll(file: ReplaceInput): Promise<ReplaceResult> {
@@ -471,6 +490,7 @@ export async function replaceAll(file: ReplaceInput): Promise<ReplaceResult> {
     ["출퇴근 올리기", () => pushPunches(file.punches)],
     ["근로계약 올리기", () => pushContracts(file.contracts)],
     ["매출 올리기", () => pushSales(file.sales ?? {})],
+    ["거래처 올리기", () => pushVendors(file.vendors ?? { vendors: [], items: [] })],
   ];
   const n: number[] = [];
   for (const [step, run] of steps) {
@@ -482,4 +502,156 @@ export async function replaceAll(file: ReplaceInput): Promise<ReplaceResult> {
     n.push(r.rows);
   }
   return { state: "ok", staff: n[0], punches: n[1], contracts: n[2], sales: n[3] };
+}
+
+/* ------------------------------------------------------------------ *
+ * 거래처 · 단가 (2026-09-16)
+ *
+ * ★ 앱의 품목 하나가 서버에서는 **표 둘**로 갈라진다.
+ *
+ *     items         … 무엇인가 (이름 · 어느 거래처 · 어떤 단위 계열)
+ *     item_versions … 얼마인가 (그 값이 유효한 기간까지)
+ *
+ *   서버는 단가의 **역사**를 담을 수 있게 설계돼 있는데(`validity` 기간과
+ *   «겹치면 안 된다» 는 제약), **앱에는 역사가 없다.** 화면은 «지금 단가»
+ *   하나만 들고 있다. 그래서 품목마다 **기간이 열린 줄 하나**만 두고 고쳐
+ *   쓴다. 줄을 새로 쌓으면 기간이 겹쳐서 제약에 걸리고, 그 실패는
+ *   「보내지 못했습니다」 로만 보인다.
+ *
+ *   ⚠️ 그래서 **단가를 바꾸면 옛 단가는 남지 않는다.** 앱이 원래 그렇다 —
+ *   서버로 옮긴다고 없던 역사가 생기지는 않는다. 역사가 필요해지면
+ *   그때 줄을 쌓는 쪽으로 바꾸면 되고, 표는 이미 그걸 받을 수 있다.
+ *
+ * ★ `item_versions.id` 를 품목 id 와 **같게** 둔다.
+ *   앱에는 버전이라는 것이 없어서 따로 줄 id 가 없다. 같게 두면 고칠 때
+ *   같은 줄을 정확히 찾는다 — 새로 만들면 기간이 겹쳐 거절당한다.
+ * ------------------------------------------------------------------ */
+
+/** 기간의 시작. 아주 옛날로 두면 «늘 유효» 가 되고 겹칠 일이 없다 */
+const ALWAYS = "[2000-01-01,)";
+
+export function vendorToRow(v: Vendor): Row {
+  return {
+    id: v.id,
+    name: v.name,
+    phone: v.phone || null,
+    contact: v.contact || null,
+    order_method: v.how || null,
+    cutoff_time: v.cutoff || null,
+    delivery_days: v.deliverDays,
+    lead_days: v.leadDays,
+    memo: v.note || null,
+  };
+}
+
+export function rowToVendor(r: Row): Vendor {
+  return {
+    id: str(r.id),
+    name: str(r.name),
+    phone: str(r.phone),
+    contact: str(r.contact),
+    how: str(r.order_method),
+    cutoff: str(r.cutoff_time).slice(0, 5),
+    deliverDays: Array.isArray(r.delivery_days) ? (r.delivery_days as number[]).map(num) : [],
+    leadDays: num(r.lead_days),
+    note: str(r.memo),
+  };
+}
+
+/** 품목의 «무엇인가» 쪽 */
+export function itemToRow(i: VendorItem): Row {
+  return {
+    id: i.id,
+    supplier_id: i.vendorId || null,
+    name: i.name,
+    /* 거래처에서 **사는** 것이다. 우리가 만드는 것(`made`)은 레시피 쪽이다 */
+    kind: "purchased",
+    base_unit: i.packUnit,
+    base_family: familyOf(i.packUnit),
+  };
+}
+
+/** 품목의 «얼마인가» 쪽 */
+export function itemVersionToRow(i: VendorItem): Row {
+  return {
+    /* ★ 품목 id 와 같게 둔다 — 위 주석 참고 */
+    id: i.id,
+    item_id: i.id,
+    unit_cost: i.packPrice,
+    per_unit: i.packAmount,
+    pack_unit: i.packUnit,
+    /* ★ `items.base_family` 와 같아야 한다 (외래키). 다르면 통째로 거절된다 */
+    pack_family: familyOf(i.packUnit),
+    validity: ALWAYS,
+    note: i.note || null,
+  };
+}
+
+/** 두 표에서 받은 것을 앱의 품목 하나로 합친다 */
+export function rowsToItem(item: Row, version: Row | undefined): VendorItem {
+  return {
+    id: str(item.id),
+    vendorId: str(item.supplier_id),
+    name: str(item.name),
+    packAmount: num(version?.per_unit),
+    packUnit: str(version?.pack_unit) || str(item.base_unit),
+    packPrice: num(version?.unit_cost),
+    note: str(version?.note),
+  };
+}
+
+/**
+ * 서버가 모르는 단위는 미리 걸러서 **이유를 말한다.**
+ *
+ * ★ `units` 표에 없는 단위는 외래키에 걸려 거절당하는데, 화면에는
+ *   「보내지 못했습니다」 로만 보인다. 앱은 `장`·`팩`·`봉` 도 받지만
+ *   서버가 아는 것은 `g·kg·ml·L·개·ea` 뿐이다.
+ */
+export const SERVER_UNITS = ["g", "kg", "ml", "L", "개", "ea"];
+
+export function unknownUnitItems(items: VendorItem[]): VendorItem[] {
+  return items.filter((i) => !SERVER_UNITS.includes(i.packUnit));
+}
+
+export async function pullVendors(): Promise<VendorData | null> {
+  const [vRows, iRows, verRows] = await Promise.all([
+    get("suppliers"),
+    get("items"),
+    get("item_versions"),
+  ]);
+  if (!vRows || !iRows || !verRows) return null;
+
+  const byItem = new Map<string, Row>();
+  for (const r of verRows as Row[]) byItem.set(str(r.item_id), r);
+
+  return {
+    vendors: (vRows as Row[]).map(rowToVendor),
+    items: (iRows as Row[]).map((r) => rowsToItem(r, byItem.get(str(r.id)))),
+  };
+}
+
+/**
+ * 거래처 → 품목 → 단가 **순서로** 보낸다.
+ *
+ * ★ `items.supplier_id` 가 `suppliers.id` 를, `item_versions.item_id` 가
+ *   `items.id` 를 가리킨다. 순서를 어기면 외래키가 거부하고, 그 실패는
+ *   「보내지 못했습니다」 로만 보여서 원인을 못 찾는다.
+ */
+export async function pushVendors(data: VendorData): Promise<SyncResult> {
+  const bad = unknownUnitItems(data.items);
+  if (bad.length > 0) {
+    const what = bad.map((i) => `${i.name}(${i.packUnit})`).join(", ");
+    return {
+      ok: false,
+      reason: `${what} 의 단위를 서버가 모릅니다. ${SERVER_UNITS.join(" · ")} 중에서 골라 주세요.`,
+    };
+  }
+
+  const v = await put("suppliers", data.vendors.map(vendorToRow));
+  if (!v.ok) return v;
+
+  const i = await put("items", data.items.map(itemToRow));
+  if (!i.ok) return i;
+
+  return put("item_versions", data.items.map(itemVersionToRow));
 }

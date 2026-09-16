@@ -10,7 +10,17 @@
  *   그 테스트가 «주소로 아무 표나 부를 수 없다» 를 못 박는다.
  * ------------------------------------------------------------------ */
 
-export const ALLOWED_TABLES = ["staff", "punches", "contracts", "daily_sales"] as const;
+export const ALLOWED_TABLES = [
+  "staff",
+  "punches",
+  "contracts",
+  "daily_sales",
+  /* 거래처 (2026-09-16) — 앱의 품목 하나가 서버에서는 표 둘로 갈라진다.
+     `items` 는 «무엇인가», `item_versions` 는 «얼마인가». */
+  "suppliers",
+  "items",
+  "item_versions",
+] as const;
 
 export type AllowedTable = (typeof ALLOWED_TABLES)[number];
 
@@ -37,4 +47,7 @@ export const CONFLICT_KEY: Record<AllowedTable, string> = {
   punches: "id",
   contracts: "id",
   daily_sales: "store_id,business_date",
+  suppliers: "id",
+  items: "id",
+  item_versions: "id",
 };

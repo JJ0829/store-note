@@ -16,6 +16,13 @@ import {
   hasRows,
   REPLACE_DELETE_ORDER,
   rowToSales,
+  rowToVendor,
+  rowsToItem,
+  itemToRow,
+  itemVersionToRow,
+  pushVendors,
+  unknownUnitItems,
+  vendorToRow,
   salesToRow,
   staffToRow,
 } from "../src/lib/serverSync.ts";
@@ -25,6 +32,7 @@ import path from "node:path";
 import type { Punch, PunchData } from "../src/lib/attendance.ts";
 import type { Contract } from "../src/lib/contracts.ts";
 import type { Staff } from "../src/lib/roster.ts";
+import type { Vendor, VendorItem } from "../src/lib/vendors.ts";
 import { newUuid } from "../src/lib/store.ts";
 
 /* ------------------------------------------------------------------ *
@@ -402,4 +410,106 @@ test("★ 비우기 길은 되돌리기 전용이다 — 화면을 열 때 부�
   );
   assert.ok(route.includes("export async function DELETE"), "비우기 길이 없다");
   assert.ok(route.includes("store_id=eq."), "이 매장 것만 지워야 한다");
+});
+
+/* ------------------------------------------------------------------ *
+ * 거래처 · 단가 (2026-09-16)
+ *
+ * ★ 앱의 품목 하나가 서버 표 **둘**로 갈라진다. 칸이 하나 빠지면 원가가
+ *   조용히 틀리고, 사장님은 그 숫자로 판매가를 정한다.
+ * ------------------------------------------------------------------ */
+
+test("★ 거래처 — 왕복해도 그대로다", () => {
+  const v: Vendor = {
+    id: newUuid(),
+    name: "△△ 로스터리",
+    phone: "010-1111-2222",
+    contact: "김대리",
+    how: "카톡",
+    cutoff: "12:00",
+    deliverDays: [1, 2, 3, 4, 5],
+    leadDays: 2,
+    note: "5kg 이상 배송비 없음",
+  };
+  assert.deepEqual(rowToVendor(vendorToRow(v)), v);
+});
+
+test("★★ 품목 — 표 둘로 갈라졌다가 다시 하나로 합쳐진다", () => {
+  const i: VendorItem = {
+    id: newUuid(),
+    vendorId: newUuid(),
+    name: "우유",
+    packAmount: 1000,
+    packUnit: "ml",
+    packPrice: 2900,
+    note: "1L 팩",
+  };
+  const back = rowsToItem(itemToRow(i), itemVersionToRow(i));
+  assert.deepEqual(back, i, "갈랐다 합치면 그대로여야 한다");
+});
+
+test("★ 단가 줄의 id 는 품목 id 와 같다 — 다르면 기간이 겹쳐 거절된다", () => {
+  /* `item_versions` 에 EXCLUDE (item_id =, validity &&) 가 걸려 있다.
+     단가를 고칠 때마다 새 id 로 보내면 같은 품목에 기간이 겹친 줄이
+     둘이 되어 **조용히 실패한다.** */
+  const i: VendorItem = {
+    id: newUuid(), vendorId: newUuid(), name: "설탕",
+    packAmount: 15000, packUnit: "g", packPrice: 21000, note: "",
+  };
+  const ver = itemVersionToRow(i);
+  assert.equal(ver.id, i.id);
+  assert.equal(ver.item_id, i.id);
+});
+
+test("★ 품목의 계열이 두 표에서 같다 — 다르면 외래키가 통째로 거절한다", () => {
+  /* `item_versions(item_id, store_id, pack_family)` →
+     `items(id, store_id, base_family)` 외래키가 걸려 있다 */
+  for (const unit of ["g", "kg", "ml", "L", "개"]) {
+    const i: VendorItem = {
+      id: newUuid(), vendorId: newUuid(), name: "x",
+      packAmount: 1, packUnit: unit, packPrice: 1, note: "",
+    };
+    assert.equal(itemToRow(i).base_family, itemVersionToRow(i).pack_family, unit);
+  }
+});
+
+test("★ 사는 물건은 purchased 다 — 아니면 체크 제약에 걸린다", () => {
+  const i: VendorItem = {
+    id: newUuid(), vendorId: newUuid(), name: "버터",
+    packAmount: 1000, packUnit: "g", packPrice: 14000, note: "",
+  };
+  assert.equal(itemToRow(i).kind, "purchased");
+});
+
+test("★ 서버가 모르는 단위는 «무엇을 고르라» 고 말한다", async () => {
+  /* 앱은 `장`·`팩`·`봉` 도 받지만 서버 `units` 에는 없다. 그냥 보내면
+     외래키에 걸려 「보내지 못했습니다」 로만 보인다 */
+  const bad: VendorItem = {
+    id: newUuid(), vendorId: newUuid(), name: "김",
+    packAmount: 10, packUnit: "봉", packPrice: 5000, note: "",
+  };
+  const good: VendorItem = { ...bad, id: newUuid(), name: "소금", packUnit: "g" };
+
+  assert.deepEqual(unknownUnitItems([bad, good]), [bad]);
+  assert.deepEqual(unknownUnitItems([good]), []);
+
+  const r = await pushVendors({ vendors: [], items: [bad, good] });
+  assert.equal(r.ok, false);
+  assert.ok(!r.ok && r.reason.includes("김"), "어느 품목인지 말해야 한다");
+  assert.ok(!r.ok && r.reason.includes("봉"), "어느 단위가 문제인지 말해야 한다");
+  assert.ok(!r.ok && !r.reason.includes("소금"), "멀쩡한 품목까지 탓하면 안 된다");
+});
+
+test("★ 시연 데이터의 거래처·품목 id 가 uuid 다", () => {
+  /* 아니면 「시연 데이터 넣기」 를 눌러도 서버에는 한 건도 안 올라간다 */
+  const raw = fs.readFileSync(path.join(process.cwd(), "public/demo-backup.json"), "utf8");
+  const dump = JSON.parse(raw) as {
+    vendors?: { vendors: { id: string }[]; items: { id: string }[] };
+  };
+  const v = dump.vendors;
+  assert.ok(v, "시연 데이터에 거래처가 없다");
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  for (const x of v.vendors) assert.match(x.id, uuid, "거래처 id");
+  for (const x of v.items) assert.match(x.id, uuid, "품목 id");
+  assert.ok(v.vendors.length > 0 && v.items.length > 0);
 });

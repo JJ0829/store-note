@@ -10,6 +10,7 @@ import WhoBar from "@/components/WhoBar";
 import { loadMarks, mark, saveMarks, type MarkLog, type WhoAmI } from "@/lib/whoami";
 import { ro } from "@/lib/store";
 import { label as dayLabel } from "@/lib/roster";
+import { SKIP, pushVendors } from "@/lib/serverSync";
 import {
   buildOrderText,
   loadOrderLinks,
@@ -177,6 +178,14 @@ export default function OrderView({
     const nextVendors: VendorData = { ...vendors!, vendors: [...vendors!.vendors, v] };
     setVendors(nextVendors);
     save.report("거래처", saveVendors(nextVendors));
+    /* ★ 여기서 만든 거래처도 서버에 올린다. 안 그러면 발주 화면에서 만든
+       거래처만 태블릿에 남아, 기기를 바꾸면 그 문자 상대가 사라진다.
+       기다리지 않고 바로 보낸다 — 여기는 글자를 치는 화면이 아니라
+       「만들기」 한 번으로 끝나는 자리다. */
+    void pushVendors(nextVendors).then((r) => {
+      if (!r.ok && r.reason === SKIP) return;
+      save.report("거래처(서버 보관)", r.ok);
+    });
 
     const nextLinks = { ...links, [taskId]: v.id };
     setLinks(nextLinks);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   BTN,
   BTN_PRIMARY,
@@ -26,6 +26,7 @@ import {
   type VendorItem,
 } from "@/lib/vendors";
 import { WEEKDAY } from "@/lib/roster";
+import { SKIP, hasRows, pullVendors, pushVendors } from "@/lib/serverSync";
 import { loadSettings, saveSettings, type Settings } from "@/lib/settings";
 
 /* ------------------------------------------------------------------ *
@@ -50,9 +51,26 @@ export default function VendorView({
   const save = useSaveState();
   const [settings, setSettings] = useState<Settings | null>(null);
 
+  const upTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (upTimer.current) clearTimeout(upTimer.current); }, []);
+
   useEffect(() => {
     setData(loadVendors());
     setSettings(loadSettings());
+
+    /* ★★ 빈 서버로 태블릿을 덮지 않는다 (계약·출퇴근과 같은 규율).
+       거래처가 비면 원가율이 통째로 사라지고, 그건 사장님이 가격을 정할 때
+       보는 유일한 숫자다. 서버가 비어 있으면 반대로 이 태블릿 것을 올린다. */
+    void pullVendors().then((server) => {
+      if (server === null) return; // 로그인 안 함
+      if (hasRows(server.vendors) || hasRows(server.items)) {
+        saveVendors(server);
+        setData(server);
+        return;
+      }
+      const mine = loadVendors();
+      if (hasRows(mine.vendors) || hasRows(mine.items)) sendUp(mine);
+    });
   }, []);
 
   /** 원가에 세지 않을 재료로 옮긴다 (수돗물, "추출량" 같은 결과값) */
@@ -79,6 +97,20 @@ export default function VendorView({
     save.report("거래처·단가", saveVendors(next), () =>
       save.report("거래처·단가", saveVendors(next)),
     );
+    sendUp(next);
+  }
+
+  /* ★ 서버 보관은 따로 알린다. 그리고 **글자마다 보내지 않는다** —
+     단가를 치는 동안 PUT 이 여러 번 나가면 먼저 것이 나중에 도착해서
+     옛 값이 남는다 (2026-09-16 에 계약 화면에서 실제로 그랬다). */
+  function sendUp(next: VendorData) {
+    if (upTimer.current) clearTimeout(upTimer.current);
+    upTimer.current = setTimeout(() => {
+      void pushVendors(next).then((r) => {
+        if (!r.ok && r.reason === SKIP) return;
+        save.report("거래처·단가(서버 보관)", r.ok, () => sendUp(next));
+      });
+    }, 1200);
   }
 
   const priced = useMemo(

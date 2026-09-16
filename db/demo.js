@@ -83,7 +83,7 @@ const SHIFTS = {
  *   시연 데이터가 **브라우저에만 남고 서버로는 한 건도 안 올라갔다.**
  *   결과가 결정적이어야 하므로(테스트가 파일과 비교한다) 난수 대신
  *   자리에 번호를 박은 uuid 를 만든다. 첫 마디가 종류다 — aa 직원 · bb 출퇴근 · cc 계약.
- *   거래처(`v-demo-*`)는 서버로 안 가므로 그대로 둔다.
+ *   ★ 2026-09-16 — 거래처·품목도 서버로 간다. dd 거래처 · ee 품목.
  */
 const demoId = (kind, n) =>
   `${kind.repeat(4)}-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -219,29 +219,33 @@ export function buildDemo(base = BASE_DAY) {
   /* ---------- 거래처 · 단가 ----------
    *  ★ 품목 이름은 시드 레시피의 재료 이름과 글자까지 같다. */
   const vendors = [
-    { id: "v-demo-roast", name: "△△ 로스터리", phone: "", contact: "", how: "카톡", cutoff: "12:00", deliverDays: [1, 2, 3, 4, 5], leadDays: 2, note: "원두 5kg 이상이면 배송비 없음" },
-    { id: "v-demo-food", name: "□□ 식자재", phone: "", contact: "", how: "전화", cutoff: "15:00", deliverDays: [1, 2, 3, 4, 5], leadDays: 1, note: "금요일에 주말치까지 주문" },
-    { id: "v-demo-bake", name: "◇◇ 베이킹몰", phone: "", contact: "", how: "온라인", cutoff: "14:00", deliverDays: [1, 2, 3, 4, 5], leadDays: 2, note: "" },
+    { id: demoId("dd", 1), name: "△△ 로스터리", phone: "", contact: "", how: "카톡", cutoff: "12:00", deliverDays: [1, 2, 3, 4, 5], leadDays: 2, note: "원두 5kg 이상이면 배송비 없음" },
+    { id: demoId("dd", 2), name: "□□ 식자재", phone: "", contact: "", how: "전화", cutoff: "15:00", deliverDays: [1, 2, 3, 4, 5], leadDays: 1, note: "금요일에 주말치까지 주문" },
+    { id: demoId("dd", 3), name: "◇◇ 베이킹몰", phone: "", contact: "", how: "온라인", cutoff: "14:00", deliverDays: [1, 2, 3, 4, 5], leadDays: 2, note: "" },
   ];
+  /* ★ 품목 id 도 uuid 다. 전에는 이름에서 만들었는데(`vi-demo-우유`)
+     서버 `items.id` 가 uuid 라 한 건도 안 올라갔다. 결과가 결정적이어야
+     하므로(테스트가 파일과 비교한다) 부른 차례대로 번호를 매긴다. */
+  let itemNo = 0;
   const item = (vendorId, name, packAmount, packUnit, packPrice, note = "") => ({
-    id: `vi-demo-${name.replace(/[^가-힣a-zA-Z0-9]/g, "")}`,
+    id: demoId("ee", ++itemNo),
     vendorId, name, packAmount, packUnit, packPrice, note,
   });
   const items = [
-    item("v-demo-roast", "원두 (도징)", 1000, "g", 32_000, "에스프레소 블렌드 1kg"),
-    item("v-demo-roast", "원두 (굵게 분쇄)", 1000, "g", 30_000, "콜드브루용"),
-    item("v-demo-food", "우유", 1000, "ml", 2_900),
-    item("v-demo-food", "생크림", 1000, "ml", 7_800),
-    item("v-demo-food", "과일 과육", 1000, "g", 9_000, "냉동 딸기 기준"),
-    item("v-demo-food", "레몬즙", 1000, "ml", 8_500),
-    item("v-demo-bake", "강력분", 20000, "g", 38_000, "20kg 한 포"),
-    item("v-demo-bake", "설탕", 15000, "g", 21_000, "15kg 한 포"),
-    item("v-demo-bake", "소금", 1000, "g", 1_500),
-    item("v-demo-bake", "이스트", 500, "g", 6_500, "인스턴트 드라이"),
-    item("v-demo-bake", "버터", 1000, "g", 14_000),
-    item("v-demo-bake", "찻잎", 100, "g", 12_000, "얼그레이"),
-    item("v-demo-bake", "홍차잎", 500, "g", 28_000, "밀크티용 아쌈"),
-    item("v-demo-bake", "바닐라 시럽", 1000, "ml", 12_000),
+    item(demoId("dd", 1), "원두 (도징)", 1000, "g", 32_000, "에스프레소 블렌드 1kg"),
+    item(demoId("dd", 1), "원두 (굵게 분쇄)", 1000, "g", 30_000, "콜드브루용"),
+    item(demoId("dd", 2), "우유", 1000, "ml", 2_900),
+    item(demoId("dd", 2), "생크림", 1000, "ml", 7_800),
+    item(demoId("dd", 2), "과일 과육", 1000, "g", 9_000, "냉동 딸기 기준"),
+    item(demoId("dd", 2), "레몬즙", 1000, "ml", 8_500),
+    item(demoId("dd", 3), "강력분", 20000, "g", 38_000, "20kg 한 포"),
+    item(demoId("dd", 3), "설탕", 15000, "g", 21_000, "15kg 한 포"),
+    item(demoId("dd", 3), "소금", 1000, "g", 1_500),
+    item(demoId("dd", 3), "이스트", 500, "g", 6_500, "인스턴트 드라이"),
+    item(demoId("dd", 3), "버터", 1000, "g", 14_000),
+    item(demoId("dd", 3), "찻잎", 100, "g", 12_000, "얼그레이"),
+    item(demoId("dd", 3), "홍차잎", 500, "g", 28_000, "밀크티용 아쌈"),
+    item(demoId("dd", 3), "바닐라 시럽", 1000, "ml", 12_000),
   ];
 
   /* ---------- 설정 ----------
@@ -277,7 +281,9 @@ export function buildDemo(base = BASE_DAY) {
     };
     if (i === -4) orderLog[day]["p-6"] = { ordered: true, received: true, memo: "원두 5kg" };
   }
-  const orderLinks = { "p-5": "v-demo-food", "p-6": "v-demo-roast" };
+  /* ★ 거래처 id 가 uuid 로 바뀌었으므로 여기도 같은 값을 써야 한다.
+     문자열로 두면 발주 화면이 «없는 거래처» 를 가리켜 문자를 못 보낸다. */
+  const orderLinks = { "p-5": demoId("dd", 2), "p-6": demoId("dd", 1) };
 
   return {
     kind: "store-note-backup",
