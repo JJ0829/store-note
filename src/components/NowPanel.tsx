@@ -92,7 +92,8 @@ export default function NowPanel({ shifts: seedShifts }: { shifts: Shift[] }) {
   });
 
   return (
-    <div className="mt-5 flex flex-col gap-3">
+    // 태블릿(md+)에서는 세 조가 나란히 — 한 화면에 하루가 다 보인다. 폰은 한 줄 그대로
+    <div className="mt-5 flex flex-col gap-3 md:grid md:grid-cols-3 md:items-start">
       {ordered.map((shift) => {
         const st = stateOf(shift);
         const on = (st?.working ?? 0) > 0;

@@ -71,7 +71,7 @@ export default function Home() {
     /* ★ pb-24 — 하단 탭바가 `fixed` 라 여백이 없으면 **마지막 카드(촬영)가**
        **탭바 밑에 깔려서 반쯤 잘린다.** 다른 화면은 `Screen`(ui.tsx)이
        같은 값을 주는데 이 화면만 `<main>` 을 직접 써서 빠져 있었다. */
-    <main className="mx-auto min-h-dvh w-full max-w-[560px] bg-zinc-50 px-4 py-8 pb-24 dark:bg-zinc-950">
+    <main className="mx-auto min-h-dvh w-full max-w-[560px] bg-zinc-50 px-4 py-8 pb-24 dark:bg-zinc-950 md:max-w-[900px] md:px-6">
       {/* ★ 로그인 상태는 **맨 위 오른쪽**이다. 공용 태블릿이라
           «지금 누구로 열려 있나» 가 매출·시급을 보기 전에 보여야 한다.
           서버에 Supabase 설정이 없으면 이 자리는 비어 있다 — 없는 기능을
@@ -110,8 +110,14 @@ export default function Home() {
           탭바에 있는 쪽이다.
           ================================================================ */}
 
+      {/* ★ 태블릿(md 768px+)에서는 두 열 격자 (사장님 요청 2026-09-16).
+          폰에서는 한 줄 그대로다 — md: 접두사가 없는 클래스는 폰 모양이고
+          있는 클래스만 태블릿에서 더해진다. 매일 여는 「할 일」은 펴 둔 채로
+          두 열을 다 쓴다(col-span-2). 나머지 접힌 섹션은 두 개씩 나란히. */}
+      <div className="md:mt-3 md:grid md:grid-cols-2 md:items-start md:gap-4">
       {/* ---------- 할 일 — 매일 연다. 유일하게 펴 둔다 ---------- */}
       <Fold
+        className="md:col-span-2 md:mt-0"
         title="할 일"
         note="오늘 해야 내일 쓸 수 있는 것들입니다."
         count={`${prepLists.length}개 목록`}
@@ -154,6 +160,7 @@ export default function Home() {
 
       {/* ---------- 레시피 ---------- */}
       <Fold
+        className="md:mt-0"
         title="레시피"
         note="이름으로 찾고, 필요한 만큼 배수로 계산합니다."
         count={`${recipes.length}개`}
@@ -197,6 +204,7 @@ export default function Home() {
       {/* 근무표(계획) → 출퇴근(실제) → 계약서(조건). 이 순서로 이어진다.
           출퇴근은 탭바에 있어서 여기서는 뺐다 */}
       <Fold
+        className="md:mt-0"
         title="직원"
         note="근무표가 계획, 출퇴근이 실제입니다. 두 개의 차이가 근태이고, 계약서의 시급을 곱하면 인건비가 됩니다."
       >
@@ -228,6 +236,7 @@ export default function Home() {
 
       {/* ---------- 교육 ---------- */}
       <Fold
+        className="md:mt-0"
         title="포지션별 체크리스트"
         note="첫날 교육은 태블릿에서 교육 모드로 보여주고, 그 뒤에 혼자 확인할 수 있게 체크리스트 링크를 보내주세요."
         count={`${positions.length}개 포지션`}
@@ -277,6 +286,7 @@ export default function Home() {
 
       {/* ---------- 촬영 ---------- */}
       <Fold
+        className="md:mt-0"
         title="촬영"
         note="사진·영상이 붙은 항목만 화면에 보입니다. 뭘 더 찍어야 하는지 여기서 봅니다."
       >
@@ -294,6 +304,7 @@ export default function Home() {
       {/* ---------- 돈 ---------- */}
       {/* 거래처(단가) → 원가, 그리고 매출에서 뺀다. 발주는 탭바에 있다 */}
       <Fold
+        className="md:mt-0"
         title="재무"
         note="거래처 단가를 넣으면 레시피에서 원가가 나오고, 출퇴근에서 인건비가 나옵니다. 매출에서 둘을 빼면 그날 하루 순익입니다."
       >
@@ -320,6 +331,7 @@ export default function Home() {
 
         <OwnerLockButton />
       </Fold>
+      </div>
     </main>
   );
 }

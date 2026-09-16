@@ -18,6 +18,7 @@ export default function Fold({
   note,
   count,
   open = false,
+  className = "",
   children,
 }: {
   title: string;
@@ -27,12 +28,14 @@ export default function Fold({
   count?: string;
   /** 매일 여는 묶음만 펼친 채로 둔다 */
   open?: boolean;
+  /** 태블릿 격자에서 칸을 어디에 놓을지는 바깥(홈)이 정한다 — md:col-span-2 등 */
+  className?: string;
   children: ReactNode;
 }) {
   return (
     <details
       open={open}
-      className="group mt-3 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+      className={`group mt-3 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 ${className}`}
     >
       <summary
         className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 active:bg-zinc-50 dark:active:bg-zinc-800 [&::-webkit-details-marker]:hidden"

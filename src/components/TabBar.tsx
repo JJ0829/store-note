@@ -124,7 +124,7 @@ export default function TabBar() {
       /* env(safe-area-inset-bottom) — 아이패드 홈 인디케이터에 가리면 못 누른다 */
       className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95"
     >
-      <ul className="mx-auto flex w-full max-w-[560px]">
+      <ul className="mx-auto flex w-full max-w-[560px] md:max-w-[900px]">
         {TABS.map((tab) => {
           const on = isOn(pathname, tab);
           return (
