@@ -11,7 +11,7 @@ import { ro } from "@/lib/store";
 import type { Shift } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
- * 근무조 이름·시간 고치기.
+ * 근무조 이름·시간 수정.
  *
  * 시드 값은 **한 매장의 값**이다. 오픈 07:30 도 마감 22:30 도 매장마다
  * 다르고, 「아침」·「저녁」이라고 부르는 곳도 있다. 앱이 남의 매장 시간을
@@ -66,7 +66,7 @@ export default function ShiftEditor({
         aria-expanded={open}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <span className="text-[15px] font-bold">근무조 고치기</span>
+        <span className="text-[15px] font-bold">근무조 수정</span>
         <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
           {shifts.map((s) => s.name).join(" · ")} {open ? "▲" : "▼"}
         </span>

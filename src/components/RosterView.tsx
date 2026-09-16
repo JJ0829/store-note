@@ -339,7 +339,7 @@ export default function RosterView({
         )}
       </div>
 
-      {/* ---------- 근무조 고치기 ----------
+      {/* ---------- 근무조 수정 ----------
           ★ 직원 추가보다 위에 둔다. 조를 먼저 정하고 사람을 배정하는 순서다. */}
       <ShiftEditor
         shifts={shifts}
@@ -463,19 +463,32 @@ export default function RosterView({
                       s.section || "—"
                     )}
                   </td>
-                  {/* ★ 고치기·삭제를 **이름 아래**에 둔다 (2026-09-16).
+                  {/* ★ 수정·삭제를 **이름 아래**에 둔다 (2026-09-16).
                       칸을 하나 더 만들었더니 표가 넘쳐서 가로로 밀어야 보였다 —
                       사장님이 «삭제가 없다» 고 한 것과 똑같은 일이 다시 났다.
                       이름 옆이면 누구를 고치는지도 분명하다. */}
                   <td className="px-3 py-2">
-                    <div className="font-bold">{s.name}</div>
+                    {editing === s.id ? (
+                      /* ★ 이름도 고칠 수 있어야 한다. 못 고치면 오타 하나에
+                         **지우고 다시 넣는** 수밖에 없는데, 그러면 id 가 바뀌어서
+                         그 사람의 출퇴근·근로계약이 통째로 끊긴다 (3년 보존 대상). */
+                      <input
+                        type="text"
+                        value={s.name}
+                        aria-label="이름"
+                        onChange={(e) => patchStaff(s.id, { name: e.target.value })}
+                        className={`${INPUT} py-1 text-[13px] font-bold`}
+                      />
+                    ) : (
+                      <div className="font-bold">{s.name}</div>
+                    )}
                     <div className="mt-1 flex gap-1.5">
                       <button
                         type="button"
                         onClick={() => setEditing(editing === s.id ? null : s.id)}
                         className="rounded-lg border border-zinc-300 px-2 py-0.5 text-[12px] font-semibold active:bg-zinc-100 dark:border-zinc-700 dark:active:bg-zinc-800"
                       >
-                        {editing === s.id ? "끝" : "고치기"}
+                        {editing === s.id ? "완료" : "수정"}
                       </button>
                       <button
                         type="button"
