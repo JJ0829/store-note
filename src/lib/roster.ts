@@ -36,6 +36,21 @@ export const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 /** 자주 쓰는 섹션. 버튼으로 넣어주고, 직접 입력도 받는다 */
 export const SECTIONS = ["제빵", "바", "홀", "주방"];
 
+/**
+ * 이름 가나다 순.
+ *
+ * ★ 넣은 순서가 아니라 **이름 순**이다 (2026-09-17 · 사장님 지시).
+ *   넣은 순서로 두면 나중에 들어온 사람이 늘 맨 아래라, 사람이 여섯만 넘어도
+ *   «그 사람이 어디 있더라» 로 표를 훑게 된다. 근무표·출퇴근·계약서가
+ *   전부 같은 순서여야 화면을 옮겨 다녀도 눈이 같은 자리를 본다.
+ *
+ * ★ `localeCompare(…, "ko")` 를 쓴다. 기본 정렬(코드값)로 하면 한글은
+ *   대충 맞지만 «ㄱ» 같은 자모 하나짜리 이름이 엉뚱한 데로 간다.
+ */
+export function byName(staff: Staff[]): Staff[] {
+  return [...staff].sort((a, b) => a.name.localeCompare(b.name, "ko"));
+}
+
 export function loadRoster(): RosterData {
   try {
     const raw = localStorage.getItem(KEY);
@@ -51,7 +66,8 @@ export function loadRoster(): RosterData {
           phone: s.phone ?? "",
         }))
       : [];
-    return { staff, assign: parsed.assign ?? {} };
+    /* 읽을 때 정렬한다 — 화면들이 전부 이 함수를 거치므로 한곳이면 된다 */
+    return { staff: byName(staff), assign: parsed.assign ?? {} };
   } catch {
     return { staff: [], assign: {} };
   }

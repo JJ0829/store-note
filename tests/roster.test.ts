@@ -11,6 +11,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildEmailBody,
+  byName,
   bySection,
   label,
   loadRoster,
@@ -297,6 +298,54 @@ test("loadRoster: staff가 배열이 아니어도 죽지 않는다", (t) => {
   t.after(dropFakeStorage);
   useFakeStorage(JSON.stringify({ staff: "망가짐" }));
   assert.deepEqual(loadRoster().staff, []);
+});
+
+/* ------------------------------------------------------------------ */
+/* byName — 가나다 순 (2026-09-17)                                      */
+/* ------------------------------------------------------------------ */
+
+const who = (name: string) => ({ id: name, section: "", name, email: "", phone: "" });
+
+test("byName: 이름 가나다 순으로 세운다", () => {
+  const sorted = byName([who("최민준"), who("김하늘"), who("이서준"), who("박지우")]);
+  assert.deepEqual(
+    sorted.map((s) => s.name),
+    ["김하늘", "박지우", "이서준", "최민준"],
+  );
+});
+
+test("byName: 받은 배열을 건드리지 않는다", () => {
+  const before = [who("최민준"), who("김하늘")];
+  byName(before);
+  assert.deepEqual(
+    before.map((s) => s.name),
+    ["최민준", "김하늘"],
+  );
+});
+
+test("byName: 같은 성이면 뒷글자로 간다", () => {
+  const sorted = byName([who("김하늘"), who("김가영"), who("김나래")]);
+  assert.deepEqual(
+    sorted.map((s) => s.name),
+    ["김가영", "김나래", "김하늘"],
+  );
+});
+
+test("loadRoster: 저장 순서가 뒤죽박죽이어도 가나다 순으로 읽는다", (t) => {
+  t.after(dropFakeStorage);
+  useFakeStorage(
+    JSON.stringify({
+      staff: [
+        { id: "s3", name: "최민준" },
+        { id: "s1", name: "김하늘" },
+        { id: "s2", name: "박지우" },
+      ],
+    }),
+  );
+  assert.deepEqual(
+    loadRoster().staff.map((s) => s.name),
+    ["김하늘", "박지우", "최민준"],
+  );
 });
 
 test("saveRoster: 저장에 실패하면 false를 돌려준다 (예외를 던지지 않는다)", (t) => {

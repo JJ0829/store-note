@@ -7,6 +7,7 @@ import MonthPicker from "@/components/MonthPicker";
 import { INPUT, SaveFailed, useSaveState } from "@/components/ui";
 import {
   buildEmailBody,
+  byName,
   label,
   loadRoster,
   mondayOf,
@@ -107,7 +108,8 @@ export default function RosterView({
         /* 서버에 있는 것만 이긴다. 배정이 비어 있는데 덮으면
            **이 태블릿에서 짠 이번 주가 통째로 사라진다** */
         const merged: RosterData = {
-          staff: hasRows(server.staff) ? server.staff : local.staff,
+          /* 서버는 순서를 보장하지 않는다 — 여기서도 가나다 순으로 맞춘다 */
+          staff: byName(hasRows(server.staff) ? server.staff : local.staff),
           assign: hasRows(server.assign) ? server.assign : local.assign,
         };
         saveRoster(merged);
@@ -131,7 +133,12 @@ export default function RosterView({
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);
 
   const persist = useCallback(
-    (next: RosterData) => {
+    (raw: RosterData) => {
+      /* ★ 저장하기 전에 가나다 순으로 맞춘다 (2026-09-17).
+         직원을 새로 넣으면 목록 맨 끝에 붙는데, 여기서 정렬하지 않으면
+         **새로고침하기 전까지만** 맨 아래에 있다가 다음에 열면 자리가
+         바뀐다. 같은 화면이 두 가지 순서를 보이는 셈이라 더 헷갈린다. */
+      const next: RosterData = { ...raw, staff: byName(raw.staff) };
       setData(next);
       // ★ 근무표가 안 남으면 근태(계획 − 실제)를 아예 못 만든다
       save.report("근무표", saveRoster(next), () =>
