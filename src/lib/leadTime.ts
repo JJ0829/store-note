@@ -26,7 +26,7 @@ export function daysApart(from: Date, to: Date): number {
   return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
-/** 지금 걸면 언제 쓸 수 있는지. 종이가 못 하는 계산이 이거다. */
+/** 지금 시작하면 언제 쓸 수 있는지. 종이가 못 하는 계산이 이거다. */
 export function readyAt(hours: number, now: Date = new Date()): string {
   const d = new Date(now.getTime() + hours * 3600 * 1000);
   const diff = daysApart(now, d);

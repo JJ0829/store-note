@@ -138,7 +138,7 @@ export function getPrepListBySlug(slug: string): PrepList | null {
  * 되돌릴 수 없는 항목만 골라낸다.
  *
  * 이 제품이 종이를 이기는 지점이 정확히 여기다 — 발주는 깜빡해도 쿠팡으로
- * 메우지만, 어제 안 걸어둔 콜드브루는 어떤 방법으로도 못 만든다.
+ * 메우지만, 어제 안 시작해 둔 콜드브루는 어떤 방법으로도 못 만든다.
  * 전부 빨간 불로 띄우면 사람은 무시하므로, 경고는 이 목록에만 준다.
  */
 export function irreversibleTasks(list: PrepList): PrepTask[] {

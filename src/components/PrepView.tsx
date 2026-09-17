@@ -30,7 +30,7 @@ import type { PrepList, PrepTask, Recipe } from "@/lib/types";
  * 프렙 리스트 — 이 제품이 종이를 이기는 지점
  *
  * 종이 체크리스트가 못 하는 것이 여기 셋 다 들어간다.
- *   1) 오늘 걸면 몇 시에 쓸 수 있는지 계산해준다 (종이는 계산 못 함)
+ *   1) 오늘 시작하면 몇 시에 쓸 수 있는지 계산해준다 (종이는 계산 못 함)
  *   2) 되돌릴 수 있는 것과 없는 것을 구분한다 (종이는 전부 같은 줄)
  *   3) 수량이 매일 바뀌는 항목은 배수를 눌러서 그 자리에서 환산한다
  * ------------------------------------------------------------------ */
@@ -732,7 +732,7 @@ export default function PrepView({
                       제일 중요한 문장이 비어 보인다. */}
                   {task.leadTimeHours !== null && (
                     <p className="mt-2 rounded-lg bg-zinc-100 px-2.5 py-2 text-[13px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                      지금 걸면 →{" "}
+                      지금 시작하면 →{" "}
                       <b>
                         {now
                           ? `${readyAt(task.leadTimeHours, now)}부터`
@@ -765,7 +765,7 @@ export default function PrepView({
 
                   {/* 안 하면 생기는 일 */}
                   {/* ★ "안 하면 —" 은 **리드타임이 없는 항목에만** 띄운다.
-                      `지금 걸면 → 내일 07:43 부터` 가 이미 같은 말을 하고,
+                      `지금 시작하면 → 내일 07:43 부터` 가 이미 같은 말을 하고,
                       `쿠팡으로 메울 수 있습니다` 같은 문장은 안 해도 괜찮다고
                       알려주는 셈이라 해롭다 (사장님 지적 2026-09-08).
                       묶음 머리는 할 일이 아니라 이름표라서 역시 안 띄운다.
@@ -918,7 +918,7 @@ export default function PrepView({
                               </span>
                               {opt.leadTimeHours !== null && (
                                 <span className="mt-1.5 block rounded-lg bg-zinc-100 px-2 py-1.5 text-[12.5px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                                  지금 걸면 →{" "}
+                                  지금 시작하면 →{" "}
                                   <b>
                                     {now
                                       ? `${readyAt(opt.leadTimeHours, now)}부터`

@@ -370,8 +370,8 @@ create table make_recipe_versions (
   yield_unit   text not null,
   yield_family text not null,
 
-  -- 걸어놓고 몇 시간 뒤에 쓸 수 있나. 콜드브루 12~24h · 반죽 12~18h.
-  -- ★ 이 값이 있는 품목은 "오늘 안 걸면 내일 아침에 터지는" 것이다.
+  -- 시작해 놓고 몇 시간 뒤에 쓸 수 있나. 콜드브루 12~24h · 반죽 12~18h.
+  -- ★ 이 값이 있는 품목은 "오늘 안 시작하면 내일 아침에 터지는" 것이다.
   lead_time_hours numeric(6,2),
   -- 돈으로 되돌릴 수 있나. false 면 어떤 방법으로도 못 되돌린다.
   recoverable boolean not null default true,
@@ -587,7 +587,7 @@ create table baked_lines (
   make_recipe_version_id uuid,
 
   occurred_on date not null default current_date,
-  started_at  timestamptz,                 -- 리드타임의 시작. "지금 걸면 → 내일 07:43"
+  started_at  timestamptz,                 -- 리드타임의 시작. "지금 시작하면 → 내일 07:43"
   ready_at    timestamptz,                 -- 사용 가능해지는 시각
   batches     numeric(14,4) not null check (batches > 0),
   qty         numeric(14,4),               -- 실제 산출량
@@ -957,7 +957,7 @@ create table prep_tasks (
   trigger_days smallint[],                -- weekday (0=일 … 6=토)
   trigger_when text,                      -- condition — 사람이 읽는 문장
 
-  lead_time_hours numeric(6,2),           -- 걸어놓고 몇 시간 뒤 (콜드브루 · 반죽)
+  lead_time_hours numeric(6,2),           -- 시작해 놓고 몇 시간 뒤 (콜드브루 · 반죽)
   lead_time_days  int,                    -- 주문하면 며칠 뒤
 
   -- ★ 이 프로젝트에서 가장 중요한 한 칸.
@@ -967,7 +967,7 @@ create table prep_tasks (
   recoverable boolean not null default true,
 
   -- 안 하면 무슨 일이 생기는지. 리드타임 줄이 있으면 화면에 안 띄운다
-  -- ("지금 걸면 → 내일 07:43" 이 이미 그 말을 한다).
+  -- ("지금 시작하면 → 내일 07:43" 이 이미 그 말을 한다).
   consequence text not null default '',
 
   quantity_varies boolean not null default false,  -- 매일 수량이 달라짐 = 종이로 못 하는 이유

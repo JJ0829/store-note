@@ -523,7 +523,7 @@ erDiagram
     uuid id PK
     uuid item_id FK
     uuid bake_plan_id FK
-    timestamptz started_at "걸어둔 시각"
+    timestamptz started_at "시작한 시각"
     timestamptz ready_at "쓸 수 있는 시각"
     numeric batches
   }
@@ -779,7 +779,7 @@ erDiagram
   <p class="dcap">
     <b><code>PREP_TASKS</code> 가 이 그림의 중심이다.</b>
     리드타임(<code>lead_time_hours</code>)과 <code>recoverable</code> 이 여기 있고,
-    그 둘이 <b>"오늘 안 걸면 내일 아침에 터진다"</b> 를 화면에 띄우는 근거다.
+    그 둘이 <b>"오늘 안 시작하면 내일 아침에 터진다"</b> 를 화면에 띄우는 근거다.
   </p>
 
   <div class="note">
@@ -791,7 +791,7 @@ erDiagram
     </p>
     <p>
       <b>② <code>routine</code> 은 리드타임을 못 갖는다.</b> 홀 정리·화장실 청소는
-      걸어놓고 기다리는 일이 아니다. 리드타임을 적으면 화면이 <b>없는 약속</b>을 만든다.
+      시작해 놓고 기다리는 일이 아니다. 리드타임을 적으면 화면이 <b>없는 약속</b>을 만든다.
     </p>
     <p>
       <b>③ 되돌릴 수 없는 것은 이유를 반드시 적어야 한다.</b>
@@ -838,7 +838,7 @@ erDiagram
         <tr><td><code>daily_sales</code></td><td>하루 판매 머리 — <b>영업일</b> 기준</td><td>유지</td></tr>
         <tr><td><code>sales_lines</code></td><td>메뉴별 판매 + <b>그때 그 레시피 판</b></td><td class="ok">지적 1 · 2</td></tr>
         <tr><td><code>received_lines</code></td><td>입고 + <b>어느 발주 계획인가</b></td><td class="ok">지적 3</td></tr>
-        <tr><td><code>baked_lines</code></td><td>제조 + <b>어느 제조 계획인가</b> + 걸어둔/쓸 수 있는 시각</td><td class="ok">지적 3</td></tr>
+        <tr><td><code>baked_lines</code></td><td>제조 + <b>어느 제조 계획인가</b> + 시작한/쓸 수 있는 시각</td><td class="ok">지적 3</td></tr>
         <tr><td><code>waste_lines</code></td><td>폐기</td><td class="ok">복합 연결</td></tr>
         <tr><td><code>stock_counts</code></td><td>재고 실사</td><td class="ok">복합 연결</td></tr>
         <tr><td><code>recommendation_runs</code></td><td>추천을 돌린 기록 · <b>계산식 판 번호</b></td><td class="ok">신설 · 지적 5</td></tr>
@@ -1117,7 +1117,7 @@ erDiagram
       <tbody>
         <tr><td><b>프렙</b> — 목록 3 · 항목 30<br><span class="sub">리드타임 · 되돌림 여부 · 옵션</span></td>
             <td class="ok"><code>prep_lists</code> · <code>prep_tasks</code></td>
-            <td><b>매일 아침 반드시 열리는 화면.</b> "오늘 안 걸면 내일 아침에 터진다" 가 사는 곳이고, 이 제품이 종이를 이긴다는 주장의 근거 자체다</td></tr>
+            <td><b>매일 아침 반드시 열리는 화면.</b> "오늘 안 시작하면 내일 아침에 터진다" 가 사는 곳이고, 이 제품이 종이를 이긴다는 주장의 근거 자체다</td></tr>
         <tr><td><b>출퇴근</b></td><td class="ok"><code>punches</code></td>
             <td class="no"><b>근로기준법 제42조 — 3년 보존 대상</b></td></tr>
         <tr><td><b>근로계약</b></td><td class="ok"><code>contracts</code></td>
