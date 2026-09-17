@@ -263,13 +263,13 @@ export default function AttendanceView({
             찍었으면 시각을 직접 고칠 수 있습니다.
           </p>
 
-          {[...roster.staff]
-            // 오늘 근무표에 잡힌 사람을 위로 올린다
-            .sort((a, b) => {
-              const pa = roster.assign[a.id]?.[today] ? 0 : 1;
-              const pb = roster.assign[b.id]?.[today] ? 0 : 1;
-              return pa - pb;
-            })
+          {/* ★ 이름 가나다 순으로만 세운다 (2026-09-17 · 사장님 지시).
+              전에는 «오늘 근무표에 잡힌 사람을 위로» 올렸는데, 그러면
+              같은 사람이 날마다 다른 자리에 있어서 **자기 이름을 눈이 아니라
+              머리로 찾아야 한다.** 출퇴근은 하루 두 번, 바쁠 때 누르는
+              화면이라 자리가 고정된 쪽이 빠르다. 순서는 `loadRoster()` 가
+              이미 맞춰 준다 — 여기서 다시 세우지 않는다. */}
+          {roster.staff
             .map((s) => {
               const planned = roster.assign[s.id]?.[today] ?? "";
               const p = getPunch(punches, s.id, today);
