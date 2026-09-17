@@ -61,8 +61,23 @@ export default function AttendanceView({
   const [settings, setSettings] = useState<Settings | null>(null);
   const [monday, setMonday] = useState<Date | null>(null);
   const save = useSaveState();
-  // 출퇴근은 직원이 찍는 화면이라 잠글 수 없다. 돈만 가린다
+  /* 출퇴근은 직원이 찍는 화면이라 **버튼은** 잠글 수 없다. 돈을 가리고,
+     2026-09-17 부터 **이미 찍힌 시각을 고치는 것**도 가린다 (아래 `timeLocked`). */
   const owner = useOwnerOpen();
+
+  /* ★ 이미 찍힌 시각을 고치는 것은 사장님만 (2026-09-17 · 사장님 결정)
+   *
+   *   [출근]·[퇴근] 버튼은 그대로 열어 둔다 — 직원이 직접 찍어야 하는 화면이다.
+   *   그런데 **찍힌 뒤의 시각 칸은 아무나 고칠 수 있었다.** 직원이 자기 퇴근
+   *   시각을 늘려 적으면 그대로 인건비가 된다 (인건비 = 시각 × 시급).
+   *   버튼과 달리 이 칸은 **누가 고쳤는지 남지도 않는다.**
+   *
+   *   `owner.ready` 를 같이 보는 이유: 첫 그림(SSR·수화 전)에는 `open` 이
+   *   false 라, 그것만 보면 잠금번호를 안 만든 매장에서도 잠깐 잠겨 보인다.
+   *   `useOwnerOpen()` 은 **잠금번호를 아직 안 만들었으면 `open: true`** 다 —
+   *   즉 PIN 을 안 쓰는 매장에서는 이 잠금이 아예 안 걸린다.
+   */
+  const timeLocked = owner.ready && !owner.open;
   /* ★ 서버로 보내는 것은 잠깐 기다렸다 한 번만 (2026-09-16).
      시각 칸(`edit`)은 글자마다 `commit` 이 불린다. 그대로 보내면 요청이 겹쳐
      나가고 **먼저 것이 나중에 도착하면 서버에 옛 값이 남는다** — 계약 화면에서
@@ -187,6 +202,10 @@ export default function AttendanceView({
   }
 
   function edit(staffId: string, patch: Partial<ReturnType<typeof newPunch>>) {
+    /* ★ 화면에서 이미 `readOnly` 로 막지만 여기서도 막는다.
+       한 겹이면 나중에 칸을 하나 더 붙이는 사람이 `readOnly` 를 빼먹는다 —
+       그러면 아무 오류 없이 다시 열린다. */
+    if (timeLocked) return;
     const cur = getPunch(punches, staffId, today) ?? newPunch(staffId, today);
     commit(putPunch(punches, { ...cur, ...patch }));
   }
@@ -348,9 +367,11 @@ export default function AttendanceView({
                         <input
                           value={p.inAt}
                           onChange={(e) => edit(s.id, { inAt: e.target.value })}
+                          readOnly={timeLocked}
+                          aria-readonly={timeLocked}
                           placeholder="07:30"
                           aria-label={`${s.name} 출근 시각`}
-                          className={`${INPUT} w-24 text-center font-mono`}
+                          className={`${INPUT} w-24 text-center font-mono ${timeLocked ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" : ""}`}
                         />
                       </label>
                       <label className="flex items-center gap-1.5">
@@ -360,9 +381,11 @@ export default function AttendanceView({
                         <input
                           value={p.outAt}
                           onChange={(e) => edit(s.id, { outAt: e.target.value })}
+                          readOnly={timeLocked}
+                          aria-readonly={timeLocked}
                           placeholder="15:30"
                           aria-label={`${s.name} 퇴근 시각`}
-                          className={`${INPUT} w-24 text-center font-mono`}
+                          className={`${INPUT} w-24 text-center font-mono ${timeLocked ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" : ""}`}
                         />
                       </label>
                       <label className="flex items-center gap-1.5">
@@ -373,12 +396,19 @@ export default function AttendanceView({
                           <NumField
                             label={`${s.name} 휴게시간`}
                             value={p.breakMin}
-                            onChange={(v) => edit(s.id, { breakMin: v })}
+                            onChange={(v) => { if (!timeLocked) edit(s.id, { breakMin: v }); }}
                             suffix="분"
                           />
                         </div>
                       </label>
                     </div>
+                  )}
+
+                  {p?.inAt && timeLocked && (
+                    <p className="mt-1.5 text-[12px] text-zinc-500 dark:text-zinc-400">
+                      🔒 찍힌 시각을 고치는 것은 사장님만 합니다. [이번 주] 탭에서
+                      잠금번호를 넣으면 고칠 수 있습니다.
+                    </p>
                   )}
 
                   {r.lateMin > 0 && (
