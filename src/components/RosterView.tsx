@@ -21,7 +21,7 @@ import {
 } from "@/lib/roster";
 import ShiftEditor from "@/components/ShiftEditor";
 import WorkSwitch from "@/components/WorkSwitch";
-import { pullRoster, pushRoster } from "@/lib/serverSync";
+import { deleteStaff, pullRoster, pushRoster } from "@/lib/serverSync";
 import {
   applyShiftEdits,
   loadShiftEdits,
@@ -86,6 +86,8 @@ export default function RosterView({
   // 메일 본문에 연락처를 넣을지. 기본은 넣지 않는다 (bcc로 가린 의미를 지키려고)
   const [mailContacts, setMailContacts] = useState(false);
   const [mailState, setMailState] = useState<MailState>({ s: "idle" });
+  /* 직원을 못 지운 이유. 서버가 준 문장을 그대로 띄운다 (주로 «기록이 있다») */
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   useEffect(() => {
     setData(loadRoster());
@@ -178,14 +180,34 @@ export default function RosterView({
     });
   }
 
-  function removeStaff(id: string) {
+  /**
+   * 직원 한 명을 명단에서 뺀다.
+   *
+   * ★★ **서버를 먼저 지운다** (2026-09-17 · 「계속 삭제하는데도 안 지워진다」의 원인)
+   *
+   *   전에는 태블릿만 지우고 서버 줄은 그대로 뒀다. 그러면 다음에 이 화면을
+   *   열 때 「서버에 줄이 있으면 서버가 이긴다」(pull) 규칙이 **지운 직원을
+   *   도로 가져온다.** 오류도 안 나고 지운 직후에는 사라져 보이기 때문에,
+   *   사장님은 지우기를 반복하게 된다.
+   *
+   * ★ 서버가 거절하면 **태블릿에서도 안 지운다.** 여기서 지워봐야 다음에
+   *   열 때 되살아나므로, 지워진 것처럼 보였다가 돌아오는 것보다
+   *   «왜 못 지우는지» 를 그 자리에서 말하는 쪽이 낫다.
+   *   (출퇴근·근로계약이 있는 직원 — 3년 보관 기록이다)
+   *
+   * ★ 로그인 안 한 매장은 `SKIP` 이 와서 지금까지와 똑같이 동작한다.
+   */
+  async function removeStaff(id: string) {
+    setRemoveError(null);
+    const r = await deleteStaff(id);
+    if (!r.ok && r.reason !== SKIP) {
+      setRemoveError(r.reason);
+      return;
+    }
     const assign = { ...data.assign };
     delete assign[id];
     const staff = data.staff.filter((s) => s.id !== id);
     persist({ staff, assign });
-    /* ⚠️ 서버 쪽 줄은 지우지 않는다 — `/api/data` 는 덮어쓰기만 한다.
-       (늦게 연 기기가 다른 기기의 기록을 지우는 사고를 막기 위해서다)
-       올리는 것은 위의 `persist` 가 이미 했다. */
   }
 
   function setShift(staffId: string, date: string, shift: string) {
@@ -421,6 +443,30 @@ export default function RosterView({
         </div>
       </section>
 
+      {/* ---------- 못 지운 이유 (2026-09-17) ----------
+          ★ 스스로 사라지지 않는다. 지우기는 사람이 누른 일이고, 안 됐으면
+            무엇을 해야 하는지 알아야 한다. 다음에 지우기를 누르면 지워진다. */}
+      {removeError && (
+        <div
+          role="alert"
+          className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/40"
+        >
+          <p className="text-[14px] font-bold text-red-800 dark:text-red-300">
+            직원을 지우지 못했습니다
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-red-700 dark:text-red-300">
+            {removeError}
+          </p>
+          <button
+            type="button"
+            onClick={() => setRemoveError(null)}
+            className="mt-2 rounded-lg border border-red-300 px-2.5 py-1 text-[12px] font-semibold text-red-700 dark:border-red-900 dark:text-red-300"
+          >
+            닫기
+          </button>
+        </div>
+      )}
+
       {/* ---------- 직원 명단 (메일에 그대로 들어간다) ---------- */}
       {data.staff.length > 0 && (
         <section className="mt-5 overflow-x-auto rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -502,7 +548,7 @@ export default function RosterView({
                         onClick={() => {
                           if (window.confirm(`${s.name} 님을 명단에서 뺄까요?
 근무표 배정도 같이 지워집니다.`))
-                            removeStaff(s.id);
+                            void removeStaff(s.id);
                         }}
                         className="rounded-lg border border-red-300 px-2 py-0.5 text-[12px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400 dark:active:bg-red-950/40"
                       >
@@ -637,7 +683,7 @@ export default function RosterView({
                       type="button"
                       onClick={() => {
                         if (window.confirm(`${s.name} 님을 명단에서 뺄까요?`))
-                          removeStaff(s.id);
+                          void removeStaff(s.id);
                       }}
                       aria-label={`${s.name} 삭제`}
                       className="px-2 text-[16px] text-zinc-400"

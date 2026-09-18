@@ -8,7 +8,12 @@ import {
   /* ★ `@/` 가 아니라 상대경로다 — 테스트가 이 파일을 서버 없이 그대로 부른다.
    *  `/api/auth/me` · `/api/store-unlock` 과 같은 이유. */
 } from "../../../../lib/serverSession.ts";
-import { CONFLICT_KEY, isAllowedTable } from "../../../../lib/serverData.ts";
+import {
+  CONFLICT_KEY,
+  STAFF_BLOCKERS,
+  STAFF_CASCADE,
+  isAllowedTable,
+} from "../../../../lib/serverData.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -179,6 +184,107 @@ export async function PUT(request: Request, ctx: Ctx) {
  * ★ 화면을 열 때 자동으로 부르는 곳은 없다. 확인 화면 뒤의 버튼 하나뿐이다
  *   (`tests/serverSync.test.ts` 가 화면 넷이 안 부르는지 본다).
  * ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ *
+ * 줄 하나만 지우기 — 직원 명단에서 한 명을 뺄 때 (2026-09-17)
+ *
+ * ★ 위의 「표 전부 비우기」와 **다른 길**이다. 주소에 `?id=` 가 붙으면 이쪽으로
+ *   온다. 되돌리기는 여전히 표 전부를 비우고, 이쪽은 한 줄만 건드린다.
+ *
+ * ★ **직원만** 된다. 다른 표에 열어주면 «어느 줄이든 지우는 길» 이 되고,
+ *   그건 «덮어쓰기만 한다» 는 규율을 통째로 무너뜨린다. 출퇴근 한 줄을 지우는
+ *   일은 근태·인건비를 조용히 바꾸므로 그런 길을 열 거면 따로 설계해야 한다.
+ * ------------------------------------------------------------------ */
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const enc = encodeURIComponent;
+
+type Conn = { url: string; key: string; access?: string };
+
+function authHeaders(c: Conn): HeadersInit {
+  return { apikey: c.key, Authorization: `Bearer ${c.access}`, Accept: "application/json" };
+}
+
+/**
+ * 그 직원 앞으로 남아 있는 줄이 몇 개인가.
+ *
+ * ★ 못 물어봤으면 `null` 을 돌려준다. **0 으로 치면 안 된다** — 서버가 잠깐
+ *   대답을 못 했다고 «기록이 없다» 로 읽으면 지우면 안 될 것을 지운다.
+ */
+async function countFor(
+  c: Conn,
+  table: string,
+  storeId: string,
+  staffId: string,
+): Promise<number | null> {
+  try {
+    const res = await fetch(
+      `${c.url}/rest/v1/${table}?select=staff_id&store_id=eq.${enc(storeId)}&staff_id=eq.${enc(staffId)}`,
+      { headers: authHeaders(c), signal: AbortSignal.timeout(10_000), cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    const rows = (await res.json()) as unknown;
+    return Array.isArray(rows) ? rows.length : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 그 직원의 줄을 지운다. 지운 개수를 돌려준다 */
+async function wipeFor(
+  c: Conn,
+  table: string,
+  storeId: string,
+  staffId: string,
+  idColumn = "staff_id",
+): Promise<number | null> {
+  try {
+    const res = await fetch(
+      `${c.url}/rest/v1/${table}?store_id=eq.${enc(storeId)}&${idColumn}=eq.${enc(staffId)}&select=store_id`,
+      {
+        method: "DELETE",
+        headers: { ...authHeaders(c), Prefer: "return=representation" },
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!res.ok) return null;
+    const rows = (await res.json()) as unknown;
+    return Array.isArray(rows) ? rows.length : 0;
+  } catch {
+    return null;
+  }
+}
+
+async function deleteOneStaff(c: Conn, storeId: string, staffId: string) {
+  /* 1) 법정 보존 기록이 있으면 아무것도 안 건드린다 */
+  const left: string[] = [];
+  for (const { table, label } of STAFF_BLOCKERS) {
+    const n = await countFor(c, table, storeId, staffId);
+    if (n === null) return bad("서버에 연결하지 못했습니다.", 504);
+    if (n > 0) left.push(`${label} ${n}건`);
+  }
+  if (left.length > 0) {
+    return Response.json(
+      {
+        ok: false,
+        reason: `이 직원 앞으로 ${left.join(" · ")}이 남아 있어 지우지 않았습니다. 출퇴근·근로계약은 3년 보관해야 하는 기록입니다 (근로기준법 제42조).`,
+      },
+      { status: 409 },
+    );
+  }
+
+  /* 2) 배정은 계획이라 같이 지운다. 직원보다 **먼저** — 거꾸로면 FK 가 막는다 */
+  for (const table of STAFF_CASCADE) {
+    if ((await wipeFor(c, table, storeId, staffId)) === null)
+      return bad(`${table} 를 지우지 못했습니다.`, 502);
+  }
+
+  /* 3) 직원 줄. 여기서는 열쇠가 `staff_id` 가 아니라 `id` 다 */
+  const gone = await wipeFor(c, "staff", storeId, staffId, "id");
+  if (gone === null) return bad("직원을 지우지 못했습니다.", 502);
+  return Response.json({ ok: true, deleted: gone });
+}
+
 export async function DELETE(request: Request, ctx: Ctx) {
   if (!authConfigured()) return bad("not-configured", 409);
   const { table } = await ctx.params;
@@ -190,6 +296,14 @@ export async function DELETE(request: Request, ctx: Ctx) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
   if (!url || !key) return bad("not-configured", 409);
+
+  /* ★ `?id=` 가 붙으면 한 줄만 지운다 (직원 전용) */
+  const one = new URL(request.url).searchParams.get("id");
+  if (one !== null) {
+    if (table !== "staff") return bad("한 줄만 지우는 길은 직원 명단에만 있습니다.");
+    if (!UUID_RE.test(one)) return bad("직원 번호가 올바르지 않습니다.");
+    return deleteOneStaff({ url, key, access }, who.storeId, one);
+  }
 
   let res: Response;
   try {

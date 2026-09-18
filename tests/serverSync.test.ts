@@ -29,7 +29,13 @@ import {
   salesToRow,
   staffToRow,
 } from "../src/lib/serverSync.ts";
-import { ALLOWED_TABLES, CONFLICT_KEY, isAllowedTable } from "../src/lib/serverData.ts";
+import {
+  ALLOWED_TABLES,
+  CONFLICT_KEY,
+  STAFF_BLOCKERS,
+  STAFF_CASCADE,
+  isAllowedTable,
+} from "../src/lib/serverData.ts";
 import fs from "node:fs";
 import path from "node:path";
 import type { Punch, PunchData } from "../src/lib/attendance.ts";
@@ -418,6 +424,51 @@ test("★ 비우기 길은 되돌리기 전용이다 — 화면을 열 때 부�
   );
   assert.ok(route.includes("export async function DELETE"), "비우기 길이 없다");
   assert.ok(route.includes("store_id=eq."), "이 매장 것만 지워야 한다");
+});
+
+/* ------------------------------------------------------------------ *
+ * ★ 직원 한 명 지우기 (2026-09-17)
+ *
+ *   태블릿만 지우고 서버 줄을 두면 다음에 화면을 열 때 「서버가 이긴다」 규칙이
+ *   지운 직원을 도로 가져온다. 사장님이 «계속 삭제하는데도 안 지워진다» 고 한
+ *   증상이 이것이었다. 그래서 줄 하나만 지우는 길을 냈고, 아래가 그 규율이다.
+ * ------------------------------------------------------------------ */
+
+test("★ 직원을 지울 때 막는 것은 법정 보존 기록뿐이다 (배정은 계획이라 같이 지운다)", () => {
+  const blocked = STAFF_BLOCKERS.map((b) => b.table);
+  /* 출퇴근·근로계약은 3년 보관 (근로기준법 제42조). 그만둔 사람이라도 안 지운다 */
+  assert.deepEqual([...blocked].sort(), ["contracts", "punches"]);
+  /* 배정이 막는 쪽에 끼면 근무표에 한 번이라도 오른 사람은 영영 못 지운다 */
+  assert.ok(!blocked.includes("shift_assignments"), "배정이 삭제를 막고 있다");
+  assert.deepEqual([...STAFF_CASCADE], ["shift_assignments"]);
+  /* 전부 화이트리스트 안에 있어야 주소를 만들 수 있다 */
+  for (const t of [...blocked, ...STAFF_CASCADE]) assert.ok(isAllowedTable(t));
+});
+
+test("★ 한 줄 지우기는 직원 전용이고 uuid 만 받는다", () => {
+  const route = fs.readFileSync(
+    path.join(process.cwd(), "src/app/api/data/[table]/route.ts"),
+    "utf-8",
+  );
+  assert.ok(route.includes('searchParams.get("id")'), "한 줄 지우는 길이 없다");
+  /* 다른 표에 열어주면 «어느 줄이든 지우는 길» 이 된다 — 덮어쓰기 규율이 무너진다 */
+  assert.ok(route.includes('table !== "staff"'), "직원 말고 다른 표도 지울 수 있다");
+  assert.ok(route.includes("UUID_RE.test"), "직원 번호를 검사하지 않는다");
+  /* 기록 수를 못 물어봤을 때 0 으로 치면 지우면 안 될 것을 지운다 */
+  assert.ok(route.includes("n === null"), "못 물어본 것을 «기록 없음» 으로 읽는다");
+});
+
+test("★ 근무표 화면이 서버까지 지운다 — 그리고 거절당하면 태블릿에서도 안 지운다", () => {
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "src/components/RosterView.tsx"),
+    "utf-8",
+  );
+  const del = src.indexOf("await deleteStaff(id)");
+  const local = src.indexOf("data.staff.filter((s) => s.id !== id)");
+  assert.ok(del > 0, "서버를 안 지운다 — 지운 직원이 되살아난다");
+  assert.ok(local > del, "태블릿을 먼저 지우면 거절당했을 때 어긋난다");
+  /* 거절 이유를 삼키지 않는다. 화면이 그 문장을 띄워야 사장님이 알 수 있다 */
+  assert.ok(src.includes("setRemoveError(r.reason)"), "거절 이유를 안 보여준다");
 });
 
 /* ------------------------------------------------------------------ *

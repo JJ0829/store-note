@@ -261,6 +261,37 @@ export async function pushStaff(list: Staff[]): Promise<SyncResult> {
   return put("staff", list.map(staffToRow));
 }
 
+/**
+ * 직원 한 명을 **서버에서도** 지운다 (2026-09-17).
+ *
+ * ★ 이것이 없던 동안, 명단에서 뺀 직원이 다음에 화면을 열면 되살아났다 —
+ *   태블릿만 지우고 서버에 그대로 두면 「서버에 줄이 있으면 서버가 이긴다」
+ *   규칙이 도로 가져온다. 사장님이 «계속 삭제하는데도 안 지워진다» 고 한 것이 이것이다.
+ *
+ * ★ 출퇴근·근로계약이 있는 직원은 **서버가 거절한다** (3년 보관). 그때 오는
+ *   `reason` 은 사람이 읽는 문장이라 화면이 그대로 띄우면 된다.
+ *
+ * ★ 로그인 안 했으면 `SKIP`. 서버를 안 쓰는 매장은 태블릿에서 지우면 끝이다.
+ */
+export async function deleteStaff(id: string, retry = true): Promise<SyncResult> {
+  try {
+    const res = await fetch(`/api/data/staff?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    const body = (await res.json().catch(() => null)) as
+      | { ok?: boolean; deleted?: number; reason?: string }
+      | null;
+    if (res.ok && body?.ok) return { ok: true, rows: body.deleted ?? 0 };
+    const why = body?.reason ?? "";
+    /* 토큰만 낡았다 — 갱신시키고 한 번 더. 두 번은 안 간다 */
+    if (retry && why === "stale" && (await nudge())) return deleteStaff(id, false);
+    if (SKIP_REASONS.has(why)) return { ok: false, reason: SKIP };
+    return { ok: false, reason: why || `지우지 못했습니다 (${res.status})` };
+  } catch {
+    return { ok: false, reason: "서버에 연결하지 못했습니다" };
+  }
+}
+
 export async function pullPunches(): Promise<PunchData | null> {
   const rows = await get("punches");
   return rows ? nestPunches(rows.map((r) => rowToPunch(r as Row))) : null;
