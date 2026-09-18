@@ -175,9 +175,14 @@ export async function PUT(request: Request, ctx: Ctx) {
  *   되살아나는 것이 그 증상이다.
  *
  * ★ 이 매장 것만 지운다 — `store_id` 를 서버가 붙이고 RLS 가 한 번 더 본다.
- *   본문은 받지 않는다. «어느 줄» 을 고를 수 없고 «이 표 전부» 만 된다.
  * ★ 화면을 열 때 자동으로 부르는 곳은 없다. 확인 화면 뒤의 버튼 하나뿐이다
  *   (`tests/serverSync.test.ts` 가 화면 넷이 안 부르는지 본다).
+ *
+ * ★★ 2026-09-18 — **줄 몇 개만 지우는 길**을 더했다 (`?ids=a,b,c`).
+ *   그전까지 지우는 길이 «표 전부» 뿐이라, 화면에서 직원이나 거래처를 지워도
+ *   **서버에는 그대로 남았다.** 그리고 다음에 화면을 열면 pull 이 그것을
+ *   도로 가져와서 **지운 것이 되살아났다.**
+ *   `ids` 가 있으면 그것만, 없으면 지금까지처럼 이 표 전부를 지운다.
  * ------------------------------------------------------------------ */
 export async function DELETE(request: Request, ctx: Ctx) {
   if (!authConfigured()) return bad("not-configured", 409);
@@ -191,10 +196,24 @@ export async function DELETE(request: Request, ctx: Ctx) {
   const key = process.env.SUPABASE_ANON_KEY;
   if (!url || !key) return bad("not-configured", 409);
 
+  /* ★ `?ids=a,b,c` 가 있으면 그 줄만 지운다. 없으면 이 표 전부 (되돌리기) */
+  const ids = (new URL(request.url).searchParams.get("ids") ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  /* 빈 목록으로 오면 «전부 지우기» 로 새지 않게 아무것도 안 한다 —
+     지우기에서 «아무것도 안 고름» 과 «전부» 를 같게 두면 사고가 난다 */
+  if (new URL(request.url).searchParams.has("ids") && ids.length === 0) {
+    return Response.json({ ok: true, deleted: 0 });
+  }
+  const pick = ids.length
+    ? `&id=in.(${ids.map((x) => encodeURIComponent(x)).join(",")})`
+    : "";
+
   let res: Response;
   try {
     res = await fetch(
-      `${url}/rest/v1/${table}?store_id=eq.${encodeURIComponent(who.storeId)}&select=store_id`,
+      `${url}/rest/v1/${table}?store_id=eq.${encodeURIComponent(who.storeId)}${pick}&select=store_id`,
       {
         method: "DELETE",
         headers: {

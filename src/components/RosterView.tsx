@@ -20,7 +20,6 @@ import {
 } from "@/lib/roster";
 import ShiftEditor from "@/components/ShiftEditor";
 import WorkSwitch from "@/components/WorkSwitch";
-import { pullRoster, pushRoster } from "@/lib/serverSync";
 import {
   applyShiftEdits,
   loadShiftEdits,
@@ -29,7 +28,9 @@ import {
 import type { Shift } from "@/lib/types";
 import { maskEmail, maskPhone } from "@/lib/maskContact";
 import { sendViaServer, type Failed } from "@/lib/rosterMail";
-import { SKIP, hasRows, pullStaff, pushStaff } from "@/lib/serverSync";
+import { SKIP, deleteRows, hasRows, pullRoster, pushRoster } from "@/lib/serverSync";
+import { loadPunches } from "@/lib/attendance";
+import { loadContracts } from "@/lib/contracts";
 
 /** 「메일로 보내기」 의 진행 상태. 서버 메일(Resend)이 설정돼 있을 때만 움직인다 */
 type MailState =
@@ -187,9 +188,32 @@ export default function RosterView({
     delete assign[id];
     const staff = data.staff.filter((s) => s.id !== id);
     persist({ staff, assign });
-    /* ⚠️ 서버 쪽 줄은 지우지 않는다 — `/api/data` 는 덮어쓰기만 한다.
-       (늦게 연 기기가 다른 기기의 기록을 지우는 사고를 막기 위해서다)
-       올리는 것은 위의 `persist` 가 이미 했다. */
+    /* ★ 2026-09-18 — 서버에서도 지운다.
+       그전에는 «덮어쓰기만 한다» 는 이유로 서버 줄을 남겨뒀는데, 그러면
+       다음에 화면을 열 때 pull 이 도로 가져와서 **지운 직원이 되살아난다.**
+       출퇴근·근로계약이 그 사람을 가리키므로 **그것부터 지운다** —
+       거꾸로 하면 외래키가 거부한다.
+       ⚠️ 출퇴근·근로계약은 법정 3년 보존 대상이다. 그래서 «명단에서 빼기» 가
+         기록까지 지운다는 것을 확인 문구에 적어 뒀다. */
+    void (async () => {
+      const punchIds = Object.values(loadPunches()[id] ?? {}).map((p) => p.id);
+      const contractIds = loadContracts()
+        .filter((c) => c.staffId === id)
+        .map((c) => c.id);
+      for (const [table, ids] of [
+        ["shift_assignments", [id]],
+        ["punches", punchIds],
+        ["contracts", contractIds],
+        ["staff", [id]],
+      ] as Array<[string, string[]]>) {
+        const r = await deleteRows(table, ids);
+        if (!r.ok && r.reason !== SKIP) {
+          save.report("직원 지우기(서버)", false);
+          return;
+        }
+      }
+      save.report("직원 지우기(서버)", true);
+    })();
   }
 
   function setShift(staffId: string, date: string, shift: string) {

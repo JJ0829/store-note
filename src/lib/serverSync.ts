@@ -643,22 +643,61 @@ export async function pullVendors(): Promise<VendorData | null> {
  *   「보내지 못했습니다」 로만 보여서 원인을 못 찾는다.
  */
 export async function pushVendors(data: VendorData): Promise<SyncResult> {
+  /* ★★ 2026-09-18 — **문제 있는 품목 하나가 전부를 막고 있었다.**
+     전에는 단위를 모르는 품목이 하나라도 있으면 여기서 바로 돌아가서
+     **거래처조차 한 줄도 안 올라갔다.** 화면은 「보내지 못했습니다」 한 줄뿐이라
+     사장님은 거래처를 넣었는데 서버가 비어 있는 이유를 알 수 없었다.
+     이제 **성한 것은 올리고, 못 올린 것만 이름을 대고 말한다.** */
   const bad = unknownUnitItems(data.items);
-  if (bad.length > 0) {
-    const what = bad.map((i) => `${i.name}(${i.packUnit})`).join(", ");
-    return {
-      ok: false,
-      reason: `${what} 의 단위를 서버가 모릅니다. ${SERVER_UNITS.join(" · ")} 중에서 골라 주세요.`,
-    };
-  }
+  const ok = data.items.filter((i) => !bad.includes(i));
 
   const v = await put("suppliers", data.vendors.map(vendorToRow));
   if (!v.ok) return v;
 
-  const i = await put("items", data.items.map(itemToRow));
+  const i = await put("items", ok.map(itemToRow));
   if (!i.ok) return i;
 
-  return put("item_versions", data.items.map(itemVersionToRow));
+  const ver = await put("item_versions", ok.map(itemVersionToRow));
+  if (!ver.ok) return ver;
+
+  if (bad.length > 0) {
+    const what = bad.map((x) => `${x.name || "(이름 없음)"}(${x.packUnit})`).join(", ");
+    return {
+      ok: false,
+      reason: `거래처는 올렸습니다. 다만 ${what} 의 단위를 서버가 모릅니다 — ${SERVER_UNITS.join(" · ")} 중에서 골라 주세요.`,
+    };
+  }
+  return { ok: true, rows: data.vendors.length + ok.length };
+}
+
+/* ------------------------------------------------------------------ *
+ * 줄 몇 개만 지우기 (2026-09-18)
+ *
+ * ★ 그전까지 지우는 길이 «표 전부» 뿐이었다. 그래서 화면에서 직원이나
+ *   거래처를 지워도 **서버에는 그대로 남고**, 다음에 화면을 열면 pull 이
+ *   그것을 도로 가져와서 **지운 것이 되살아났다.**
+ *
+ * ★ 실패해도 화면을 막지 않는다 — 태블릿에서는 이미 지워졌다. 다만
+ *   조용히 넘어가지도 않는다. 화면이 「서버에서 못 지웠다」 를 말한다.
+ * ------------------------------------------------------------------ */
+export async function deleteRows(
+  table: string,
+  ids: string[],
+): Promise<SyncResult> {
+  if (ids.length === 0) return { ok: true, rows: 0 };
+  try {
+    const q = encodeURIComponent(ids.join(","));
+    const res = await fetch(`/api/data/${table}?ids=${q}`, { method: "DELETE" });
+    const body = (await res.json().catch(() => null)) as
+      | { ok?: boolean; deleted?: number; reason?: string }
+      | null;
+    if (res.ok && body?.ok) return { ok: true, rows: body.deleted ?? 0 };
+    const why = body?.reason ?? "";
+    if (SKIP_REASONS.has(why)) return { ok: false, reason: SKIP };
+    return { ok: false, reason: why || `서버에서 못 지웠습니다 (${res.status})` };
+  } catch {
+    return { ok: false, reason: "서버에 연결하지 못했습니다" };
+  }
 }
 
 /* ------------------------------------------------------------------ *

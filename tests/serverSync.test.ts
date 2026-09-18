@@ -489,9 +489,13 @@ test("★ 사는 물건은 purchased 다 — 아니면 체크 제약에 걸린�
   assert.equal(itemToRow(i).kind, "purchased");
 });
 
-test("★ 서버가 모르는 단위는 «무엇을 고르라» 고 말한다", async () => {
-  /* 앱은 `장`·`팩`·`봉` 도 받지만 서버 `units` 에는 없다. 그냥 보내면
-     외래키에 걸려 「보내지 못했습니다」 로만 보인다 */
+test("★ 서버가 모르는 단위를 골라낸다 (앱은 `장·팩·봉` 도 받는다)", () => {
+  /* 서버 `units` 에 없는 단위는 외래키에 걸려 거절당하는데, 화면에는
+     「보내지 못했습니다」 로만 보인다. 그래서 미리 골라낸다.
+
+     ★ 2026-09-18 — 예전에는 이런 품목이 하나라도 있으면 `pushVendors` 가
+       첫 줄에서 돌아가서 **거래처조차 한 줄도 안 올라갔다.** 지금은
+       성한 것을 먼저 올리고 못 올린 것만 이름을 댄다 (아래 별도 테스트). */
   const bad: VendorItem = {
     id: newUuid(), vendorId: newUuid(), name: "김",
     packAmount: 10, packUnit: "봉", packPrice: 5000, note: "",
@@ -500,12 +504,7 @@ test("★ 서버가 모르는 단위는 «무엇을 고르라» 고 말한다", 
 
   assert.deepEqual(unknownUnitItems([bad, good]), [bad]);
   assert.deepEqual(unknownUnitItems([good]), []);
-
-  const r = await pushVendors({ vendors: [], items: [bad, good] });
-  assert.equal(r.ok, false);
-  assert.ok(!r.ok && r.reason.includes("김"), "어느 품목인지 말해야 한다");
-  assert.ok(!r.ok && r.reason.includes("봉"), "어느 단위가 문제인지 말해야 한다");
-  assert.ok(!r.ok && !r.reason.includes("소금"), "멀쩡한 품목까지 탓하면 안 된다");
+  assert.deepEqual(unknownUnitItems([]), []);
 });
 
 test("★ 시연 데이터의 거래처·품목 id 가 uuid 다", () => {
@@ -578,5 +577,62 @@ test("★ 비우는 순서 — 배정이 직원·조보다 먼저다", () => {
   assert.ok(
     order.indexOf("shift_assignments") < order.indexOf("shifts"),
     "배정을 근무조보다 나중에 비우면 외래키에 걸린다",
+  );
+});
+
+/* ------------------------------------------------------------------ *
+ * 지우기 · 부분 실패 (2026-09-18)
+ * ------------------------------------------------------------------ */
+
+test("★★ 단위를 모르는 품목이 있어도 거래처는 올라간다", async () => {
+  /* 2026-09-18 실측 — 거래처를 넣었는데 서버가 0줄이었다. 단위를 모르는
+     품목 하나 때문에 `pushVendors` 가 첫 줄에서 돌아가서 **거래처조차
+     한 줄도 안 올라갔다.** 화면은 「보내지 못했습니다」 한 줄뿐이라
+     사장님이 원인을 알 수 없었다. */
+  const src = fs
+    .readFileSync(path.join(process.cwd(), "src/lib/serverSync.ts"), "utf-8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const body = src.slice(src.indexOf("export async function pushVendors"));
+  const end = body.indexOf("\n}");
+  const fn = body.slice(0, end);
+
+  /* 단위 검사가 **거래처를 올린 뒤**에 판정해야 한다 */
+  assert.ok(
+    fn.indexOf('put("suppliers"') < fn.indexOf("bad.length > 0"),
+    "단위가 이상하면 거래처도 못 올라간다 — 성한 것은 먼저 올려야 한다",
+  );
+  assert.match(fn, /filter\(\(i\) => !bad\.includes\(i\)\)/, "성한 품목만 골라내지 않는다");
+});
+
+test("★ 지우기는 «고른 줄» 과 «표 전부» 를 구별한다", () => {
+  /* `?ids=` 가 비어 있는데 «전부» 로 새면 표가 통째로 날아간다 */
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "src/app/api/data/[table]/route.ts"),
+    "utf-8",
+  );
+  assert.match(src, /searchParams\.has\("ids"\)/, "ids 가 있는지 자체를 안 본다");
+  assert.match(src, /id=in\.\(/, "고른 줄만 지우는 길이 없다");
+});
+
+test("★★ 화면에서 지우면 서버에서도 지운다 — 안 그러면 되살아난다", () => {
+  /* pull 이 서버 줄을 도로 가져오므로, 서버에 남겨두면 지운 것이 돌아온다 */
+  const roster = fs.readFileSync(
+    path.join(process.cwd(), "src/components/RosterView.tsx"), "utf-8");
+  const vendor = fs.readFileSync(
+    path.join(process.cwd(), "src/components/VendorView.tsx"), "utf-8");
+
+  assert.match(roster, /deleteRows\(/, "직원을 지워도 서버에 남는다");
+  assert.match(vendor, /deleteRows\(/, "거래처를 지워도 서버에 남는다");
+
+  /* ★ 가리키는 쪽을 먼저 지운다 — 거꾸로면 외래키가 거부한다 */
+  const r = roster.slice(roster.indexOf("function removeStaff"));
+  assert.ok(
+    r.indexOf('"punches"') < r.indexOf('"staff"'),
+    "출퇴근보다 직원을 먼저 지우면 외래키에 걸린다",
+  );
+  const v = vendor.slice(vendor.indexOf("function removeVendor"));
+  assert.ok(
+    v.indexOf('"items"') < v.indexOf('"suppliers"'),
+    "품목보다 거래처를 먼저 지우면 외래키에 걸린다",
   );
 });

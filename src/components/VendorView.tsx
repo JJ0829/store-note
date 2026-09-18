@@ -29,7 +29,7 @@ import {
 } from "@/lib/vendors";
 import { WEEKDAY } from "@/lib/roster";
 import { loadOrderLinks, saveOrderLinks } from "@/lib/orders";
-import { SKIP, hasRows, pullVendors, pushVendors } from "@/lib/serverSync";
+import { SKIP, hasRows, pullVendors, pushVendors, deleteRows } from "@/lib/serverSync";
 import { loadSettings, saveSettings, type Settings } from "@/lib/settings";
 
 /* ------------------------------------------------------------------ *
@@ -167,10 +167,33 @@ export default function VendorView({
       ? `${gwa(v?.name ?? "")} 등록된 품목 ${mine}개를 지웁니다. 그 품목을 쓰는 레시피는 원가가 다시 빈칸이 됩니다.`
       : `${eul(v?.name ?? "")} 지웁니다.`;
     if (!window.confirm(msg)) return;
+    const goneItems = data!.items.filter((i) => i.vendorId === id).map((i) => i.id);
     commit({
       vendors: data!.vendors.filter((x) => x.id !== id),
       items: data!.items.filter((i) => i.vendorId !== id),
     });
+    /* ★ 서버에서도 지운다 (2026-09-18). 안 지우면 다음에 화면을 열 때
+       pull 이 도로 가져와서 **지운 거래처가 되살아난다.**
+       순서는 단가 → 품목 → 거래처 (가리키는 쪽이 먼저). */
+    void removeOnServer([
+      ["item_versions", goneItems],
+      ["items", goneItems],
+      ["suppliers", [id]],
+    ]);
+  }
+
+  /** 서버에서 줄을 지운다. 실패해도 화면은 막지 않지만 조용히 넘어가지도 않는다 */
+  function removeOnServer(jobs: Array<[string, string[]]>) {
+    void (async () => {
+      for (const [table, ids] of jobs) {
+        const r = await deleteRows(table, ids);
+        if (!r.ok && r.reason !== SKIP) {
+          save.report("거래처 지우기(서버)", false);
+          return;
+        }
+      }
+      save.report("거래처 지우기(서버)", true);
+    })();
   }
 
   function addItem(vendorId: string, name = "") {
@@ -189,6 +212,7 @@ export default function VendorView({
 
   function removeItem(id: string) {
     commit({ ...data!, items: data!.items.filter((i) => i.id !== id) });
+    void removeOnServer([["item_versions", [id]], ["items", [id]]]);
   }
 
   return (
