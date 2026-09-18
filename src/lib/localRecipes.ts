@@ -1,4 +1,5 @@
 import type { Recipe } from "./types";
+import { newUuid } from "./store.ts";
 
 /* ------------------------------------------------------------------ *
  * 매장에서 직접 추가한 레시피.
@@ -102,6 +103,60 @@ export function isLocal(recipe: Recipe): boolean {
   return recipe.id.startsWith(LOCAL_PREFIX);
 }
 
+/**
+ * ★ 2026-09-18 — **뒤가 uuid 다.**
+ *
+ *   전에는 `my-a1b2c3d4` 였는데, 서버의 id 칸은 전부 uuid 라 **한 줄도 안
+ *   올라갔다.** 아무 오류도 안 뜬다 — 직원(9/16)·거래처(9/17)에서 이미 두 번
+ *   당한 것과 같은 함정이고 이게 세 번째다.
+ *
+ *   `my-` 접두사는 그대로 둔다. 그게 «내가 추가한 것» 을 가리는 표시이고
+ *   (`isLocal`), 접두사만 떼면 그대로 서버 id 가 된다 — 되돌리기도 된다.
+ */
 export function newLocalId(): string {
-  return LOCAL_PREFIX + Math.random().toString(36).slice(2, 10);
+  return LOCAL_PREFIX + newUuid();
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** 서버에 보낼 수 있는 꼴인가 — 옛 레시피는 아니다 */
+export function serverReady(r: Recipe): boolean {
+  if (!UUID.test(r.id.slice(LOCAL_PREFIX.length))) return false;
+  return r.sections.every(
+    (sec) => UUID.test(sec.id) && sec.steps.every((st) => UUID.test(st.id)),
+  );
+}
+
+/** 옛 꼴이 하나라도 있나 */
+export function needsRecipeIdMigration(list: Recipe[]): boolean {
+  return list.some((r) => !serverReady(r));
+}
+
+/**
+ * 옛 id 를 uuid 로 옮긴다. **사장님이 다시 입력할 일은 없어야 한다.**
+ *
+ * ★ 레시피·섹션·스텝 셋 다 바꾼다. 스텝 id 는 사진 파일 이름의 앞부분이라
+ *   (`MediaSlot`) 바꾸면 이미 넣어둔 사진과 이름이 어긋난다 — 그래서
+ *   **이미 uuid 인 것은 건드리지 않는다.** 옛 레시피에 사진이 붙어 있을
+ *   가능성은 낮지만(추가 화면에 사진 칸이 없다) 그래도 규칙은 지킨다.
+ */
+export function migrateRecipeIds(list: Recipe[]): Recipe[] {
+  return list.map((r) => {
+    if (serverReady(r)) return r;
+    const rid = UUID.test(r.id.slice(LOCAL_PREFIX.length))
+      ? r.id
+      : LOCAL_PREFIX + newUuid();
+    return {
+      ...r,
+      id: rid,
+      sections: r.sections.map((sec) => ({
+        ...sec,
+        id: UUID.test(sec.id) ? sec.id : newUuid(),
+        steps: sec.steps.map((st) => ({
+          ...st,
+          id: UUID.test(st.id) ? st.id : newUuid(),
+        })),
+      })),
+    };
+  });
 }

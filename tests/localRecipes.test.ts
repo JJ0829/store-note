@@ -191,7 +191,7 @@ test("newLocalId 는 매번 다르다 (100번 뽑아 중복 없음)", () => {
 test("newLocalId 는 URL·파일명에 안전한 문자만 쓴다", () => {
   // ?id= 로 주소에 실린다 (`/r/my?id=...`)
   for (let i = 0; i < 30; i++) {
-    assert.match(newLocalId(), /^my-[a-z0-9]+$/);
+    assert.match(newLocalId(), /^my-[a-z0-9-]+$/);
   }
 });
 

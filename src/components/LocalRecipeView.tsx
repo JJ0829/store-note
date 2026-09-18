@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import RecipeDetail from "@/components/RecipeDetail";
 import { getLocalRecipe, removeLocalRecipe } from "@/lib/localRecipes";
+import { deleteRows, lineId, serverRecipeId } from "@/lib/serverSync";
 import type { Recipe } from "@/lib/types";
 
 export default function LocalRecipeView({ storeName }: { storeName: string }) {
@@ -54,6 +55,24 @@ export default function LocalRecipeView({ storeName }: { storeName: string }) {
               );
               return;
             }
+            /* ★ 서버에서도 지운다 (2026-09-18). 안 지우면 다음에 화면을 열 때
+               **서버 사본이 이겨서 지운 레시피가 되살아난다** — 같은 일을
+               출퇴근(9/18)·거래처(9/15)에서 이미 겪었다.
+               지우는 순서는 매다는 순서의 반대다: 스텝 → 섹션 → 재료 줄 → 판.
+               ⚠️ **cascade 가 없다**(`confdeltype = 'a'`). 재료 줄을 남겨두고
+               판을 지우면 외래키가 거부하고, 그 실패는 아무데도 안 뜬다.
+               줄 id 는 «레시피 + 재료 이름» 에서 정해지므로 다시 만들 수 있다.
+               품목(`items`)은 안 지운다 — 다른 레시피가 쓰고 있을 수 있다. */
+            const vid = serverRecipeId(recipe.id);
+            const secIds = recipe.sections.map((x) => x.id);
+            const stepIds = recipe.sections.flatMap((x) => x.steps.map((y) => y.id));
+            const lineIds = recipe.ingredients.map((g) => lineId(recipe.id, g.name));
+            void (async () => {
+              await deleteRows("steps", stepIds);
+              await deleteRows("sections", secIds);
+              await deleteRows("make_recipe_lines", lineIds);
+              await deleteRows("make_recipe_versions", [vid]);
+            })();
             router.push("/r");
           }}
           className="w-full rounded-xl border border-red-300 py-3 text-[13px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400"

@@ -1,10 +1,12 @@
 import type { Punch, PunchData } from "./attendance.ts";
 import type { Contract } from "./contracts.ts";
 import type { Assign, RosterData, Staff } from "./roster.ts";
-import type { Shift } from "./types.ts";
+import type { Recipe, Shift } from "./types.ts";
 import type { DaySales, SalesData } from "./sales.ts";
 import type { Vendor, VendorData, VendorItem } from "./vendors.ts";
 import { familyOf } from "./units.ts";
+import { newUuid } from "./store.ts";
+import { LOCAL_PREFIX, serverReady } from "./localRecipes.ts";
 
 /* ------------------------------------------------------------------ *
  * 브라우저 ↔ 서버 — 매장 데이터를 옮기는 층
@@ -430,6 +432,14 @@ export const REPLACE_DELETE_ORDER = [
   "staff",
   "shifts",
   "daily_sales",
+  /* ★ 레시피는 품목보다 먼저다 (2026-09-18). 판이 품목을 가리키고
+     (`make_recipe_versions.item_id`), 재료 줄도 품목을 가리킨다.
+     그리고 **cascade 가 없다**(`confdeltype = 'a'`) — 자식을 안 지우고
+     부모를 지우면 외래키가 거부한다 */
+  "steps",
+  "sections",
+  "make_recipe_lines",
+  "make_recipe_versions",
   "item_versions",
   "items",
   "suppliers",
@@ -445,6 +455,10 @@ const TABLE_LABEL: Record<(typeof REPLACE_DELETE_ORDER)[number], string> = {
   suppliers: "거래처",
   shift_assignments: "근무 배정",
   shifts: "근무조",
+  steps: "레시피 순서",
+  sections: "레시피 구간",
+  make_recipe_lines: "레시피 재료",
+  make_recipe_versions: "레시피",
 };
 
 /** 표 하나를 통째로 비운다 — `replaceAll` 만 부른다 */
@@ -480,6 +494,11 @@ export type ReplaceInput = {
      위에서 비웠는데 다시 안 올리기 때문이다. 그러면 단가가 어긋나고
      원가율이 조용히 딴 값이 된다. */
   vendors?: VendorData;
+  /* ★ 거래처와 같은 이유로 레시피도 받는다. 위에서 비웠는데 다시 안 올리면
+     **사장님이 직접 넣은 레시피가 서버에서 사라진다.** 백업 파일에는
+     들어 있으므로(`BackupFile.recipes`) 잃지는 않지만, 화면을 다시 열기
+     전까지 서버가 비어 있는 것은 사고와 구별이 안 된다. */
+  recipes?: Recipe[];
 };
 
 export async function replaceAll(file: ReplaceInput): Promise<ReplaceResult> {
@@ -499,6 +518,10 @@ export async function replaceAll(file: ReplaceInput): Promise<ReplaceResult> {
     ["근로계약 올리기", () => pushContracts(file.contracts)],
     ["매출 올리기", () => pushSales(file.sales ?? {})],
     ["거래처 올리기", () => pushVendors(file.vendors ?? { vendors: [], items: [] })],
+    [
+      "레시피 올리기",
+      () => pushRecipes(file.recipes ?? [], file.vendors?.items ?? []),
+    ],
   ];
   const n: number[] = [];
   for (const [step, run] of steps) {
@@ -575,7 +598,7 @@ export function itemToRow(i: VendorItem): Row {
     /* 거래처에서 **사는** 것이다. 우리가 만드는 것(`made`)은 레시피 쪽이다 */
     kind: "purchased",
     base_unit: i.packUnit,
-    base_family: familyOf(i.packUnit),
+    base_family: serverFamily(i.packUnit),
   };
 }
 
@@ -589,7 +612,7 @@ export function itemVersionToRow(i: VendorItem): Row {
     per_unit: i.packAmount,
     pack_unit: i.packUnit,
     /* ★ `items.base_family` 와 같아야 한다 (외래키). 다르면 통째로 거절된다 */
-    pack_family: familyOf(i.packUnit),
+    pack_family: serverFamily(i.packUnit),
     validity: ALWAYS,
     note: i.note || null,
   };
@@ -616,6 +639,39 @@ export function rowsToItem(item: Row, version: Row | undefined): VendorItem {
  *   서버가 아는 것은 `g·kg·ml·L·개·ea` 뿐이다.
  */
 export const SERVER_UNITS = ["g", "kg", "ml", "L", "개", "ea"];
+
+/* ------------------------------------------------------------------ *
+ * ★★ 계열 이름이 앱과 서버에서 다르다 (2026-09-18 에 찾았다)
+ *
+ *   앱의 `familyOf("개")` 는 **`as:개`** 를 돌려준다. 모르는 단위는
+ *   «자기 자신하고만 같은 계열» 로 두는 규칙이라서다(`units.ts`) — 앱
+ *   안에서는 그게 맞다. g↔ml 을 막는 것과 같은 안전장치다.
+ *
+ *   그런데 **서버 `units` 표는 `개 → count`** 다. 그래서 그대로 보내면
+ *   외래키 `(base_unit, base_family) → units(code, family)` 가 거절한다.
+ *
+ *   ⛔ **이게 조용하다.** `unknownUnitItems` 는 단위 **코드**만 보므로
+ *   「개」 는 성한 것으로 통과하고, 거절은 서버에서 난다. 그리고
+ *   `pushVendors` 는 품목 한 줄이 거절되면 **묶음 전체**가 실패한다 —
+ *   즉 「개」 로 파는 품목 하나가 단가를 통째로 못 올리게 만든다.
+ *   2026-09-18 실측: 거래처 3줄은 올라갔는데 `items` 가 0줄이었다.
+ *
+ *   그래서 **보낼 때는 서버가 아는 이름으로 바꾼다.** 앱 안의 계열 규칙은
+ *   그대로 둔다 — 거기서는 `as:개` 가 맞다.
+ * ------------------------------------------------------------------ */
+const SERVER_FAMILY: Record<string, string> = {
+  g: "weight",
+  kg: "weight",
+  ml: "volume",
+  L: "volume",
+  "개": "count",
+  ea: "count",
+};
+
+/** 서버 `units` 표가 쓰는 계열 이름. 모르는 단위면 앱 것을 그대로 (어차피 걸러진다) */
+export function serverFamily(unit: string): string {
+  return SERVER_FAMILY[unit] ?? familyOf(unit);
+}
 
 export function unknownUnitItems(items: VendorItem[]): VendorItem[] {
   return items.filter((i) => !SERVER_UNITS.includes(i.packUnit));
@@ -875,4 +931,373 @@ export function takeVendors(
   save: (v: VendorData) => boolean,
 ): Promise<VendorData | null> {
   return take(pullVendors, save, (v) => hasRows(v.vendors) || hasRows(v.items));
+}
+
+export function takeRecipes(
+  save: (v: Recipe[]) => boolean,
+): Promise<Recipe[] | null> {
+  return take(pullRecipes, save, hasRows);
+}
+
+/* ------------------------------------------------------------------ *
+ * 레시피 (2026-09-18 · 이관순서 3단계)
+ *
+ * ★ **매장이 직접 추가한 레시피(`sop:recipes`)만** 올린다.
+ *   시드 레시피 14개는 앱에 실려 나가는 내용물이라 기기를 바꿔도 안
+ *   사라진다. 올리면 매장마다 같은 줄이 복제될 뿐이다.
+ *   사라질 위험이 있는 것은 사장님이 `/r/new` 로 넣은 것뿐이다.
+ *
+ * ★ 올리는 순서 — 어기면 외래키가 거부하고, 그 실패는 화면에
+ *   「보내지 못했습니다」 로만 보인다:
+ *
+ *     items(재료) → items(레시피 자신) → make_recipe_versions
+ *                → make_recipe_lines → sections → steps
+ *
+ * ★★ **레시피도 품목이고, 재료도 품목이다.**
+ *   여기가 이 단계에서 제일 헷갈리는 곳이다.
+ *   · `make_recipe_versions.item_id` — 이 레시피로 «만들어지는 것».
+ *     그래서 레시피마다 `items` 한 줄(`kind: "made"`)이 필요하다.
+ *   · `make_recipe_lines.ingredient_item_id` — 재료. NOT NULL 이다.
+ *     즉 스키마는 «재료는 이름이 아니라 품목» 이라고 본다. 앱이 이름으로
+ *     맞추는 것(`cost.ts`)과 다르다. 그래서 없는 재료는 품목으로 만들어 준다.
+ *     그러면 거래처 화면에 «단가를 모르는 재료» 로 나타나는데, 그건 사고가
+ *     아니라 **원가에서 빠지고 있는 재료의 목록**이라 오히려 봐야 한다.
+ *
+ * ⚠️ 단위 계열이 품목 기준 계열과 **같아야 한다**(`fk_mrl_*`). 같은 이름을
+ *   한 레시피에서는 g, 다른 데서는 ml 로 쓰면 그 줄은 통째로 거절된다 —
+ *   g↔ml 금지가 DB 에도 박혀 있는 것이다. 미리 걸러서 **이름을 대고 말한다.**
+ * ------------------------------------------------------------------ */
+
+/** 같은 재료 이름을 계열이 다른 단위로 쓴 것 — 서버가 거절한다 */
+export function conflictingIngredients(list: Recipe[]): string[] {
+  const seen = new Map<string, string>();
+  const bad = new Set<string>();
+  for (const r of list) {
+    for (const g of r.ingredients) {
+      /* ★ 앱 계열이 아니라 **서버 계열**로 본다 — 거절하는 쪽의 기준이 그것이다.
+         (`개` 와 `ea` 는 앱에서 다른 계열이지만 서버에서는 둘 다 count 다) */
+      const fam = serverFamily(g.unit);
+      const was = seen.get(g.name);
+      if (was === undefined) seen.set(g.name, fam);
+      else if (was !== fam) bad.add(g.name);
+    }
+  }
+  return [...bad];
+}
+
+/** 서버가 모르는 단위를 쓰는 레시피 — 품목으로 못 만든다 */
+export function unknownUnitRecipes(list: Recipe[]): Recipe[] {
+  return list.filter(
+    (r) =>
+      !SERVER_UNITS.includes(r.yield.unit) ||
+      r.ingredients.some((g) => !SERVER_UNITS.includes(g.unit)),
+  );
+}
+
+/**
+ * 재료 이름 → 품목 id.
+ *
+ * ★ 이미 있는 품목(거래처에서 산 것)은 **이름이 같으면 그것을 쓴다.**
+ *   새로 만들면 같은 재료가 둘이 되고, 단가가 붙은 쪽을 원가가 못 찾는다.
+ */
+export function ingredientItemIds(
+  list: Recipe[],
+  existing: VendorItem[],
+): Map<string, string> {
+  const byName = new Map<string, string>();
+  for (const i of existing) if (!byName.has(i.name)) byName.set(i.name, i.id);
+
+  const out = new Map<string, string>();
+  for (const r of list) {
+    for (const g of r.ingredients) {
+      if (out.has(g.name)) continue;
+      out.set(g.name, byName.get(g.name) ?? newUuid());
+    }
+  }
+  return out;
+}
+
+/** 재료를 품목 줄로. **없던 것만** 만든다 */
+export function ingredientItemRows(
+  list: Recipe[],
+  ids: Map<string, string>,
+  existing: VendorItem[],
+): Row[] {
+  const have = new Set(existing.map((i) => i.name));
+  const unit = new Map<string, string>();
+  for (const r of list) {
+    for (const g of r.ingredients) if (!unit.has(g.name)) unit.set(g.name, g.unit);
+  }
+  const rows: Row[] = [];
+  for (const [name, u] of unit) {
+    if (have.has(name)) continue;
+    rows.push({
+      id: ids.get(name),
+      supplier_id: null, // 어느 거래처에서 사는지는 아직 모른다
+      name,
+      /* ★ `made` 로 단정하지 않는다. 우리가 만드는지 사 오는지 앱은 모르고,
+         모르는 것을 앱이 단정하면 사장님이 그걸 믿는다 (CLAUDE.md).
+         표의 기본값이 `purchased` 이고 그게 재료의 보통 경우다. */
+      kind: "purchased",
+      base_unit: u,
+      base_family: serverFamily(u),
+    });
+  }
+  return rows;
+}
+
+/** 레시피 자신을 품목으로 — 이게 «만들어지는 것» 이다 */
+export function recipeItemRow(r: Recipe): Row {
+  return {
+    id: serverRecipeId(r.id),
+    supplier_id: null,
+    name: r.name,
+    category: r.category || null,
+    kind: "made", // 이건 단정해도 된다 — 레시피가 있다는 게 만든다는 뜻이다
+    base_unit: r.yield.unit,
+    base_family: serverFamily(r.yield.unit),
+  };
+}
+
+/**
+ * 앱 id → 서버 id. **`my-` 접두사만 뗀다.**
+ *
+ * ★ 앱은 `my-<uuid>` 로 들고 있다 — 접두사가 «내가 추가한 것» 을 가리는
+ *   표시이기 때문이다(`localRecipes.isLocal`). 서버 칸은 uuid 라 그대로는
+ *   못 넣는다. 떼고 붙이기만 하므로 **되돌리기도 그대로 된다.**
+ */
+export function serverRecipeId(appId: string): string {
+  return appId.startsWith(LOCAL_PREFIX) ? appId.slice(LOCAL_PREFIX.length) : appId;
+}
+
+/** 서버 id → 앱 id */
+export function appRecipeId(serverId: string): string {
+  return LOCAL_PREFIX + serverId;
+}
+
+/** 한 판만 쓴다 — 앱에는 「배합을 고친 이력」이 아직 없다 */
+function versionIdOf(recipeId: string): string {
+  return serverRecipeId(recipeId);
+}
+
+/**
+ * 재료 줄의 id — **같은 레시피의 같은 재료면 언제나 같은 값**이어야 한다.
+ *
+ * ★ 매번 새로 만들면(`newUuid()`) 올릴 때마다 같은 재료가 한 줄씩 쌓인다.
+ *   덮어쓰기(upsert)의 열쇠가 `id` 이기 때문이다. 그래서 «레시피 id + 재료
+ *   이름» 에서 **정해진 값**을 만든다. 되돌아올 때는 안 쓰므로 한 방향이면 된다.
+ *
+ * ★ FNV-1a 를 네 번 돌려 128비트를 채운다. 암호용이 아니라 «같은 입력이면
+ *   같은 값» 만 필요하다.
+ */
+export function lineId(recipeId: string, ingredient: string): string {
+  const seed = `${serverRecipeId(recipeId)}|${ingredient}`;
+  let hex = "";
+  for (let k = 0; k < 4; k++) {
+    let h = 0x811c9dc5 ^ k;
+    for (let i = 0; i < seed.length; i++) {
+      h ^= seed.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    hex += h.toString(16).padStart(8, "0");
+  }
+  // uuid 꼴로 끊는다 (판(version) 자리는 5 로 둔다 — 무작위가 아니라는 표시)
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    "5" + hex.slice(13, 16),
+    ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16) + hex.slice(17, 20),
+    hex.slice(20, 32),
+  ].join("-");
+}
+
+export function recipeToVersionRow(r: Recipe): Row {
+  return {
+    id: versionIdOf(r.id),
+    item_id: serverRecipeId(r.id),
+    version: 1,
+    /* ★ 배수 계산의 기준. `menu_recipe_versions` 에는 이 칸이 없어서
+       그쪽으로 올리면 이 값을 잃는다 — 그래서 `make_` 를 쓴다 */
+    yield_amount: r.yield.amount,
+    yield_unit: r.yield.unit,
+    yield_family: serverFamily(r.yield.unit),
+    /* 리드타임·되돌림은 **프렙 항목**이 들고 있고 레시피에는 없다.
+       비워 둔다 — 0 으로 채우면 «기다릴 것이 없다» 는 거짓말이 된다.
+       `recoverable` 은 NOT NULL 이라 표의 기본값(true)을 그대로 쓴다 */
+    lead_time_hours: null,
+    valid_from: "2000-01-01",
+    valid_to: null,
+    note: null,
+  };
+}
+
+export function recipeToLineRows(r: Recipe, ids: Map<string, string>): Row[] {
+  return r.ingredients.map((g) => ({
+    /* ★ 줄 id 를 매번 새로 만들면 올릴 때마다 재료가 쌓인다.
+       레시피 id + 재료 이름이 같으면 같은 줄이다 */
+    id: lineId(r.id, g.name),
+    version_id: versionIdOf(r.id),
+    ingredient_item_id: ids.get(g.name),
+    amount: g.amount,
+    unit: g.unit,
+    unit_family: serverFamily(g.unit),
+    /* 「추출량」처럼 사는 게 아니라 결과인 줄. 앱은 그것을 레시피가 아니라
+       `settings.excluded`(이름 목록)로 들고 있어서 6단계에서 같이 옮긴다 */
+    excluded_from_cost: false,
+  }));
+}
+
+export function recipeToSectionRows(r: Recipe): Row[] {
+  return r.sections.map((sec, n) => ({
+    id: sec.id,
+    position_id: null,
+    menu_recipe_version_id: null,
+    make_recipe_version_id: versionIdOf(r.id),
+    title: sec.title,
+    note: sec.note || null,
+    sort_order: n,
+  }));
+}
+
+export function recipeToStepRows(r: Recipe): Row[] {
+  const rows: Row[] = [];
+  for (const sec of r.sections) {
+    sec.steps.forEach((st, n) => {
+      rows.push({
+        id: st.id,
+        section_id: sec.id,
+        title: st.title,
+        descr: st.desc || null, // 서버 칸 이름은 `descr` 이다
+        tip: st.tip || null,
+        critical: st.critical,
+        good_image: st.goodImage || null,
+        bad_image: st.badImage || null,
+        video_url: st.videoUrl || null,
+        sort_order: n,
+      });
+    });
+  }
+  return rows;
+}
+
+/**
+ * 레시피를 올린다 — **성한 것은 올리고, 못 올린 것은 이름을 대고 말한다.**
+ *
+ * ★ 거래처(`pushVendors`)에서 배운 것을 그대로 지킨다. 전에는 문제 있는
+ *   품목 하나가 전부를 막아서 거래처조차 한 줄도 안 올라갔고, 화면에는
+ *   「보내지 못했습니다」 한 줄뿐이라 원인을 찾을 수 없었다.
+ */
+export async function pushRecipes(
+  list: Recipe[],
+  existingItems: VendorItem[],
+): Promise<SyncResult> {
+  const old = list.filter((r) => !serverReady(r));
+  const badUnit = unknownUnitRecipes(list);
+  const clash = conflictingIngredients(list);
+
+  const ok = list.filter(
+    (r) =>
+      serverReady(r) &&
+      !badUnit.includes(r) &&
+      !r.ingredients.some((g) => clash.includes(g.name)),
+  );
+
+  if (ok.length > 0) {
+    const ids = ingredientItemIds(ok, existingItems);
+
+    /* 재료 품목 → 레시피 품목 → 판 → 재료 줄 → 섹션 → 스텝.
+       한 단계라도 실패하면 **그 뒤는 보내지 않는다** — 외래키가 어차피
+       거부하고, 반쯤 올라간 상태가 제일 읽기 어렵다 */
+    const steps: Array<[string, Row[]]> = [
+      ["items", [...ingredientItemRows(ok, ids, existingItems), ...ok.map(recipeItemRow)]],
+      ["make_recipe_versions", ok.map(recipeToVersionRow)],
+      ["make_recipe_lines", ok.flatMap((r) => recipeToLineRows(r, ids))],
+      ["sections", ok.flatMap(recipeToSectionRows)],
+      ["steps", ok.flatMap(recipeToStepRows)],
+    ];
+    for (const [table, rows] of steps) {
+      const r = await put(table, rows);
+      if (!r.ok) return r;
+    }
+  }
+
+  const 못올림 = [
+    old.length > 0 && `${old.length}개는 옛 번호라 못 올렸습니다 (화면을 한 번 열면 바뀝니다)`,
+    badUnit.length > 0 &&
+      `${badUnit.map((r) => r.name).join(", ")} 의 단위를 서버가 모릅니다 (아는 것: ${SERVER_UNITS.join(" · ")})`,
+    clash.length > 0 &&
+      `${clash.join(", ")} 은 레시피마다 계열이 다른 단위로 적혀 있습니다 (g 과 ml 은 못 섞습니다)`,
+  ].filter(Boolean);
+
+  if (못올림.length > 0) {
+    return {
+      ok: false,
+      reason: `레시피 ${ok.length}개는 올렸습니다. 다만 ${못올림.join(" / ")}`,
+    };
+  }
+  return { ok: true, rows: ok.length };
+}
+
+/** 서버에 있는 레시피를 앱의 꼴로 */
+export async function pullRecipes(): Promise<Recipe[] | null> {
+  const [verRows, lineRows, itemRows, secRows, stepRows] = await Promise.all([
+    get("make_recipe_versions"),
+    get("make_recipe_lines"),
+    get("items"),
+    get("sections"),
+    get("steps"),
+  ]);
+  if (!verRows || !lineRows || !itemRows || !secRows || !stepRows) return null;
+
+  const itemById = new Map<string, Row>();
+  for (const r of itemRows as Row[]) itemById.set(str(r.id), r);
+
+  const linesByVersion = new Map<string, Row[]>();
+  for (const r of lineRows as Row[]) {
+    const k = str(r.version_id);
+    linesByVersion.set(k, [...(linesByVersion.get(k) ?? []), r]);
+  }
+  const stepsBySection = new Map<string, Row[]>();
+  for (const r of stepRows as Row[]) {
+    const k = str(r.section_id);
+    stepsBySection.set(k, [...(stepsBySection.get(k) ?? []), r]);
+  }
+  const order = (a: Row, b: Row) => num(a.sort_order) - num(b.sort_order);
+
+  return (verRows as Row[]).map((v) => {
+    const item = itemById.get(str(v.item_id));
+    const id = appRecipeId(str(v.item_id));
+    const mine = (secRows as Row[])
+      .filter((s) => str(s.make_recipe_version_id) === str(v.id))
+      .sort(order);
+    return {
+      id,
+      slug: id,
+      name: str(item?.name),
+      category: str(item?.category) || "기타",
+      yield: { amount: num(v.yield_amount), unit: str(v.yield_unit) },
+      forNewbie: false,
+      ingredients: (linesByVersion.get(str(v.id)) ?? []).map((l) => ({
+        name: str(itemById.get(str(l.ingredient_item_id))?.name),
+        amount: num(l.amount),
+        unit: str(l.unit),
+        note: null,
+      })),
+      sections: mine.map((sec) => ({
+        id: str(sec.id),
+        title: str(sec.title),
+        note: str(sec.note) || null,
+        steps: (stepsBySection.get(str(sec.id)) ?? []).sort(order).map((st) => ({
+          id: str(st.id),
+          title: str(st.title),
+          desc: str(st.descr),
+          tip: str(st.tip) || null,
+          critical: !!st.critical,
+          goodImage: str(st.good_image) || null,
+          badImage: str(st.bad_image) || null,
+          videoUrl: str(st.video_url) || null,
+        })),
+      })),
+    } satisfies Recipe;
+  });
 }

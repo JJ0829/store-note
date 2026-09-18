@@ -25,6 +25,29 @@ export const ALLOWED_TABLES = [
      (`shiftEdit.ts`) — 그래서 시드의 셋이 전부다. */
   "shifts",
   "shift_assignments",
+  /* 레시피 (2026-09-18 · 이관순서 3단계).
+     ★ **매장이 직접 추가한 레시피(`sop:recipes`)만** 여기로 간다.
+       시드 레시피는 앱에 실려 나가는 내용물이라 매장 DB 에 안 넣는다 —
+       기기를 바꿔도 안 사라지고, 넣으면 매장마다 같은 줄이 복제된다.
+
+     앱의 레시피 하나가 서버에서는 표 넷으로 갈라진다:
+       make_recipe_versions  «1배합이 얼마나 나오나» + 리드타임
+       make_recipe_lines     «무엇이 얼마나» — 재료
+       sections · steps      «어떻게 만드나» — 만드는 순서
+     그리고 레시피의 주인은 `items` 한 줄이다 (`kind: "made"`).
+
+     ★★ **`menu_` 가 아니라 `make_` 를 쓴다.** 둘 다 레시피 표인데
+       `menu_recipe_versions` 에는 **`yield` 칸이 없다** — 파는 메뉴는
+       «한 잔» 이 기준이라서다. 앱의 레시피는 전부 «1배합 = 몇 개» 를
+       들고 있고 **그 값이 배수 계산의 기준**이다. `menu_` 로 올리면
+       그것을 잃는다 — 이 제품이 종이를 이긴다고 말하는 바로 그 기능이다.
+       `make_recipe_versions` 는 `yield_amount/unit/family` 에 더해
+       `lead_time_hours` · `recoverable` 까지 갖고 있어 프렙과도 맞는다.
+       판매가는 6단계에서 `menu_prices` 로 따로 옮긴다. */
+  "make_recipe_versions",
+  "make_recipe_lines",
+  "sections",
+  "steps",
 ] as const;
 
 export type AllowedTable = (typeof ALLOWED_TABLES)[number];
@@ -59,4 +82,8 @@ export const CONFLICT_KEY: Record<AllowedTable, string> = {
   /* ★ 배정에는 id 가 없다. 기본키가 «매장+직원+날짜» 다 —
      id 로 맞추면 근무표를 고칠 때마다 같은 날 같은 사람이 두 줄이 된다 */
   shift_assignments: "store_id,staff_id,business_date",
+  make_recipe_versions: "id",
+  make_recipe_lines: "id",
+  sections: "id",
+  steps: "id",
 };

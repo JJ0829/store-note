@@ -7,7 +7,12 @@ import {
   countBrokenLocalRecipes,
   isLocal,
   loadLocalRecipes,
+  migrateRecipeIds,
+  needsRecipeIdMigration,
+  saveLocalRecipes,
 } from "@/lib/localRecipes";
+import { loadVendors } from "@/lib/vendors";
+import { SKIP, pushRecipes, takeRecipes } from "@/lib/serverSync";
 import type { Recipe } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -26,8 +31,31 @@ export default function RecipeSearch({ recipes }: { recipes: Recipe[] }) {
   const [broken, setBroken] = useState(0);
 
   useEffect(() => {
-    setMine(loadLocalRecipes());
+    /* ★ 옛 번호(`my-a1b2c3d4`)를 uuid 로 옮긴다 (2026-09-18).
+       서버 id 칸이 전부 uuid 라 옛 꼴은 **한 줄도 안 올라간다.** 직원·거래처에서
+       이미 두 번 당한 함정이고, 그때처럼 **사장님이 다시 입력할 일은 없게** 한다 —
+       화면을 한 번 열면 조용히 바뀐다. */
+    let list = loadLocalRecipes();
+    if (needsRecipeIdMigration(list)) {
+      const moved = migrateRecipeIds(list);
+      if (saveLocalRecipes(moved)) list = moved;
+    }
+    setMine(list);
     setBroken(countBrokenLocalRecipes());
+
+    /* ★ 서버에 사본이 있으면 그것으로 덮어쓴다. 없으면 이 기기 것을 올린다.
+       «빈 서버로 태블릿을 덮지 않는다» 는 출퇴근에서 배운 규칙이다
+       (2026-09-15 에 실제로 지워졌다). 로그인 안 했으면 아무 일도 안 일어난다. */
+    void takeRecipes(saveLocalRecipes).then((server) => {
+      if (server && server.length > 0) {
+        setMine(server);
+        return;
+      }
+      if (list.length === 0) return;
+      void pushRecipes(list, loadVendors().items).then((r) => {
+        if (!r.ok && r.reason !== SKIP) console.warn("레시피 서버 보관:", r.reason);
+      });
+    });
   }, []);
 
   const all = useMemo(() => [...recipes, ...mine], [recipes, mine]);

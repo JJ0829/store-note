@@ -1,33 +1,47 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { Recipe } from "../src/lib/types.ts";
 
 import {
+  REPLACE_DELETE_ORDER,
+  SERVER_UNITS,
+  SHIFT_UUID,
+  appRecipeId,
+  assignToRows,
+  conflictingIngredients,
   contractToRow,
   flattenPunches,
-  nestPunches,
-  punchToRow,
-  rowToContract,
-  rowToPunch,
-  oldStyleStaff,
-  pushContracts,
-  pushStaff,
-  readyContracts,
-  rowToStaff,
   hasRows,
-  REPLACE_DELETE_ORDER,
-  rowToSales,
-  rowToVendor,
-  rowsToItem,
+  ingredientItemIds,
+  ingredientItemRows,
   itemToRow,
   itemVersionToRow,
+  lineId,
+  nestPunches,
+  oldStyleStaff,
+  punchToRow,
+  pushContracts,
+  pushStaff,
   pushVendors,
-  unknownUnitItems,
-  vendorToRow,
-  SHIFT_UUID,
-  assignToRows,
+  readyContracts,
+  recipeItemRow,
+  recipeToSectionRows,
+  recipeToStepRows,
+  recipeToVersionRow,
+  rowToContract,
+  rowToPunch,
+  rowToSales,
+  rowToStaff,
+  rowToVendor,
   rowsToAssign,
+  rowsToItem,
   salesToRow,
+  serverFamily,
+  serverRecipeId,
   staffToRow,
+  unknownUnitItems,
+  unknownUnitRecipes,
+  vendorToRow,
 } from "../src/lib/serverSync.ts";
 import { ALLOWED_TABLES, CONFLICT_KEY, isAllowedTable } from "../src/lib/serverData.ts";
 import fs from "node:fs";
@@ -645,4 +659,146 @@ test("★★ 화면에서 지우면 서버에서도 지운다 — 안 그러면 
     v.indexOf('"items"') < v.indexOf('"suppliers"'),
     "품목보다 거래처를 먼저 지우면 외래키에 걸린다",
   );
+});
+
+/* ------------------------------------------------------------------ *
+ * 레시피 (2026-09-18 · 이관순서 3단계)
+ * ------------------------------------------------------------------ */
+
+const 레시피: Recipe = {
+  id: "my-11111111-2222-3333-4444-555555555555",
+  slug: "my-11111111-2222-3333-4444-555555555555",
+  name: "딸기라떼",
+  category: "음료",
+  yield: { amount: 1, unit: "개" },
+  forNewbie: false,
+  ingredients: [
+    { name: "우유", amount: 200, unit: "ml", note: null },
+    { name: "딸기청", amount: 30, unit: "ml", note: null },
+  ],
+  sections: [
+    {
+      id: "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa",
+      title: "만드는 순서",
+      note: null,
+      steps: [
+        {
+          id: "bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+          title: "청을 잔에 먼저",
+          desc: "층이 생긴다",
+          tip: null,
+          critical: false,
+          goodImage: null,
+          badImage: null,
+          videoUrl: null,
+        },
+      ],
+    },
+  ],
+};
+
+test("★★ 레시피는 `make_` 로 간다 — `menu_` 에는 1배합 수량 칸이 없다", () => {
+  /* 이게 이 단계에서 제일 중요한 판단이다. 둘 다 레시피 표인데
+     `menu_recipe_versions` 에는 yield 칸이 없다(파는 메뉴는 «한 잔» 기준).
+     앱의 레시피는 전부 «1배합 = 몇 개» 를 들고 있고 그게 배수 계산의
+     기준이다 — `menu_` 로 올리면 그 값을 잃는다. */
+  const v = recipeToVersionRow(레시피);
+  assert.equal(v.yield_amount, 1, "1배합 수량이 안 실렸다");
+  assert.equal(v.yield_unit, "개");
+  assert.equal(v.yield_family, "count", "계열이 안 맞으면 외래키가 거절한다");
+  assert.ok("item_id" in v, "make_recipe_versions 는 item_id 로 품목을 가리킨다");
+});
+
+test("★ 앱 id 의 `my-` 를 떼면 서버 id 다 — 되돌리기도 된다", () => {
+  assert.equal(serverRecipeId(레시피.id), "11111111-2222-3333-4444-555555555555");
+  assert.equal(appRecipeId(serverRecipeId(레시피.id)), 레시피.id);
+  /* 서버 칸은 전부 uuid 다. 옛 꼴(`my-a1b2c3d4`)은 한 줄도 안 올라간다 —
+     직원·거래처에서 두 번 당한 함정이고 이게 세 번째였다 */
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  assert.match(serverRecipeId(레시피.id), UUID);
+  assert.match(String(recipeItemRow(레시피).id), UUID);
+});
+
+test("★★ 재료 줄 id 는 정해진 값이다 — 매번 새로 만들면 올릴 때마다 쌓인다", () => {
+  const a = lineId(레시피.id, "우유");
+  assert.equal(a, lineId(레시피.id, "우유"), "같은 입력인데 값이 다르다");
+  assert.notEqual(a, lineId(레시피.id, "딸기청"), "재료가 달라도 값이 같다");
+  assert.notEqual(a, lineId("my-99999999-2222-3333-4444-555555555555", "우유"));
+  assert.match(a, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+});
+
+test("★ 이미 있는 품목은 다시 만들지 않는다 — 두 개가 되면 단가를 못 찾는다", () => {
+  const 있던: VendorItem[] = [
+    { id: "cccccccc-3333-4333-8333-cccccccccccc", vendorId: "", name: "우유", packAmount: 1000, packUnit: "ml", packPrice: 2900, note: "" },
+  ];
+  const ids = ingredientItemIds([레시피], 있던);
+  assert.equal(ids.get("우유"), 있던[0].id, "이름이 같은 품목을 안 썼다");
+
+  const rows = ingredientItemRows([레시피], ids, 있던);
+  assert.deepEqual(rows.map((r) => r.name), ["딸기청"], "있던 품목을 또 만들었다");
+});
+
+test("★ 계열이 갈리는 재료를 미리 걸러낸다 (g 과 ml 은 못 섞는다)", () => {
+  const 다른 = {
+    ...레시피,
+    id: "my-99999999-2222-3333-4444-555555555555",
+    ingredients: [{ name: "우유", amount: 200, unit: "g", note: null }],
+  };
+  assert.deepEqual(conflictingIngredients([레시피, 다른]), ["우유"]);
+  assert.deepEqual(conflictingIngredients([레시피]), [], "멀쩡한 것을 잡았다");
+});
+
+test("★ 서버가 모르는 단위를 쓰는 레시피를 골라낸다", () => {
+  const 컵 = { ...레시피, ingredients: [{ name: "우유", amount: 1, unit: "컵", note: null }] };
+  assert.deepEqual(unknownUnitRecipes([컵]).map((r) => r.name), ["딸기라떼"]);
+  assert.deepEqual(unknownUnitRecipes([레시피]), []);
+});
+
+test("★★ 비우는 순서 — 레시피가 품목보다 먼저다 (cascade 가 없다)", () => {
+  /* `confdeltype = 'a'` 라 자식을 안 지우고 부모를 지우면 외래키가 거부한다.
+     그 실패는 되돌리기 중간에 나고, 화면에는 한 줄로만 보인다 */
+  const o: string[] = [...REPLACE_DELETE_ORDER];
+  assert.ok(o.indexOf("steps") < o.indexOf("sections"), "스텝이 구간보다 뒤다");
+  assert.ok(o.indexOf("sections") < o.indexOf("make_recipe_versions"));
+  assert.ok(o.indexOf("make_recipe_lines") < o.indexOf("make_recipe_versions"));
+  assert.ok(o.indexOf("make_recipe_versions") < o.indexOf("items"), "판이 품목보다 뒤다");
+});
+
+test("★ 섹션은 주인이 하나여야 한다 (ck_sections_one_owner)", () => {
+  const [sec] = recipeToSectionRows(레시피);
+  const 주인 = [sec.position_id, sec.menu_recipe_version_id, sec.make_recipe_version_id]
+    .filter((x) => x !== null).length;
+  assert.equal(주인, 1, `주인이 ${주인}개다 — 체크 제약에 걸린다`);
+});
+
+test("★ 스텝의 설명 칸 이름은 `descr` 다 (`desc` 는 예약어라 칸이 다르다)", () => {
+  const [st] = recipeToStepRows(레시피);
+  assert.equal(st.descr, "층이 생긴다");
+  assert.ok(!("desc" in st), "`desc` 로 보내면 그 칸이 통째로 빈다");
+  assert.equal(st.sort_order, 0);
+});
+
+test("★★ 서버가 아는 단위는 전부 서버 계열 이름으로 나간다 (2026-09-18 실제 사고)", () => {
+  /* 앱의 `familyOf("개")` 는 `as:개` 다 — 앱 안에서는 그게 맞다(모르는 단위는
+     자기 자신하고만 같은 계열). 그런데 서버 `units` 표는 `개 → count` 라서
+     그대로 보내면 외래키가 거절한다.
+
+     ⛔ **그 거절이 조용하다.** `unknownUnitItems` 는 단위 코드만 보므로
+     「개」 는 성한 것으로 통과하고, `pushVendors` 는 품목 한 줄이 거절되면
+     묶음 전체를 실패시킨다 — 「개」 짜리 품목 하나가 단가를 통째로 막는다.
+     2026-09-18 실측: 거래처 3줄은 올라갔는데 items 가 0줄이었다. */
+  const 서버표: Record<string, string> = {
+    g: "weight", kg: "weight", ml: "volume", L: "volume", "개": "count", ea: "count",
+  };
+  for (const u of SERVER_UNITS) {
+    assert.equal(serverFamily(u), 서버표[u], `${u} 의 계열이 서버 units 표와 다르다`);
+  }
+});
+
+test("★ 품목 줄이 보내는 계열은 서버 것이다 — 앱 것을 그대로 보내면 거절당한다", () => {
+  const 컵: VendorItem = { id: "dddddddd-4444-4444-8444-dddddddddddd", vendorId: "", name: "종이컵", packAmount: 100, packUnit: "개", packPrice: 5000, note: "" };
+  assert.equal(itemToRow(컵).base_family, "count");
+  assert.equal(itemVersionToRow(컵).pack_family, "count");
+  /* 두 표의 계열이 같아야 한다 — 다르면 통째로 거절된다 */
+  assert.equal(itemToRow(컵).base_family, itemVersionToRow(컵).pack_family);
 });

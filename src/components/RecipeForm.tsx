@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { addLocalRecipe, newLocalId } from "@/lib/localRecipes";
+import { newUuid } from "@/lib/store";
+import { loadVendors } from "@/lib/vendors";
+import { pushRecipes } from "@/lib/serverSync";
 import type { Ingredient, Recipe } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
@@ -80,11 +83,14 @@ export default function RecipeForm({ categories }: { categories: string[] }) {
         filledSteps.length > 0
           ? [
               {
-                id: `${id}-sec`,
+                /* ★ 섹션·스텝 id 도 uuid 다 (2026-09-18). 전에는
+                   `my-a1b2c3d4-sec` 이라 서버가 거절했다 — 그리고 아무
+                   오류도 안 뜬다. `localRecipes.newLocalId` 주석 참고. */
+                id: newUuid(),
                 title: "만드는 순서",
                 note: null,
-                steps: filledSteps.map((s, i) => ({
-                  id: `${id}-s${i}`,
+                steps: filledSteps.map((s) => ({
+                  id: newUuid(),
                   title: s.title.trim(),
                   desc: s.desc.trim(),
                   tip: null,
@@ -102,6 +108,11 @@ export default function RecipeForm({ categories }: { categories: string[] }) {
       setError("저장에 실패했습니다. 브라우저 저장 공간을 확인해주세요.");
       return;
     }
+    /* ★ 서버에도 남긴다 (2026-09-18). **기다리지 않는다** — 이 화면의 일은
+       태블릿에 저장하는 것까지이고, 서버는 «사라지지 않는 사본» 이다.
+       로그인 안 했으면 아무 일도 안 일어난다. 실패해도 화면을 막지 않는다:
+       막으면 기록은 남았는데 못 나가는 상태가 된다. */
+    void pushRecipes([recipe], loadVendors().items);
     router.push(`/r/my?id=${id}`);
   }
 
