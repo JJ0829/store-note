@@ -776,3 +776,61 @@ export async function pushRoster(
 
   return put("shift_assignments", assignToRows(data.assign, shifts));
 }
+
+/* ------------------------------------------------------------------ *
+ * 「내 것이 아닌 데이터」도 받아 온다 (2026-09-18)
+ *
+ * ★ 사장님 지적: *"왜 바로 반영 안 되고 내가 근로계약서 가야 적용되서 보이네?"*
+ *
+ *   화면마다 **자기가 고치는 것만** 서버에서 받고 있었다. 출퇴근 화면은
+ *   출퇴근만 받고 계약·근무표는 이 태블릿 것만 읽었다. 그래서 기기를 바꾸면
+ *   **「근로계약서」 화면을 한 번 들러야** 시급이 생겼다 — 거기서 받아
+ *   localStorage 에 적어주기 때문이다.
+ *
+ *   매출 화면은 셋(계약·출퇴근·근무표), 원가·발주는 거래처, 홈은
+ *   근무표·출퇴근이 같은 이유로 비어 있었다.
+ *
+ * ★ 여기 함수들은 **받아서 태블릿에 적기만 한다.** 올리지 않는다 —
+ *   그 데이터의 주인 화면이 따로 있고, 두 곳에서 올리면 늦게 도착한 쪽이
+ *   이겨서 방금 고친 것이 덮인다.
+ *
+ * ★ **비어 있으면 아무 일도 안 한다.** 빈 서버로 태블릿을 덮으면
+ *   어제 기록이 사라진다 (2026-09-15 에 실제로 그랬다).
+ * ------------------------------------------------------------------ */
+
+/** 받아서 적었으면 그 값을, 안 했으면 `null` */
+async function take<T>(
+  pull: () => Promise<T | null>,
+  save: (v: T) => boolean,
+  filled: (v: T) => boolean,
+): Promise<T | null> {
+  const server = await pull();
+  if (server === null) return null; // 로그인 안 함
+  if (!filled(server)) return null; // 서버가 비었다 — 덮지 않는다
+  save(server);
+  return server;
+}
+
+export function takeContracts(
+  save: (v: Contract[]) => boolean,
+): Promise<Contract[] | null> {
+  return take(pullContracts, save, hasRows);
+}
+
+export function takePunches(
+  save: (v: PunchData) => boolean,
+): Promise<PunchData | null> {
+  return take(pullPunches, save, hasRows);
+}
+
+export function takeRoster(
+  save: (v: RosterData) => boolean,
+): Promise<RosterData | null> {
+  return take(pullRoster, save, (r) => hasRows(r.staff) || hasRows(r.assign));
+}
+
+export function takeVendors(
+  save: (v: VendorData) => boolean,
+): Promise<VendorData | null> {
+  return take(pullVendors, save, (v) => hasRows(v.vendors) || hasRows(v.items));
+}

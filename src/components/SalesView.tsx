@@ -2,20 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { SKIP, hasRows, pullSales, pushSales } from "@/lib/serverSync";
+import { SKIP, hasRows, pullSales, pushSales, takeContracts, takePunches, takeRoster } from "@/lib/serverSync";
 import { BTN, Card, Caveat, Chip, NumField, Row, Screen, useSaveState } from "@/components/ui";
+import OpsSwitch from "@/components/OpsSwitch";
 import { pct, won } from "@/lib/store";
 import { logEvent } from "@/lib/metrics";
-import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData } from "@/lib/roster";
+import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData, saveRoster } from "@/lib/roster";
 import {
   dayLaborCost,
   getPunch,
   hoursLabel,
   judgeDay,
   loadPunches,
+  savePunches,
   type PunchData,
 } from "@/lib/attendance";
-import { contractOf, loadContracts, type Contract } from "@/lib/contracts";
+import { contractOf, loadContracts, type Contract, saveContracts } from "@/lib/contracts";
 import { loadSettings, saveSettings, type Settings } from "@/lib/settings";
 import {
   dailyFixed,
@@ -93,6 +95,14 @@ export default function SalesView({
       const mine = loadSales();
       if (hasRows(mine)) sendUp(mine);
     });
+
+    /* ★ 인건비를 만드는 셋도 받는다 (2026-09-18). 계약(시급)·출퇴근(시간)·
+       근무표(직원)가 없으면 이 화면의 「남은 돈」이 매출에서 재료비만 뺀 값이
+       되어 **실제보다 크게** 나온다. 사장님이 그 숫자로 판단한다.
+       받아 적기만 한다 — 올리는 것은 각자의 주인 화면이 한다. */
+    void takeContracts(saveContracts).then((c) => c && setContracts(c));
+    void takePunches(savePunches).then((p) => p && setPunches(p));
+    void takeRoster(saveRoster).then((r) => r && setRoster(r));
   }, [seedShifts]);
 
   /* ★ 매출은 **글자마다** 바뀐다 (`patch` 가 `onChange` 다).
@@ -210,6 +220,9 @@ export default function SalesView({
       saveFailed={save.failures}
       wide
     >
+      {/* ★ 거래처(단가) → 원가(재료비) → 매출(남은 돈) 은 한 계산의 세 조각이다 */}
+      <OpsSwitch current="sales" />
+
       <div className="mt-4 flex gap-2">
         <Chip on={tab === "day"} onClick={() => setTab("day")}>
           하루

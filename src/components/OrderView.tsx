@@ -10,7 +10,7 @@ import WhoBar from "@/components/WhoBar";
 import { loadMarks, mark, saveMarks, type MarkLog, type WhoAmI } from "@/lib/whoami";
 import { ro } from "@/lib/store";
 import { label as dayLabel } from "@/lib/roster";
-import { SKIP, pushVendors } from "@/lib/serverSync";
+import { SKIP, pushVendors, takeVendors } from "@/lib/serverSync";
 import {
   buildOrderText,
   loadOrderLinks,
@@ -75,6 +75,9 @@ export default function OrderView({
   useEffect(() => {
     setNow(new Date());
     setVendors(loadVendors());
+    /* ★ 거래처를 받는다 (2026-09-18). 없으면 「주문함」을 눌러도 문자 보낼
+       상대가 없어서 «거래처 만들기» 칸만 뜬다 — 이미 만들어 뒀는데도. */
+    void takeVendors(saveVendors).then((v) => v && setVendors(v));
     setLog(loadOrderLog());
     setLinks(loadOrderLinks());
     setMarks(loadMarks("order", businessDay()));

@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, Caveat, Empty, NumField, Row, Screen, useSaveState } from "@/components/ui";
+import OpsSwitch from "@/components/OpsSwitch";
 import { pct, won } from "@/lib/store";
 import { costOfRecipe, costRate, suggestedPrice } from "@/lib/cost";
-import { loadVendors } from "@/lib/vendors";
+import { loadVendors, saveVendors } from "@/lib/vendors";
+import { takeVendors } from "@/lib/serverSync";
 import { loadSettings, saveSettings, type Settings } from "@/lib/settings";
 import { loadLocalRecipes } from "@/lib/localRecipes";
 import type { Recipe } from "@/lib/types";
@@ -39,6 +41,10 @@ export default function CostView({
     setItems(loadVendors());
     setSettings(loadSettings());
     setLocal(loadLocalRecipes());
+
+    /* ★ 거래처 단가를 받는다 (2026-09-18). 없으면 **모든 재료가 «단가 없음»**
+       이 되어 원가율이 통째로 안 나온다 — 이 화면의 존재 이유가 사라진다. */
+    void takeVendors(saveVendors).then((v) => v && setItems(v));
   }, []);
 
   const recipes = useMemo(() => [...seedRecipes, ...local], [seedRecipes, local]);
@@ -110,6 +116,8 @@ export default function CostView({
       saveFailed={save.failures}
       wide
     >
+      <OpsSwitch current="cost" />
+
       {/* ---------- 목표 원가율 ---------- */}
       <Card
         className="mt-5"

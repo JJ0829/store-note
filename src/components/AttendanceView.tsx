@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BTN, BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
 import { logEvent } from "@/lib/metrics";
-import { label, loadRoster, mondayOf, weekDays, ymd, type RosterData, type Staff } from "@/lib/roster";
+import { label, loadRoster, mondayOf, saveRoster, weekDays, ymd, type RosterData, type Staff } from "@/lib/roster";
 import {
   estimatePay,
   getPunch,
@@ -19,9 +19,9 @@ import {
   type DayResult,
   type PunchData,
 } from "@/lib/attendance";
-import { contractOf, loadContracts, type Contract } from "@/lib/contracts";
+import { contractOf, loadContracts, saveContracts, type Contract } from "@/lib/contracts";
 import WorkSwitch from "@/components/WorkSwitch";
-import { SKIP, hasRows, pullPunches, pushAttendance } from "@/lib/serverSync";
+import { SKIP, hasRows, pullPunches, pushAttendance, takeContracts, takeRoster } from "@/lib/serverSync";
 import { InlineUnlock, useOwnerOpen } from "@/components/OwnerGate";
 import { loadSettings, type Settings } from "@/lib/settings";
 import { applyShiftEdits, loadShiftEdits } from "@/lib/shiftEdit";
@@ -114,6 +114,14 @@ export default function AttendanceView({
       const mine = loadPunches();
       if (hasRows(mine)) sendUp(mine, loadRoster().staff);
     });
+
+    /* ★ 계약·근무표도 받는다 (2026-09-18 · 사장님 지적).
+       전에는 출퇴근만 받아서, 기기를 바꾸면 **「근로계약서」 화면을 한 번
+       들러야 시급이 생겼다** — 거기서만 서버 계약을 받아 적었기 때문이다.
+       시급이 없으면 이 화면의 인건비가 통째로 «—» 가 된다.
+       여기서는 **받아 적기만 한다** — 올리는 것은 각자의 주인 화면이 한다. */
+    void takeContracts(saveContracts).then((c) => c && setContracts(c));
+    void takeRoster(saveRoster).then((r) => r && setRoster(r));
 
     // ★ 1초마다. 「지금 15:22」 가 30초 늦게 바뀌면 찍은 시각을 의심하게 된다
     const id = setInterval(() => setNow(new Date()), 1000);

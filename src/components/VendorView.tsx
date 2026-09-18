@@ -12,6 +12,7 @@ import {
   Screen,
   useSaveState,
 } from "@/components/ui";
+import OpsSwitch from "@/components/OpsSwitch";
 import { eul, gwa, won } from "@/lib/store";
 import { COMMON_UNITS } from "@/lib/units";
 import {
@@ -186,6 +187,8 @@ export default function VendorView({
       saveFailed={save.failures}
       wide
     >
+      <OpsSwitch current="vendors" />
+
       {/* ---------- 단가가 빠진 재료 ---------- */}
       {ingredientNames.length > 0 && (
         <Card
