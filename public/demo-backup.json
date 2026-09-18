@@ -693,6 +693,24 @@
         "packUnit": "ml",
         "packPrice": 12000,
         "note": ""
+      },
+      {
+        "id": "eeeeeeee-0000-4000-8000-00000000000f",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
+        "name": "박력분",
+        "packAmount": 20000,
+        "packUnit": "g",
+        "packPrice": 36000,
+        "note": "20kg 한 포"
+      },
+      {
+        "id": "eeeeeeee-0000-4000-8000-000000000010",
+        "vendorId": "dddddddd-0000-4000-8000-000000000003",
+        "name": "베이킹파우더",
+        "packAmount": 1000,
+        "packUnit": "g",
+        "packPrice": 9000,
+        "note": ""
       }
     ]
   },
@@ -709,7 +727,8 @@
       "물",
       "정수",
       "추출량",
-      "기존 르방"
+      "기존 르방",
+      "르방"
     ],
     "monthlyFixed": 4200000,
     "openDaysPerMonth": 26

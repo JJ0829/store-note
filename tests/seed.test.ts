@@ -191,11 +191,15 @@ test("irreversibleTasks: recoverable:false 만 골라낸다", () => {
   }
 });
 
-test("오후 프렙에는 되돌릴 수 없는 항목이 실제로 들어 있다", () => {
-  // 이게 0이면 제품이 종이를 이기는 지점이 화면에서 사라진다
-  const afternoon = getPrepListBySlug("afternoon");
-  assert.ok(afternoon, "오후 프렙 목록이 없다");
-  assert.ok(irreversibleTasks(afternoon).length > 0);
+test("★ 제빵·바 프렙에는 되돌릴 수 없는 항목이 실제로 들어 있다", () => {
+  // 이게 0이면 제품이 종이를 이기는 지점이 화면에서 사라진다.
+  // 둘 다 봐야 한다 — 2026-09-18 에 목록을 쪼갰으므로 한쪽만 보면
+  // 반대쪽이 전부 routine 이 돼도 안 걸린다
+  for (const slug of ["bakery", "bar"]) {
+    const list = getPrepListBySlug(slug);
+    assert.ok(list, `${slug} 목록이 없다`);
+    assert.ok(irreversibleTasks(list).length > 0, `${slug}: 되돌릴 수 없는 항목이 0개다`);
+  }
 });
 
 test("없는 slug를 물으면 null (404로 이어진다)", () => {
@@ -272,16 +276,16 @@ test("★ 옵션의 옵션은 없다 — 한 겹만이다", () => {
 });
 
 test("★ 진행률 분모는 부모 항목 수다 — 옵션은 빠진다", () => {
-  // 매장마다 안 하는 일(르방)이 분모에 들어가면 9/10 이 영영 안 채워지고
+  // 매장마다 안 하는 일(르방)이 분모에 들어가면 1/2 가 영영 안 채워지고
   // 진행률이 거짓이 된다. 그게 optionOf 를 만든 이유다
-  const af = getPrepListBySlug("afternoon");
-  assert.ok(af);
-  const tops = af.tasks.filter((t) => !t.optionOf);
+  const bk = getPrepListBySlug("bakery");
+  assert.ok(bk);
+  const tops = bk.tasks.filter((t) => !t.optionOf);
   assert.ok(
-    tops.length < af.tasks.length,
-    "오후 프렙에 옵션이 하나도 없다 — 르방이 부모 항목으로 돌아갔나",
+    tops.length < bk.tasks.length,
+    "제빵 프렙에 옵션이 하나도 없다 — 르방이 부모 항목으로 돌아갔나",
   );
-  const levain = af.tasks.find((t) => t.title.includes("르방"));
+  const levain = bk.tasks.find((t) => t.title.includes("르방"));
   assert.ok(levain, "르방 항목이 없다");
   assert.equal(levain.optionOf, "p-2", "르방이 '내일용 반죽' 에 안 붙어 있다");
 });
@@ -289,9 +293,9 @@ test("★ 진행률 분모는 부모 항목 수다 — 옵션은 빠진다", () 
 test("★ 되돌릴 수 없는 안내는 옵션까지 센다", () => {
   // 진행률과 분모가 다른 것은 일부러다. 르방을 쓰는 매장에서
   // "다 했습니다" 가 거짓이 되면 안 된다
-  const af = getPrepListBySlug("afternoon");
-  assert.ok(af);
-  const keep = af.tasks.filter((t) => !t.recoverable);
+  const bar = getPrepListBySlug("bar");
+  assert.ok(bar);
+  const keep = bar.tasks.filter((t) => !t.recoverable);
   assert.ok(
     keep.some((t) => t.optionOf !== null),
     "되돌릴 수 없는 옵션이 하나도 없다 — 이 테스트가 지키려는 경우가 사라졌다",
@@ -302,13 +306,13 @@ test("★ 매장마다 다른 바 부재료는 한 카드에 모여 있다", () 
   // 사장님 지적 2026-09-09: "따로말고 한곳에 모아서 해줘"
   // 청·냉침차·밀크티·시럽·크림폼이 각각 카드를 차지하면 목록이 열 칸이 되고,
   // 그중 대부분은 "남아 있으니 넘어감" 이라 진행률이 의미를 잃는다
-  const af = getPrepListBySlug("afternoon");
-  assert.ok(af);
-  const bar = af.tasks.find((t) => t.id === "p-bar");
+  const list = getPrepListBySlug("bar");
+  assert.ok(list);
+  const bar = list.tasks.find((t) => t.id === "p-bar");
   assert.ok(bar, "바 부재료 부모 항목이 없다");
   assert.equal(bar.optionOf, null, "부모가 또 다른 옵션이 됐다");
 
-  const kids = af.tasks.filter((t) => t.optionOf === "p-bar").map((t) => t.title);
+  const kids = list.tasks.filter((t) => t.optionOf === "p-bar").map((t) => t.title);
   for (const want of ["에이드 청", "냉침차", "밀크티", "시럽", "크림폼"]) {
     assert.ok(
       kids.some((k) => k.includes(want)),
@@ -316,23 +320,23 @@ test("★ 매장마다 다른 바 부재료는 한 카드에 모여 있다", () 
     );
   }
 
-  // 카드는 다섯 개다 — 콜드브루 / 반죽 / 바 부재료 / 발주 2
-  const tops = af.tasks.filter((t) => t.optionOf === null);
-  assert.equal(tops.length, 6, `카드가 ${tops.length}개다 (6개여야 한다)`);
+  // 카드는 다섯이다 — 콜드브루 / 바 부재료 / 발주 셋
+  const tops = list.tasks.filter((t) => t.optionOf === null);
+  assert.equal(tops.length, 5, `카드가 ${tops.length}개다 (5개여야 한다)`);
 });
 
 test("★ 옵션으로 내려도 되돌릴 수 없는 것은 안내에서 안 빠진다", () => {
   // 청·냉침차·밀크티는 옵션인데 recoverable:false 다.
   // 여기서 빠지면 "다 했습니다" 가 거짓이 된다
-  const af = getPrepListBySlug("afternoon");
-  assert.ok(af);
-  const keepOptions = af.tasks.filter((t) => !t.recoverable && t.optionOf !== null);
+  const bar = getPrepListBySlug("bar");
+  assert.ok(bar);
+  const keepOptions = bar.tasks.filter((t) => !t.recoverable && t.optionOf !== null);
   assert.ok(
     keepOptions.length >= 3,
     `되돌릴 수 없는 옵션이 ${keepOptions.length}개다 — 청·냉침차·밀크티가 사라졌나`,
   );
-  // 전체 개수는 카드 수와 무관하게 유지된다
-  assert.equal(af.tasks.filter((t) => !t.recoverable).length, 7);
+  // 전체 개수는 카드 수와 무관하게 유지된다 (콜드브루 + 청·냉침차·밀크티 + 원두 발주)
+  assert.equal(bar.tasks.filter((t) => !t.recoverable).length, 5);
 });
 
 /* ---------- 묶음(그룹)과 옵션은 다른 것이다 ---------- */
@@ -393,10 +397,13 @@ test("★★ 진행률 분모 — 묶음 머리는 안 세고 그 안의 항목�
   // 묶음 3 + 항목 13 = 16 이 아니라 13 이어야 한다. 부모까지 세면 두 번 세는 셈
   assert.equal(countedOf(cy).length, 13, "주기 점검 분모가 13이 아니다");
 
-  const af = getPrepListBySlug("afternoon");
-  assert.ok(af);
   // 바 부재료는 안에 든 게 전부 optional 이라 그 카드 자체가 할 일(점검했다)이다
-  assert.equal(countedOf(af).length, 6, "오후 프렙 분모가 6이 아니다");
+  const 분모: Record<string, number> = { bakery: 1, bar: 5 };
+  for (const [slug, want] of Object.entries(분모)) {
+    const l = getPrepListBySlug(slug);
+    assert.ok(l, `${slug} 목록이 없다`);
+    assert.equal(countedOf(l).length, want, `${slug} 분모가 ${want} 가 아니다`);
+  }
 
   /* 마감 준비(evening)는 2026-09-13 에 마감 체크리스트로 합쳐졌다.
      프렙에 남을 이유가 없었다 — 세 항목 다 `routine` 이라 기다릴 것이 없었다. */
@@ -477,10 +484,11 @@ const 정본 = "docs/deliverables/21_화면명세.md §1-b 를 같이 고칠 것
 
 test("★ 숫자 정본 — 프렙 목록의 개수", () => {
   const want: Record<string, { all: number; counted: number; irreversible: number }> = {
-    afternoon: { all: 12, counted: 6, irreversible: 7 },
+    bakery: { all: 2, counted: 1, irreversible: 2 },
+    bar: { all: 10, counted: 5, irreversible: 5 },
     cycle: { all: 16, counted: 13, irreversible: 4 },
   };
-  assert.equal(listPrepLists().length, 2, `프렙 목록 수가 바뀌었다 — ${정본}`);
+  assert.equal(listPrepLists().length, 3, `프렙 목록 수가 바뀌었다 — ${정본}`);
   for (const list of listPrepLists()) {
     const w = want[list.slug];
     assert.ok(w, `모르는 프렙 목록 ${list.slug} — ${정본}`);
@@ -495,7 +503,7 @@ test("★ 숫자 정본 — 프렙 목록의 개수", () => {
 });
 
 test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상", () => {
-  assert.equal(listRecipes().length, 10, `레시피 수 — ${정본}`);
+  assert.equal(listRecipes().length, 14, `레시피 수 — ${정본}`);
   assert.equal(listShifts().length, 3, `근무조 수 — ${정본}`);
 
   const positions = listPositions();
@@ -507,7 +515,7 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
     (n, r) => n + r.sections.reduce((m, s) => m + s.steps.length, 0),
     0,
   );
-  assert.equal(recipeSteps, 32, `레시피 스텝 합계 — ${정본}`);
+  assert.equal(recipeSteps, 50, `레시피 스텝 합계 — ${정본}`);
 
   const prepTasks = listPrepLists().reduce((n, l) => n + l.tasks.length, 0);
   assert.equal(prepTasks, 28, `프렙 항목 합계 — ${정본}`);
@@ -537,7 +545,68 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   assert.equal(filmable, prepTasks - heads.length, "filmableTasks 가 묶음 머리만 뺀다");
 
   // /shoot 이 실제로 만드는 목록과 같은 셈법이다 (src/app/shoot/page.tsx)
-  assert.equal(positionSteps + recipeSteps + filmable, 92, `촬영 대상 합계 — ${정본}`);
+  assert.equal(positionSteps + recipeSteps + filmable, 110, `촬영 대상 합계 — ${정본}`);
+});
+
+test("★★ 제빵과 바는 섞이지 않는다", () => {
+  /* 사장님 지적 2026-09-18:
+       *"빵 만드는데 에이드 청을 프렙 왜 하는데.
+         콜드브루, 바 부재료 점검·제조 등등 바 & 홀로 가야지"*
+
+     맞는 말이다. 프렙 목록 하나에 열두 개를 몰아놓으니 **제빵 담당이
+     자기 것 둘을 찾으려고 바 항목 일곱 개를 지나가야 했다.** 목록은
+     «누가 여는가» 로 나뉘어야 한다 — 그게 근무조와 같은 단위다.
+
+     여기서 한 번 섞이면 화면에서는 안 보인다(그냥 카드가 늘 뿐이다).
+     그래서 시드에서 못 박는다. */
+  const bakery = getPrepListBySlug("bakery");
+  const bar = getPrepListBySlug("bar");
+  assert.ok(bakery && bar, "쪼갠 목록 둘 중 하나가 없다");
+
+  // 제빵에 바 것이 없다
+  for (const t of bakery.tasks) {
+    for (const 바 of ["청", "콜드브루", "냉침", "밀크티", "시럽", "크림폼"]) {
+      assert.ok(!t.title.includes(바), `제빵 프렙에 바 항목이 있다: ${t.title}`);
+    }
+  }
+  // 바에 제빵 것이 없다
+  for (const t of bar.tasks) {
+    for (const 빵 of ["반죽", "르방"]) {
+      assert.ok(!t.title.includes(빵), `바 프렙에 제빵 항목이 있다: ${t.title}`);
+    }
+  }
+
+  /* ★★ 발주는 **목록을 따로 만들지 않는다.**
+
+       한 번 만들었다가 되돌렸다(2026-09-18). 만들고 나니 첫 화면의
+       「할 일」 카드에 `발주` 줄이 생기는데 **하단 탭바에도 「발주」가 있고
+       둘이 다른 화면으로 간다** (`/prep/order` vs `/order`). 이름이 같은
+       문이 둘이면 사람은 어느 쪽이 맞는지 모른다 — 사장님이 이미 같은
+       지적을 하셨다: *"근무표 따로 출퇴근 밑에 아이콘 따로 의미가 없잖아"*.
+
+       그래서 발주 항목 셋은 **마감조가 여는 바 프렙 안**에 둔다. 실제로
+       주문하는 사람이 마감조다. 「주문함 / 들어옴」 두 단계는 발주 탭이
+       맡는다 — 그 화면은 `kind:"order"` 로 목록을 훑으므로 어느 목록에
+       들어 있든 찾아낸다(`OrderView.orderTasks`). */
+  assert.equal(getPrepListBySlug("order"), null, "발주 목록이 다시 생겼다 — 탭바와 문이 겹친다");
+  const 발주 = listPrepLists().flatMap((l) => l.tasks).filter((t) => t.kind === "order");
+  assert.equal(발주.length, 3, "발주 항목이 셋이 아니다");
+  for (const t of 발주) {
+    assert.ok(
+      bar.tasks.some((x) => x.id === t.id),
+      `발주 항목이 바 프렙 밖에 있다: ${t.title}`,
+    );
+  }
+
+  /* ★ 그리고 근무조가 실제로 그 목록을 연다. 안 걸어두면 쪼개기만 하고
+       아무도 못 여는 목록이 된다 (evening 이 그랬다). */
+  const 조 = (name: string) => {
+    const sh = listShifts().find((x) => x.name === name);
+    assert.ok(sh, `${name} 가 없다`);
+    return sh.focus.filter((f) => f.kind === "prep").map((f) => f.slug);
+  };
+  assert.deepEqual(조("제빵"), ["bakery"], "제빵조가 제빵 프렙을 안 연다");
+  assert.deepEqual(조("마감조"), ["bar"], "마감조가 바 프렙을 안 연다");
 });
 
 test("★ 숫자 정본 — 레시피가 붙은 프렙 · 수량이 바뀌는 프렙", () => {

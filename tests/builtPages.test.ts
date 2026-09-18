@@ -151,7 +151,17 @@ test("★ 레시피는 이제 정적 파일로 안 나간다 (V-19 해소)", (t)
    *  ⚠️ 다만 `STORE_PIN` 을 안 넣고 배포하면 서버는 **안 막는다**
    *  (사장님 결정: 환경변수를 깜빡해서 시연 중 레시피가 안 열리는 쪽이 더
    *  큰 사고다). 대신 화면이 빨간 띠로 크게 말한다 — 아래 테스트가 그걸 본다. */
-  const gated = ["r.html", "r/americano.html", "prep.html", "prep/afternoon.html"];
+  /* ★ 2026-09-18 — `prep/afternoon.html` 이 여기 적혀 있었는데 그 목록은
+     제빵·바·발주 셋으로 쪼개져 없어졌다. **없는 파일은 언제나 없으므로
+     이 검사가 조용히 무의미해진다.** 살아 있는 슬러그로 바꿔 둔다. */
+  const gated = [
+    "r.html",
+    "r/americano.html",
+    "r/baguette.html",
+    "prep.html",
+    "prep/bakery.html",
+    "prep/bar.html",
+  ];
   const stillStatic = gated.filter((rel) => fs.existsSync(path.join(OUT, rel)));
 
   assert.deepEqual(

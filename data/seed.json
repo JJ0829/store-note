@@ -1168,176 +1168,408 @@
           ]
         }
       ]
+    },
+    {
+      "id": "rec-baguette",
+      "slug": "baguette",
+      "name": "바게트 (1배합)",
+      "category": "베이커리",
+      "yield": {
+        "amount": 8,
+        "unit": "개"
+      },
+      "forNewbie": false,
+      "ingredients": [
+        {
+          "name": "강력분",
+          "amount": 2000,
+          "unit": "g",
+          "note": "100% (기준)"
+        },
+        {
+          "name": "물",
+          "amount": 1400,
+          "unit": "g",
+          "note": "70% · 수분이 높아 반죽이 질다"
+        },
+        {
+          "name": "소금",
+          "amount": 40,
+          "unit": "g",
+          "note": "2% · 이스트와 직접 닿지 않게"
+        },
+        {
+          "name": "이스트",
+          "amount": 8,
+          "unit": "g",
+          "note": "0.4% · 인스턴트 드라이. 오래 발효해서 적게 넣는다"
+        }
+      ],
+      "sections": [
+        {
+          "id": "sec-bg-1",
+          "title": "만드는 순서",
+          "note": "린 배합(기름·설탕 없음)입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
+          "steps": [
+            {
+              "id": "s-bg-1",
+              "title": "가루와 물만 섞어 30분 두기 (오토리즈)",
+              "desc": "소금·이스트는 아직 넣지 않습니다. 저절로 글루텐이 잡혀서 반죽 시간이 줄어듭니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-bg-2",
+              "title": "소금·이스트 넣고 반죽",
+              "desc": "많이 치대지 않습니다. 바게트는 반죽을 덜 해야 기공이 큽니다.",
+              "tip": "매끈해질 때까지 돌리면 속이 촘촘해집니다.",
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-bg-3",
+              "title": "1차 발효 · 30분마다 접기 3회",
+              "desc": "접을 때마다 힘이 붙습니다. 반죽이 질어서 손에 물을 묻히고 다룹니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-bg-4",
+              "title": "냉장 발효 12~18시간",
+              "desc": "여기서 하루가 걸립니다. 오늘 시작해야 내일 굽습니다. 총 반죽 3448g을 8등분하면 개당 약 430g입니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-bg-5",
+              "title": "성형 · 쿠프 넣고 스팀 구움",
+              "desc": "칼집(쿠프)은 한 번에 그어야 벌어집니다. 스팀이 없으면 껍질이 두꺼워집니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rec-croissant",
+      "slug": "croissant",
+      "name": "크루아상 (1배합)",
+      "category": "베이커리",
+      "yield": {
+        "amount": 12,
+        "unit": "개"
+      },
+      "forNewbie": false,
+      "ingredients": [
+        {
+          "name": "강력분",
+          "amount": 1000,
+          "unit": "g",
+          "note": "100% (기준)"
+        },
+        {
+          "name": "물",
+          "amount": 400,
+          "unit": "g",
+          "note": "40%"
+        },
+        {
+          "name": "우유",
+          "amount": 150,
+          "unit": "ml",
+          "note": "15% · 우유는 ml 로 답니다"
+        },
+        {
+          "name": "설탕",
+          "amount": 120,
+          "unit": "g",
+          "note": "12%"
+        },
+        {
+          "name": "소금",
+          "amount": 20,
+          "unit": "g",
+          "note": "2%"
+        },
+        {
+          "name": "이스트",
+          "amount": 30,
+          "unit": "g",
+          "note": "3% · 인스턴트 드라이"
+        },
+        {
+          "name": "버터",
+          "amount": 500,
+          "unit": "g",
+          "note": "50% · 접기용. 차갑고 단단한 상태로"
+        }
+      ],
+      "sections": [
+        {
+          "id": "sec-cr-1",
+          "title": "만드는 순서",
+          "note": "접기 3회 기준입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
+          "steps": [
+            {
+              "id": "s-cr-1",
+              "title": "반죽해서 냉장 휴지",
+              "desc": "접기용 버터는 아직 넣지 않습니다. 반죽만 만들어 차게 둡니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-cr-2",
+              "title": "버터를 판으로 만들어 반죽에 싸기",
+              "desc": "버터와 반죽이 같은 굳기여야 합니다. 버터가 더 차면 부서지고, 무르면 새어 나옵니다.",
+              "tip": "이게 크루아상에서 사람마다 제일 갈리는 지점입니다. 영상으로 남겨두세요.",
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-cr-3",
+              "title": "3절 접기 3회 · 사이마다 냉장 30분",
+              "desc": "쉬지 않고 이어 밀면 버터가 녹아 층이 사라집니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-cr-4",
+              "title": "재단 · 성형 후 냉장 발효 12h",
+              "desc": "여기서 하루가 걸립니다. 오늘 시작해야 내일 굽습니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-cr-5",
+              "title": "2차 발효 후 굽기",
+              "desc": "손으로 흔들어서 출렁이면 다 부푼 것입니다. 덜 부풀면 속이 떡집니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rec-sourdough",
+      "slug": "sourdough",
+      "name": "사워도우 (1배합)",
+      "category": "베이커리",
+      "yield": {
+        "amount": 4,
+        "unit": "개"
+      },
+      "forNewbie": false,
+      "ingredients": [
+        {
+          "name": "강력분",
+          "amount": 2000,
+          "unit": "g",
+          "note": "100% (기준)"
+        },
+        {
+          "name": "물",
+          "amount": 1500,
+          "unit": "g",
+          "note": "75%"
+        },
+        {
+          "name": "르방",
+          "amount": 400,
+          "unit": "g",
+          "note": "20% · 갱신하고 4~6시간 지난 것"
+        },
+        {
+          "name": "소금",
+          "amount": 40,
+          "unit": "g",
+          "note": "2%"
+        }
+      ],
+      "sections": [
+        {
+          "id": "sec-sd-1",
+          "title": "만드는 순서",
+          "note": "르방을 쓰는 매장만 해당합니다. 우리 매장 기준이 정해지면 덮어쓰세요",
+          "steps": [
+            {
+              "id": "s-sd-1",
+              "title": "르방 상태 먼저 확인",
+              "desc": "부피가 2배로 오르고 시큼하면서 상쾌해야 합니다. 쏘는 냄새면 과발효라 그날 빵이 안 됩니다.",
+              "tip": "여기서 아니면 다음 단계를 가지 마세요. 르방부터 다시 살립니다.",
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-sd-2",
+              "title": "오토리즈 후 르방·소금",
+              "desc": "가루와 물만 1시간 두었다가 르방과 소금을 넣습니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-sd-3",
+              "title": "30분마다 접기 4회",
+              "desc": "이스트가 없어서 시간이 오래 걸립니다. 온도가 낮으면 더 걸립니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-sd-4",
+              "title": "냉장 발효 12~18시간",
+              "desc": "여기서 하루가 걸립니다. 총 반죽 3940g을 4등분하면 개당 약 985g입니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-sd-5",
+              "title": "쿠프 넣고 스팀 구움",
+              "desc": "차가운 채로 바로 굽습니다. 실온에 두면 퍼집니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rec-scone",
+      "slug": "scone",
+      "name": "스콘 (1배합)",
+      "category": "베이커리",
+      "yield": {
+        "amount": 12,
+        "unit": "개"
+      },
+      "forNewbie": true,
+      "ingredients": [
+        {
+          "name": "박력분",
+          "amount": 1000,
+          "unit": "g",
+          "note": "100% (기준)"
+        },
+        {
+          "name": "버터",
+          "amount": 450,
+          "unit": "g",
+          "note": "45% · 차가운 상태로 깍둑 썰어"
+        },
+        {
+          "name": "설탕",
+          "amount": 150,
+          "unit": "g",
+          "note": "15%"
+        },
+        {
+          "name": "베이킹파우더",
+          "amount": 40,
+          "unit": "g",
+          "note": "4%"
+        },
+        {
+          "name": "소금",
+          "amount": 8,
+          "unit": "g",
+          "note": "0.8%"
+        },
+        {
+          "name": "우유",
+          "amount": 350,
+          "unit": "ml",
+          "note": "35% · 차갑게. ml 로 답니다"
+        }
+      ],
+      "sections": [
+        {
+          "id": "sec-sc-1",
+          "title": "만드는 순서",
+          "note": "당일 구워 당일 파는 품목입니다. 우리 매장 기준이 정해지면 덮어쓰세요",
+          "steps": [
+            {
+              "id": "s-sc-1",
+              "title": "차가운 버터를 가루에 비벼 콩알만 하게",
+              "desc": "손 열로 버터가 녹으면 층이 안 생기고 쿠키처럼 됩니다.",
+              "tip": "손이 따뜻하면 스크래퍼로 자르듯 섞으세요.",
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-sc-2",
+              "title": "우유 넣고 덩어리만 지게",
+              "desc": "치대면 질겨집니다. 가루가 조금 남아 보여도 그대로 둡니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            },
+            {
+              "id": "s-sc-3",
+              "title": "재단 후 바로 굽기",
+              "desc": "리드타임이 없습니다 — 아침에 만들어 아침에 냅니다.",
+              "tip": null,
+              "critical": false,
+              "goodImage": null,
+              "badImage": null,
+              "videoUrl": null
+            }
+          ]
+        }
+      ]
     }
   ],
   "prepLists": [
     {
-      "id": "prep-afternoon",
-      "slug": "afternoon",
-      "name": "오후 프렙",
-      "note": "14:00~15:30. 점심 손님이 빠진 뒤 한꺼번에 확인하고 만듭니다. 대부분 내일을 위한 일입니다.",
+      "slug": "bakery",
+      "name": "제빵 프렙",
+      "note": "내일 아침 빵을 위해 오늘 걸어두는 것들입니다. 반죽은 냉장에서 밤새 발효합니다.",
       "tasks": [
-        {
-          "id": "p-1",
-          "title": "내일용 콜드브루 시작하기",
-          "desc": "원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.",
-          "kind": "time",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": 16,
-          "leadTimeDays": null,
-          "recoverable": false,
-          "consequence": "내일 콜드브루 못 팝니다. 사올 수도 없습니다.",
-          "quantityVaries": true,
-          "critical": true,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": "cold-brew",
-          "optionOf": null,
-          "optional": false,
-          "group": "바 (bar)"
-        },
-        {
-          "id": "p-bar",
-          "title": "바 부재료 점검 · 제조",
-          "desc": "점심 손님이 빠진 뒤 아래를 한꺼번에 확인합니다. 남아 있으면 넘어가고, 부족한 것만 지금 만듭니다.",
-          "kind": "routine",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "",
-          "quantityVaries": false,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": null,
-          "optionOf": null,
-          "optional": false,
-          "group": "바 (bar)"
-        },
-        {
-          "id": "p-7",
-          "title": "에이드 청 만들기",
-          "desc": "과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다.",
-          "kind": "time",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": 72,
-          "leadTimeDays": null,
-          "recoverable": false,
-          "consequence": "떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.",
-          "quantityVaries": true,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": "cheong",
-          "optionOf": "p-bar",
-          "optional": true,
-          "group": "바 (bar)"
-        },
-        {
-          "id": "p-9",
-          "title": "냉침차(콜드티) 우리기",
-          "desc": "찬물에 8~12시간 우립니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 맛이 옅습니다.",
-          "kind": "time",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": 12,
-          "leadTimeDays": null,
-          "recoverable": false,
-          "consequence": "내일 아이스티 못 팝니다. 찬물에 우리는 8~12시간을 되돌릴 방법이 없습니다.",
-          "quantityVaries": true,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": "cold-tea",
-          "optionOf": "p-bar",
-          "optional": true,
-          "group": "바 (bar)"
-        },
-        {
-          "id": "p-10",
-          "title": "밀크티 베이스 침출",
-          "desc": "찻잎을 4~12시간 침출합니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 싱겁습니다.",
-          "kind": "time",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": 12,
-          "leadTimeDays": null,
-          "recoverable": false,
-          "consequence": "내일 밀크티 못 팝니다. 침출 시간을 되돌릴 방법이 없습니다.",
-          "quantityVaries": true,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": "milk-tea-base",
-          "optionOf": "p-bar",
-          "optional": true,
-          "group": "바 (bar)"
-        },
-        {
-          "id": "p-4",
-          "title": "시럽 제조",
-          "desc": "잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
-          "kind": "time",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": 4,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "",
-          "quantityVaries": true,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": "simple-syrup",
-          "optionOf": "p-bar",
-          "optional": true,
-          "group": "바 (bar)"
-        },
-        {
-          "id": "p-8",
-          "title": "크림폼 만들기",
-          "desc": "생크림을 그날 쓸 만큼만 올립니다. 미리 많이 만들어두면 분리됩니다. 아인슈페너·크림라떼 판매량 보고 배수를 정합니다.",
-          "kind": "routine",
-          "trigger": {
-            "type": "daily",
-            "at": "14:00"
-          },
-          "leadTimeHours": null,
-          "leadTimeDays": null,
-          "recoverable": true,
-          "consequence": "피크에 떨어지면 줄이 섭니다.",
-          "quantityVaries": true,
-          "critical": false,
-          "goodImage": null,
-          "badImage": null,
-          "videoUrl": null,
-          "recipeSlug": "cream-foam",
-          "optionOf": "p-bar",
-          "optional": true,
-          "group": "바 (bar)"
-        },
         {
           "id": "p-2",
           "title": "내일용 반죽 제조 후 냉장",
@@ -1359,7 +1591,7 @@
           "recipeSlug": "shokupan",
           "optionOf": null,
           "optional": false,
-          "group": "제빵"
+          "group": null
         },
         {
           "id": "p-3",
@@ -1382,7 +1614,175 @@
           "recipeSlug": "levain",
           "optionOf": "p-2",
           "optional": true,
-          "group": "제빵"
+          "group": null
+        }
+      ]
+    },
+    {
+      "slug": "bar",
+      "name": "바 · 홀 프렙",
+      "note": "오후에 바에서 하는 것들입니다. 콜드브루와 부재료는 오늘 시작해야 내일 쓰고, 발주는 거래처마다 마감 시각이 다릅니다.",
+      "tasks": [
+        {
+          "id": "p-1",
+          "title": "내일용 콜드브루 시작하기",
+          "desc": "원두 200g : 물 2L. 필요한 양에 맞춰 배수로 늘립니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 16,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "내일 콜드브루 못 팝니다. 사올 수도 없습니다.",
+          "quantityVaries": true,
+          "critical": true,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": "cold-brew",
+          "optionOf": null,
+          "optional": false,
+          "group": null
+        },
+        {
+          "id": "p-bar",
+          "title": "바 부재료 점검 · 제조",
+          "desc": "점심 손님이 빠진 뒤 아래를 한꺼번에 확인합니다. 남아 있으면 넘어가고, 부족한 것만 지금 만듭니다.",
+          "kind": "routine",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "",
+          "quantityVaries": false,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": null,
+          "optional": false,
+          "group": null
+        },
+        {
+          "id": "p-7",
+          "title": "에이드 청 만들기",
+          "desc": "과일과 설탕을 같은 무게로 절입니다. 종류에 따라 3일~2주 두어야 씁니다 — 화면의 시각은 가장 짧은 3일 기준입니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 72,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "떨어지면 복구할 방법이 없습니다. 담그는 데만 3일이고, 시판 청으로 바꾸면 맛이 달라집니다.",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": "cheong",
+          "optionOf": "p-bar",
+          "optional": true,
+          "group": null
+        },
+        {
+          "id": "p-9",
+          "title": "냉침차(콜드티) 우리기",
+          "desc": "찬물에 8~12시간 우립니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 맛이 옅습니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 12,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "내일 아이스티 못 팝니다. 찬물에 우리는 8~12시간을 되돌릴 방법이 없습니다.",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": "cold-tea",
+          "optionOf": "p-bar",
+          "optional": true,
+          "group": null
+        },
+        {
+          "id": "p-10",
+          "title": "밀크티 베이스 침출",
+          "desc": "찻잎을 4~12시간 침출합니다. 화면의 시각은 넉넉한 12시간 기준입니다 — 일찍 꺼내면 싱겁습니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 12,
+          "leadTimeDays": null,
+          "recoverable": false,
+          "consequence": "내일 밀크티 못 팝니다. 침출 시간을 되돌릴 방법이 없습니다.",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": "milk-tea-base",
+          "optionOf": "p-bar",
+          "optional": true,
+          "group": null
+        },
+        {
+          "id": "p-4",
+          "title": "시럽 제조",
+          "desc": "잔량 보고 필요한 만큼. 만들고 식히는 데 2~4시간 걸립니다.",
+          "kind": "time",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": 4,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": "simple-syrup",
+          "optionOf": "p-bar",
+          "optional": true,
+          "group": null
+        },
+        {
+          "id": "p-8",
+          "title": "크림폼 만들기",
+          "desc": "생크림을 그날 쓸 만큼만 올립니다. 미리 많이 만들어두면 분리됩니다. 아인슈페너·크림라떼 판매량 보고 배수를 정합니다.",
+          "kind": "routine",
+          "trigger": {
+            "type": "daily",
+            "at": "14:00"
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": null,
+          "recoverable": true,
+          "consequence": "피크에 떨어지면 줄이 섭니다.",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": "cream-foam",
+          "optionOf": "p-bar",
+          "optional": true,
+          "group": null
         },
         {
           "id": "p-5",
@@ -1412,7 +1812,7 @@
           "recipeSlug": null,
           "optionOf": null,
           "optional": false,
-          "group": "발주"
+          "group": null
         },
         {
           "id": "p-5b",
@@ -1442,7 +1842,7 @@
           "recipeSlug": null,
           "optionOf": null,
           "optional": false,
-          "group": "발주"
+          "group": null
         },
         {
           "id": "p-6",
@@ -1465,7 +1865,7 @@
           "recipeSlug": null,
           "optionOf": null,
           "optional": false,
-          "group": "발주"
+          "group": null
         }
       ]
     },
@@ -1855,6 +2255,11 @@
       "note": "어제 시작해 둔 것 받고, 내일 것 새로 시작하기",
       "focus": [
         {
+          "kind": "prep",
+          "slug": "bakery",
+          "label": "제빵 프렙 (내일 것 시작하기)"
+        },
+        {
           "kind": "recipes",
           "label": "레시피 찾기"
         }
@@ -1883,8 +2288,8 @@
       "focus": [
         {
           "kind": "prep",
-          "slug": "afternoon",
-          "label": "오후 프렙 (내일 것 시작하기)"
+          "slug": "bar",
+          "label": "바 프렙 (내일 것 시작하기)"
         },
         {
           "kind": "checklist",

@@ -462,10 +462,10 @@ erDiagram
 | Position | 3 | `cafe-open` / `cafe-close` / `bakery-morning` |
 | Section | 19 | 포지션 9 + 레시피 10. id 전부 유일 (2026-09-10) |
 | Step | 58 | **시드 기준 2026-09-10.** 포지션 26 + 레시피 32. 매장이 레시피를 직접 추가하면 **브라우저가 Section·Step을 런타임에 더 만든다** → 3-4절 |
-| Recipe | 10 | `americano` `cafe-latte` `cold-brew` `shokupan` + 바 부재료 6(`levain` 계열·청·냉침차·밀크티·시럽·크림폼). **10개 모두 `forNewbie: true`** (숫자 정본: [21_화면명세.md §1-b](21_화면명세.md)) |
-| Ingredient | 13 | 단위는 `g`, `ml` 두 종류만 |
-| PrepList | 3 | `afternoon`(카드 5 + 옵션 6) / `evening`(3) / `cycle`(묶음 3 + 항목 13) |
-| PrepTask | 30 | `recoverable: false` **8개** (숫자 정본: [21_화면명세.md §1-b](21_화면명세.md)) |
+| Recipe | 14 | `americano` `cafe-latte` `cold-brew` `shokupan` + 바 부재료 6(`levain` 계열·청·냉침차·밀크티·시럽·크림폼) + 빵 4(`baguette` `croissant` `sourdough` `scone`, 2026-09-18). **`forNewbie` 는 이제 섞여 있다** — 바게트·크루아상·사워도우는 `false` 다 (숫자 정본: [21_화면명세.md §1-b](21_화면명세.md)) |
+| Ingredient | 16 | 단위는 `g`, `ml` 두 종류만. ★ **같은 「우유」라도 산 단위(ml)로 적는다** — `g` 로 적으면 계열이 달라 단가가 안 붙는다 |
+| PrepList | 3 | `bakery`(카드 1 + 옵션 1) / `bar`(카드 5 + 옵션 5) / `cycle`(묶음 3 + 항목 13). **2026-09-18 에 `afternoon` 을 앞의 둘로 쪼갰다** — 발주는 탭바와 문이 겹쳐서 목록으로 안 뺐다 |
+| PrepTask | 28 | `recoverable: false` **11개** (숫자 정본: [21_화면명세.md §1-b](21_화면명세.md)) |
 | Shift | 3 | 제빵 05:00–13:00 / 오픈조 07:30–15:30 / 마감조 14:30–22:30 (2026-09-13 미들 제거. 시각은 기본값 — `sop:shifts` 로 매장이 덮어쓴다) |
 | ShiftFocus | 7 | **training 1 / checklist 2 / prep 2 / recipes 2** (`282c0a9`에서 `position` 3건이 `training` 1 + `checklist` 2로 갈렸다 — 5-2절) |
 | Staff · Assign | 0 | 서버에 없다. 브라우저 저장 |

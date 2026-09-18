@@ -74,12 +74,12 @@ test("★ 개인정보가 없다 — public/ 에 있는 파일이다", () => {
   for (const v of b.vendors?.vendors ?? []) assert.match(v.name, /^[△□◇]{2} /);
 });
 
-test("★ 시드 레시피 10개 전부 원가가 잡힌다 (missing 0) — 재료 이름이 글자까지 같다", () => {
+test("★ 시드 레시피 14개 전부 원가가 잡힌다 (missing 0) — 재료 이름이 글자까지 같다", () => {
   const b = loadDemo();
   const items = b.vendors?.items ?? [];
   const excluded = b.settings?.excluded ?? [];
   const recipes = listRecipes();
-  assert.equal(recipes.length, 10);
+  assert.equal(recipes.length, 14);
   for (const r of recipes) {
     const c = costOfRecipe(r, items, excluded);
     const missing = c.lines.filter((l) => l.cost === null && !l.excluded).map((l) => l.name);
