@@ -16,6 +16,9 @@ import {
   SECTIONS,
   weekDays,
   ymd,
+  isLeft,
+  leftLabel,
+  staffOrder,
   type RosterData,
 } from "@/lib/roster";
 import ShiftEditor from "@/components/ShiftEditor";
@@ -136,11 +139,10 @@ export default function RosterView({
      `localeCompare("ko")` 를 쓴다 — 기본 비교는 «ㄱ» 보다 «ㅎ» 이 작게
      나오는 경우가 있어서 한글 정렬이 어긋난다.
      ⚠️ **저장 순서는 안 바꾼다.** 보이는 차례만 바꾼다 — `data.staff` 를
-       정렬해서 저장하면 서버로 같은 줄이 계속 다시 올라간다. */
-  const sortedStaff = useMemo(
-    () => [...data.staff].sort((a, b) => a.name.localeCompare(b.name, "ko")),
-    [data.staff],
-  );
+       정렬해서 저장하면 서버로 같은 줄이 계속 다시 올라간다.
+     ★ 2026-09-18 — 퇴사자는 맨 아래로 (`staffOrder`). 지우지 않는 이유는
+       `roster.ts` 의 `leftAt` 주석에 있다 (근로기준법 제42조 · 3년 보존). */
+  const sortedStaff = useMemo(() => staffOrder(data.staff), [data.staff]);
 
   const persist = useCallback(
     (next: RosterData) => {
@@ -175,12 +177,38 @@ export default function RosterView({
        두 번 보낸다 (2026-09-16 에 배정까지 같이 보내면서 한곳으로 모았다) */
   }
 
+  /** 이 사람에게 남은 기록이 있나 — 있으면 «완전 삭제» 를 안 보여준다 */
+  function hasRecords(id: string): boolean {
+    if (Object.keys(loadPunches()[id] ?? {}).length > 0) return true;
+    if (loadContracts().some((c) => c.staffId === id)) return true;
+    return Object.keys(data.assign[id] ?? {}).length > 0;
+  }
+
   /** 직원 한 명의 칸 하나를 고친다 (연락처·섹션) */
   function patchStaff(id: string, patch: Partial<(typeof data.staff)[number]>) {
     persist({
       ...data,
       staff: data.staff.map((s) => (s.id === id ? { ...s, ...patch } : s)),
     });
+  }
+
+  /** 퇴사 처리 — 지우지 않고 날짜만 적는다 (3년 보존) */
+  function retireStaff(id: string) {
+    const who = data.staff.find((s) => s.id === id);
+    if (!who) return;
+    if (
+      !window.confirm(
+        `${who.name} 님을 퇴사 처리할까요?
+명단 맨 아래로 내려가고, 출퇴근·근로계약 기록은 그대로 남습니다 (3년 보존).`,
+      )
+    )
+      return;
+    patchStaff(id, { leftAt: ymd(new Date()) });
+  }
+
+  /** 퇴사 처리를 되돌린다 — 잘못 눌렀거나 다시 나온 경우 */
+  function unretireStaff(id: string) {
+    patchStaff(id, { leftAt: "" });
   }
 
   function removeStaff(id: string) {
@@ -515,7 +543,14 @@ export default function RosterView({
                         className={`${INPUT} py-1 text-[13px] font-bold`}
                       />
                     ) : (
-                      <div className="font-bold">{s.name}</div>
+                      <div className="font-bold">
+                        {s.name}
+                        {isLeft(s) && (
+                          <span className="ml-2 rounded-md bg-zinc-200 px-1.5 py-0.5 text-[11px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {leftLabel(s)}
+                          </span>
+                        )}
+                      </div>
                     )}
                     <div className="mt-1 flex gap-1.5">
                       <button
@@ -525,17 +560,40 @@ export default function RosterView({
                       >
                         {editing === s.id ? "완료" : "수정"}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(`${s.name} 님을 명단에서 뺄까요?
-근무표 배정도 같이 지워집니다.`))
-                            removeStaff(s.id);
-                        }}
-                        className="rounded-lg border border-red-300 px-2 py-0.5 text-[12px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400 dark:active:bg-red-950/40"
-                      >
-                        삭제
-                      </button>
+                      {isLeft(s) ? (
+                        <button
+                          type="button"
+                          onClick={() => unretireStaff(s.id)}
+                          className="rounded-lg border border-zinc-300 px-2 py-0.5 text-[12px] font-semibold active:bg-zinc-100 dark:border-zinc-700 dark:active:bg-zinc-800"
+                        >
+                          복귀
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => retireStaff(s.id)}
+                          className="rounded-lg border border-amber-300 px-2 py-0.5 text-[12px] font-semibold text-amber-700 active:bg-amber-50 dark:border-amber-900 dark:text-amber-400 dark:active:bg-amber-950/40"
+                        >
+                          퇴사
+                        </button>
+                      )}
+                      {/* ★ 완전 삭제는 **기록이 하나도 없을 때만** 보인다.
+                          출퇴근·근로계약은 3년 보존 대상이라, 기록이 있는
+                          사람을 지우면 그 기록이 누구 것인지 잃는다.
+                          오타로 만든 줄을 치우는 용도로만 남긴다. */}
+                      {!hasRecords(s.id) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`${s.name} 님을 아주 지울까요?
+기록이 없는 사람이라 되돌릴 수 없습니다.`))
+                              removeStaff(s.id);
+                          }}
+                          className="rounded-lg border border-red-300 px-2 py-0.5 text-[12px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400 dark:active:bg-red-950/40"
+                        >
+                          삭제
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td

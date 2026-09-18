@@ -46,15 +46,25 @@ import { newUuid } from "../src/lib/store.ts";
  *   그래서 «넣었다 빼면 그대로인가» 를 칸 단위로 못 박는다.
  * ------------------------------------------------------------------ */
 
-test("★ 직원 — 왕복해도 그대로다", () => {
+test("★ 직원 — 왕복해도 그대로다 (퇴사일 포함)", () => {
   const s: Staff = {
     id: newUuid(),
     section: "바",
     name: "김민수",
     email: "a@b.c",
     phone: "010-0000-0000",
+    leftAt: "",
   };
   assert.deepEqual(rowToStaff(staffToRow(s)), s);
+
+  /* ★ 퇴사일이 빠지면 «그만둔 사람» 이 서버에서 재직 중으로 돌아온다 —
+     기기를 바꾸면 명단 맨 위에 다시 뜬다 (2026-09-18) */
+  const left: Staff = { ...s, leftAt: "2026-06-01" };
+  assert.equal(staffToRow(left).left_at, "2026-06-01");
+  assert.deepEqual(rowToStaff(staffToRow(left)), left);
+
+  /* 재직 중은 `null` 로 보낸다 — `""` 를 보내면 date 칸이 거절한다 */
+  assert.equal(staffToRow(s).left_at, null);
 });
 
 test("★ 출퇴근 — 왕복해도 그대로다", () => {

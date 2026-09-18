@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BTN, BTN_PRIMARY, Card, Caveat, Chip, Empty, INPUT, NumField, Row, Screen, useSaveState } from "@/components/ui";
 import { won } from "@/lib/store";
 import { logEvent } from "@/lib/metrics";
-import { label, loadRoster, mondayOf, saveRoster, weekDays, ymd, type RosterData, type Staff } from "@/lib/roster";
+import { label, loadRoster, mondayOf, saveRoster, weekDays, ymd, type RosterData, type Staff, isLeft } from "@/lib/roster";
 import {
   estimatePay,
   getPunch,
@@ -334,7 +334,11 @@ export default function AttendanceView({
             찍었으면 시각을 직접 고칠 수 있습니다.
           </p>
 
-          {[...roster.staff]
+          {roster.staff
+            /* ★ 퇴사자는 오늘 찍을 일이 없다 (2026-09-18). 기록은 남기되
+               버튼은 안 보여준다 — 그만둔 사람 이름이 매일 뜨면
+               누가 실수로 찍는다. [이번 주] 탭에는 그대로 나온다. */
+            .filter((s) => !isLeft(s))
             // 오늘 근무표에 잡힌 사람을 위로 올린다
             .sort((a, b) => {
               const pa = roster.assign[a.id]?.[today] ? 0 : 1;

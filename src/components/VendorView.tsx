@@ -300,6 +300,14 @@ export default function VendorView({
 
       {/* ---------- 거래처 목록 ---------- */}
       <div className="mt-4 flex flex-col gap-3">
+        {/* ★ 2026-09-18 — 추가 버튼을 **맨 위에도** 둔다.
+            원래 목록 맨 아래에만 있었는데, 위의 「단가가 빠진 재료」 카드가
+            길어서 한참 내려야 나왔다. 사장님이 «추가 삭제가 안 보인다» 고
+            한 것이 이것이다 — 직원 삭제 때와 같은 일이 또 났다. */}
+        <button type="button" onClick={addVendor} className={BTN_PRIMARY}>
+          + 거래처 추가
+        </button>
+
         {data.vendors.length === 0 && (
           <Empty>
             거래처가 없습니다.
@@ -327,6 +335,17 @@ export default function VendorView({
                     {v.how} · 마감 {v.cutoff} · 주문 후 {v.leadDays}일 · 품목{" "}
                     {items.length}개
                   </span>
+                </button>
+                {/* ★ 지우기를 **접힌 채로도** 보이게 (2026-09-18).
+                    원래 카드를 펼쳐서 맨 아래까지 내려야 나왔다 —
+                    사장님이 «삭제가 안 보인다» 고 한 것이 이것이다. */}
+                <button
+                  type="button"
+                  onClick={() => removeVendor(v.id)}
+                  aria-label={`${v.name || "이름 없는 거래처"} 지우기`}
+                  className="shrink-0 rounded-lg border border-red-300 px-2 py-1 text-[12px] font-semibold text-red-600 active:bg-red-50 dark:border-red-900 dark:text-red-400 dark:active:bg-red-950/40"
+                >
+                  지우기
                 </button>
                 {v.phone && (
                   <a
@@ -560,9 +579,11 @@ export default function VendorView({
           );
         })}
 
-        <button type="button" onClick={addVendor} className={BTN_PRIMARY}>
-          + 거래처 추가
-        </button>
+        {data.vendors.length > 2 && (
+          <button type="button" onClick={addVendor} className={BTN_PRIMARY}>
+            + 거래처 추가
+          </button>
+        )}
       </div>
 
       {/* 입력 도움말 — 레시피 재료명을 그대로 고를 수 있게 */}

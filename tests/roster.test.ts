@@ -18,7 +18,11 @@ import {
   saveRoster,
   weekDays,
   ymd,
+  isLeft,
+  leftLabel,
+  staffOrder,
   type RosterData,
+  type Staff,
 } from "../src/lib/roster.ts";
 
 /* ------------------------------------------------------------------ */
@@ -316,4 +320,43 @@ test("saveRoster → loadRoster 왕복", (t) => {
   };
   assert.equal(saveRoster(data), true);
   assert.deepEqual(loadRoster(), data);
+});
+
+/* ------------------------------------------------------------------ *
+ * 퇴사 (2026-09-18)
+ *
+ * ★ 사장님 지적: *"직원이 그만둬도 3년은 보관해야 한다는데"*. 맞다 —
+ *   근로기준법 제42조. 직원 줄을 지우면 출퇴근·근로계약이 **누구 것인지
+ *   잃는다.** 그래서 지우지 않고 날짜만 적고 맨 아래로 내린다.
+ * ------------------------------------------------------------------ */
+
+test("★ 퇴사자는 맨 아래로, 나머지는 가나다순", () => {
+  const mk = (name: string, leftAt = ""): Staff => ({
+    id: name, section: "바", name, email: "", phone: "", leftAt,
+  });
+  const out = staffOrder([
+    mk("최민준"),
+    mk("강수진", "2026-06-01"),
+    mk("김하늘"),
+    mk("박지우", "2026-01-15"),
+  ]).map((s) => s.name);
+
+  assert.deepEqual(out, ["김하늘", "최민준", "강수진", "박지우"]);
+});
+
+test("★ 퇴사 표시는 «몇 개월» 로 읽힌다 — 보존 기한을 그걸로 판단한다", () => {
+  const at = (d: string): Staff => ({
+    id: "x", section: "", name: "x", email: "", phone: "", leftAt: d,
+  });
+  const today = new Date("2026-09-18T00:00:00");
+  assert.equal(leftLabel(at("2026-09-02"), today), "퇴사 이번 달");
+  assert.equal(leftLabel(at("2026-06-18"), today), "퇴사 3개월");
+  assert.equal(leftLabel(at("2025-09-18"), today), "퇴사 1년");
+  assert.equal(leftLabel(at("2025-06-18"), today), "퇴사 1년 3개월");
+});
+
+test("재직자는 아무 표시도 없다", () => {
+  const s: Staff = { id: "x", section: "", name: "x", email: "", phone: "" };
+  assert.equal(isLeft(s), false);
+  assert.equal(leftLabel(s), "");
 });

@@ -136,6 +136,8 @@ export function staffToRow(s: Staff): Row {
     section: s.section || null,
     email: s.email || null,
     phone: s.phone || null,
+    /* ★ 비어 있으면 재직 중이다. `""` 를 그대로 보내면 date 칸이 거절한다 */
+    left_at: s.leftAt || null,
   };
 }
 
@@ -146,6 +148,7 @@ export function rowToStaff(r: Row): Staff {
     name: str(r.name),
     email: str(r.email),
     phone: str(r.phone),
+    leftAt: str(r.left_at),
   };
 }
 

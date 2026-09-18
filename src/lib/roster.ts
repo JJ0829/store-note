@@ -18,6 +18,16 @@ export type Staff = {
   /** 근무표를 보낼 주소. 없으면 메일 발송 대상에서 빠진다 */
   email: string;
   phone: string;
+  /**
+   * 퇴사일 (`YYYY-MM-DD`). 비어 있으면 **재직 중**이다.
+   *
+   * ★ 왜 지우지 않고 날짜를 적나 (2026-09-18 · 사장님 지적)
+   *   근로기준법 제42조 — **출퇴근·근로계약은 3년** 보존해야 한다. 그런데
+   *   직원 줄을 지우면 `punches.staff_id` 가 가리킬 곳이 없어져서 **남은
+   *   기록이 누구 것인지 잃는다.** 그래서 목록 맨 아래로 내리고
+   *   「퇴사 3개월」 처럼 표시만 한다.
+   */
+  leftAt?: string;
 };
 
 /** `assign[staffId][날짜(YYYY-MM-DD)] = 조 이름 또는 "" (휴무)` */
@@ -198,4 +208,44 @@ export function buildEmailBody(
 
   out.push("변경 사항이 있으면 알려주세요.");
   return out.join("\n");
+}
+
+/* ------------------------------------------------------------------ *
+ * 퇴사 (2026-09-18)
+ * ------------------------------------------------------------------ */
+
+export function isLeft(s: Staff): boolean {
+  return !!s.leftAt;
+}
+
+/**
+ * 「퇴사 3개월」 처럼 읽을 말.
+ *
+ * ★ 개월로 센다. 날짜를 그대로 보여주면 «얼마나 지났나» 를 사람이 머리로
+ *   계산해야 하는데, 보존 기한(3년)을 판단할 때 필요한 것은 그 «얼마나» 다.
+ */
+export function leftLabel(s: Staff, today = new Date()): string {
+  if (!s.leftAt) return "";
+  const d = new Date(`${s.leftAt}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "퇴사";
+  const months =
+    (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth());
+  if (months <= 0) return "퇴사 이번 달";
+  if (months < 12) return `퇴사 ${months}개월`;
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  return m === 0 ? `퇴사 ${y}년` : `퇴사 ${y}년 ${m}개월`;
+}
+
+/**
+ * 화면에 세우는 차례 — **재직자가 먼저, 그 안에서 가나다순.**
+ * 퇴사자는 맨 아래로 내리되 지우지는 않는다.
+ */
+export function staffOrder(list: Staff[]): Staff[] {
+  return [...list].sort((a, b) => {
+    const la = isLeft(a) ? 1 : 0;
+    const lb = isLeft(b) ? 1 : 0;
+    if (la !== lb) return la - lb;
+    return a.name.localeCompare(b.name, "ko");
+  });
 }
