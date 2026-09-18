@@ -21,7 +21,7 @@ import {
 } from "@/lib/attendance";
 import { contractOf, loadContracts, saveContracts, type Contract } from "@/lib/contracts";
 import WorkSwitch from "@/components/WorkSwitch";
-import { SKIP, hasRows, pullPunches, pushAttendance, takeContracts, takeRoster } from "@/lib/serverSync";
+import { SKIP, deleteRows, hasRows, pullPunches, pushAttendance, takeContracts, takeRoster } from "@/lib/serverSync";
 import { InlineUnlock, useOwnerOpen } from "@/components/OwnerGate";
 import { loadSettings, type Settings } from "@/lib/settings";
 import { applyShiftEdits, loadShiftEdits } from "@/lib/shiftEdit";
@@ -190,6 +190,49 @@ export default function AttendanceView({
         save.report("출퇴근 기록(서버 보관)", r.ok, () => sendUp(next, staff));
       });
     }, 1200);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 잘못 찍은 기록 지우기 (2026-09-18 · 사장님 요청)
+   *
+   * ★ 왜 「고치기」 로는 안 되나.
+   *   시각 칸은 원래 고칠 수 있었다. 그런데 **잘못 찍은 것은 고칠 값이
+   *   없다** — 오늘 출근한 적이 없는 사람이 눌린 것이라 07:30 을 적어도
+   *   거짓이 된다. 그 줄은 지워져야 «안 찍음» 으로 돌아간다.
+   *   시연 중에 눌러 보고 못 되돌린 데서 나온 요청이지만, 실매장에서도
+   *   남의 이름을 눌러 찍는 일은 생긴다.
+   *
+   * ★ `commit()` 을 못 쓴다. 그쪽은 **덮어쓰기(upsert)** 로 보내므로
+   *   서버 줄은 그대로 남는다. 다음에 다른 기기에서 열면 지운 기록이
+   *   돌아온다. 그래서 여기서만 `deleteRows` 를 부른다.
+   *
+   * ★ 사장님만 한다 — 시각 고치기(`timeLocked`)와 같은 이유다.
+   *   직원이 자기 기록을 지울 수 있으면 지각이 없던 일이 된다.
+   *   지우기는 고치기보다 세므로 **확인을 한 번 받는다.**
+   * ------------------------------------------------------------------ */
+  function removePunch(s: Staff) {
+    const p = punches[s.id]?.[today];
+    if (!p) return;
+    const 무엇 = [p.inAt && `출근 ${p.inAt}`, p.outAt && `퇴근 ${p.outAt}`]
+      .filter(Boolean)
+      .join(" · ");
+    if (!confirm(`${s.name} 의 오늘 기록(${무엇})을 지웁니다.
+안 찍은 상태로 돌아갑니다.`)) return;
+
+    const mine = { ...(punches[s.id] ?? {}) };
+    delete mine[today];
+    const next: PunchData = { ...punches, [s.id]: mine };
+    setPunches(next);
+    save.report("출퇴근 기록", savePunches(next), () =>
+      save.report("출퇴근 기록", savePunches(next)),
+    );
+    /* 서버에도 없애야 한다. 로그인 안 했으면 SKIP 이 와서 아무 말도 안 한다 */
+    void deleteRows("punches", [p.id]).then((r) => {
+      if (!r.ok && r.reason === SKIP) return;
+      save.report("출퇴근 기록(서버 보관)", r.ok, () => {
+        void deleteRows("punches", [p.id]);
+      });
+    });
   }
 
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);
@@ -463,10 +506,24 @@ export default function AttendanceView({
                     </div>
                   )}
 
+                  {/* ★ 지우기는 시각 칸과 **같은 줄이 아니라 그 아래**에 둔다.
+                      칸 옆에 붙이면 「휴게 60분」 입력하다가 닿는다. 그리고
+                      글자만 두고 테두리를 안 준다 — 출근·퇴근 버튼과 같은
+                      크기로 만들면 그게 세 번째 버튼으로 보인다. */}
+                  {p?.inAt && !timeLocked && (
+                    <button
+                      type="button"
+                      onClick={() => removePunch(s)}
+                      className="mt-1.5 text-[12px] font-semibold text-red-600 underline underline-offset-2 active:text-red-800 dark:text-red-400"
+                    >
+                      잘못 찍었습니다 — 오늘 기록 지우기
+                    </button>
+                  )}
+
                   {p?.inAt && timeLocked && (
                     <p className="mt-1.5 text-[12px] text-zinc-500 dark:text-zinc-400">
-                      🔒 찍힌 시각을 고치는 것은 사장님만 합니다. [이번 주] 탭에서
-                      잠금번호를 넣으면 고칠 수 있습니다.
+                      🔒 찍힌 시각을 고치거나 지우는 것은 사장님만 합니다. [이번 주] 탭에서
+                      잠금번호를 넣으면 할 수 있습니다.
                     </p>
                   )}
 

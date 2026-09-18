@@ -20,6 +20,7 @@ import {
   leftLabel,
   staffOrder,
   type RosterData,
+  type Staff,
 } from "@/lib/roster";
 import ShiftEditor from "@/components/ShiftEditor";
 import WorkSwitch from "@/components/WorkSwitch";
@@ -31,9 +32,10 @@ import {
 import type { Shift } from "@/lib/types";
 import { maskEmail, maskPhone } from "@/lib/maskContact";
 import { sendViaServer, type Failed } from "@/lib/rosterMail";
-import { SKIP, deleteRows, hasRows, pullRoster, pushRoster } from "@/lib/serverSync";
+import { SKIP, deleteRows, hasRows, pullRoster, pushContractSet, pushRoster, takeContracts } from "@/lib/serverSync";
 import { loadPunches } from "@/lib/attendance";
-import { loadContracts } from "@/lib/contracts";
+import { loadContracts, saveContracts, setWage, wageOf, type Contract } from "@/lib/contracts";
+import { won } from "@/lib/store";
 
 /** 「메일로 보내기」 의 진행 상태. 서버 메일(Resend)이 설정돼 있을 때만 움직인다 */
 type MailState =
@@ -71,6 +73,8 @@ export default function RosterView({
      쓰려면 클로저에 잡힌 옛 값이 아니라 **지금 값**이 필요하다 */
   const shiftsRef = useRef(shifts);
   shiftsRef.current = shifts;
+  /** 시급 칸은 글자마다 바뀐다 — 서버로는 멈춘 뒤 한 번만 보낸다 */
+  const wageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* 어느 직원 줄을 고치는 중인가. 한 번에 하나만 — 공용 태블릿이라
      여러 줄이 동시에 입력 상태면 누가 무엇을 고쳤는지 알 수 없다 */
@@ -83,6 +87,10 @@ export default function RosterView({
   const [email, setEmail] = useState("");
   const [section, setSection] = useState("");
   const [phone, setPhone] = useState("");
+  /* ★ 시급을 여기서도 받는다 (2026-09-18). 값은 계약서(`sop:contracts`)에
+     들어간다 — 이 화면이 따로 들고 있으면 두 곳이 갈린다 */
+  const [wage, setWageInput] = useState(0);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const save = useSaveState();
   // 연락처는 기본으로 가린다. 공용 태블릿이라 다음 사람이 그대로 본다.
   const [showContacts, setShowContacts] = useState(false);
@@ -94,6 +102,10 @@ export default function RosterView({
     setData(loadRoster());
     setShiftEdits(loadShiftEdits());
     setMonday(mondayOf(new Date()));
+    setContracts(loadContracts());
+    /* 계약은 **받아 적기만** 한다 — 고치는 것은 시급 한 칸뿐이고
+       나머지는 근로계약서 화면이 주인이다 */
+    void takeContracts(saveContracts).then((c) => c && setContracts(c));
 
     /* ★★ 직원을 **여기서 직접** 올린다 (2026-09-16).
        전에는 직원이 출퇴근·계약을 보낼 때 **딸려서만** 올라갔다. 그래서
@@ -169,12 +181,52 @@ export default function RosterView({
       },
     ];
     persist({ ...data, staff: next });
+    // ★ 시급은 계약서 쪽에 적는다. 0 이면 계약을 만들지 않는다 —
+    //   빈 계약이 생기면 근로계약서 화면이 «시급 미입력» 줄로 채워진다
+    if (wage > 0) putWage(next[next.length - 1].id, wage, next);
     setName("");
     setEmail("");
     setPhone("");
+    setWageInput(0);
     // 섹션은 남겨둔다. 같은 섹션 사람을 연달아 넣는 경우가 많다
     /* 서버로 보내는 것은 `persist` 가 한다 — 여기서 또 부르면 같은 것을
        두 번 보낸다 (2026-09-16 에 배정까지 같이 보내면서 한곳으로 모았다) */
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 시급 (2026-09-18 · 사장님 지적: *"시급이 왜 바로바로 반영 안 되"*)
+   *
+   * ★ 값은 **계약서에 적는다.** 이 화면이 따로 들고 있으면 근로계약서와
+   *   두 개가 생기고, 인건비가 어느 쪽을 보는지 아무도 모르게 된다.
+   *   계약이 없으면 `setWage` 가 시급만 든 계약을 만든다 — 그래도
+   *   근로계약서 화면의 법정 점검은 그대로 걸린다 (`contracts.ts` 참고).
+   *
+   * ★ 저장은 **누를 때마다가 아니라 한 박자 뒤에** 보낸다. 숫자 칸은
+   *   글자마다 바뀌어서 "10320" 하나에 PUT 이 다섯 번 나간다.
+   * ------------------------------------------------------------------ */
+  /* ⚠️ 매개변수 이름을 `won` 으로 두면 금액 표기 함수 `won()` 을 가린다.
+     이 함수 안에서는 안 쓰지만, 나중에 여기서 «10,320원» 을 찍으려는 사람이
+     조용히 막힌다 — 이름을 다르게 둔다. */
+  /* ★ `staffList` 를 받는 이유 — 방금 **추가한** 직원의 시급을 넣을 때는
+       `data.staff` 가 아직 그 사람을 모른다(`persist` 의 setState 가 다음
+       그림에 반영되므로). 그대로 보내면 `pushContractSet` 이 **그 사람 없이**
+       직원을 올리고, 이어지는 계약 줄의 `staff_id` 가 서버에 없는 사람을
+       가리켜 통째로 거부당한다. 화면에는 아무 말도 안 뜨고 시급만 안 올라간다.
+       `AttendanceView.sendUp` 이 같은 이유로 같은 모양을 하고 있다. */
+  function putWage(staffId: string, hourly: number, staffList?: Staff[]) {
+    const staff = staffList ?? data.staff;
+    const next = setWage(contracts, staffId, hourly);
+    setContracts(next);
+    save.report("시급", saveContracts(next), () =>
+      save.report("시급", saveContracts(next)),
+    );
+    if (wageTimer.current) clearTimeout(wageTimer.current);
+    wageTimer.current = setTimeout(() => {
+      void pushContractSet(staff, next).then((r) => {
+        if (!r.ok && r.reason === SKIP) return;
+        save.report("시급(서버 보관)", r.ok, () => putWage(staffId, hourly, staff));
+      });
+    }, 1200);
   }
 
   /** 이 사람에게 남은 기록이 있나 — 있으면 «완전 삭제» 를 안 보여준다 */
@@ -466,6 +518,22 @@ export default function RosterView({
             aria-label="전화번호"
             className={`${inputBase} w-40`}
           />
+          {/* ★ 시급을 넣는 자리를 여기로 당겼다 (2026-09-18).
+              전에는 계약서 화면까지 가야 넣을 수 있어서, 방금 넣은 직원이
+              출퇴근 화면 인건비에서 통째로 빠졌다. 비워 두면 0 이고,
+              0 은 «안 넣음» 으로 읽혀 그 사람만 인건비에서 빠진다 —
+              출퇴근 화면이 그걸 이름까지 대면서 알린다. */}
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={10}
+            value={wage || ""}
+            onChange={(e) => setWageInput(Number(e.target.value) || 0)}
+            placeholder="시급"
+            aria-label="시급 (원)"
+            className={`${inputBase} w-28`}
+          />
           <button
             type="button"
             onClick={addStaff}
@@ -552,6 +620,42 @@ export default function RosterView({
                         )}
                       </div>
                     )}
+                    {/* ★ 시급은 **칸을 새로 만들지 않고 이름 아래**에 둔다
+                        (2026-09-18). 위의 2026-09-16 메모와 같은 이유다 —
+                        표에 다섯 번째 칸을 만들면 태블릿에서 가로로 밀어야
+                        보이고, 그러면 «없다» 와 같아진다.
+                        수정 중이 아닐 때도 값을 보여준다. 안 보여주면 누가
+                        시급이 비었는지 한 명씩 눌러 봐야 안다. */}
+                    <div className="mt-1 text-[12px]">
+                      {editing === s.id ? (
+                        <label className="flex items-center gap-1.5">
+                          <span className="text-zinc-500 dark:text-zinc-400">시급</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            step={10}
+                            value={wageOf(contracts, s.id) || ""}
+                            aria-label={`${s.name} 시급`}
+                            placeholder="0"
+                            onChange={(e) =>
+                              putWage(s.id, Number(e.target.value) || 0)
+                            }
+                            className={`${INPUT} w-24 py-1 text-right text-[13px]`}
+                          />
+                          <span className="text-zinc-500 dark:text-zinc-400">원</span>
+                        </label>
+                      ) : wageOf(contracts, s.id) > 0 ? (
+                        <span className="text-zinc-500 dark:text-zinc-400">
+                          시급 {won(wageOf(contracts, s.id))}원
+                        </span>
+                      ) : (
+                        /* 0 을 «0원» 으로 쓰면 안 된다 — 공짜로 일한다는 말이 된다 */
+                        <span className="font-semibold text-amber-700 dark:text-amber-400">
+                          시급 미입력 — 인건비에서 빠집니다
+                        </span>
+                      )}
+                    </div>
                     <div className="mt-1 flex gap-1.5">
                       <button
                         type="button"
