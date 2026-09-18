@@ -28,6 +28,7 @@ import {
   arrivalOf,
   cutoffOrder,
   loadVendors,
+  migrateVendorIds,
   minutesToCutoff,
   newVendor,
   saveVendors,
@@ -74,7 +75,15 @@ export default function OrderView({
 
   useEffect(() => {
     setNow(new Date());
-    setVendors(loadVendors());
+    /* ★ 거래처 화면에 들르지 않고 여기부터 열 수도 있으므로 이사도 여기서
+       한 번 확인한다 (`migrateVendorIds`). 안 하면 옛 id 그대로 남아
+       서버에 안 올라가고, 「주문함」의 문자 상대도 못 찾는다. */
+    const moved = migrateVendorIds(loadVendors(), loadOrderLinks());
+    if (moved.changed) {
+      saveVendors(moved.data);
+      saveOrderLinks(moved.links);
+    }
+    setVendors(moved.data);
     /* ★ 거래처를 받는다 (2026-09-18). 없으면 「주문함」을 눌러도 문자 보낼
        상대가 없어서 «거래처 만들기» 칸만 뜬다 — 이미 만들어 뒀는데도. */
     void takeVendors(saveVendors).then((v) => v && setVendors(v));

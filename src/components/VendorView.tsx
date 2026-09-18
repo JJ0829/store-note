@@ -24,9 +24,11 @@ import {
   unitPrice,
   type Vendor,
   type VendorData,
+  migrateVendorIds,
   type VendorItem,
 } from "@/lib/vendors";
 import { WEEKDAY } from "@/lib/roster";
+import { loadOrderLinks, saveOrderLinks } from "@/lib/orders";
 import { SKIP, hasRows, pullVendors, pushVendors } from "@/lib/serverSync";
 import { loadSettings, saveSettings, type Settings } from "@/lib/settings";
 
@@ -56,7 +58,17 @@ export default function VendorView({
   useEffect(() => () => { if (upTimer.current) clearTimeout(upTimer.current); }, []);
 
   useEffect(() => {
-    setData(loadVendors());
+    /* ★ 옛 id(`vd-a1b2c3`)를 uuid 로 옮긴다 (2026-09-18).
+       서버 `suppliers.id` 는 uuid 라 옛 모양은 **한 줄도 안 올라갔다.**
+       이미 넣어둔 거래처가 있으니 지우게 하지 않고 id 만 바꿔 끼운다 —
+       품목의 `vendorId` 와 발주 화면의 거래처 연결까지 같이 고친다. */
+    const moved = migrateVendorIds(loadVendors(), loadOrderLinks());
+    if (moved.changed) {
+      saveVendors(moved.data);
+      saveOrderLinks(moved.links);
+      sendUp(moved.data); // 옮긴 김에 서버로 올린다
+    }
+    setData(moved.data);
     setSettings(loadSettings());
 
     /* ★★ 빈 서버로 태블릿을 덮지 않는다 (계약·출퇴근과 같은 규율).

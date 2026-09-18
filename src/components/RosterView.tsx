@@ -130,6 +130,17 @@ export default function RosterView({
 
   const days = useMemo(() => (monday ? weekDays(monday) : []), [monday]);
 
+  /* ★ 이름 가나다순 (2026-09-18 · 사장님 지적).
+     저장 순서(넣은 차례)로 두면 사람이 늘수록 찾는 데 시간이 걸린다.
+     `localeCompare("ko")` 를 쓴다 — 기본 비교는 «ㄱ» 보다 «ㅎ» 이 작게
+     나오는 경우가 있어서 한글 정렬이 어긋난다.
+     ⚠️ **저장 순서는 안 바꾼다.** 보이는 차례만 바꾼다 — `data.staff` 를
+       정렬해서 저장하면 서버로 같은 줄이 계속 다시 올라간다. */
+  const sortedStaff = useMemo(
+    () => [...data.staff].sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    [data.staff],
+  );
+
   const persist = useCallback(
     (next: RosterData) => {
       setData(next);
@@ -442,7 +453,7 @@ export default function RosterView({
               </tr>
             </thead>
             <tbody>
-              {data.staff.map((s) => (
+              {sortedStaff.map((s) => (
                 <tr
                   key={s.id}
                   className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
@@ -587,7 +598,7 @@ export default function RosterView({
               </tr>
             </thead>
             <tbody>
-              {data.staff.map((s) => (
+              {sortedStaff.map((s) => (
                 <tr
                   key={s.id}
                   className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"

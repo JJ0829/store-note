@@ -43,6 +43,45 @@ import type { Shift } from "@/lib/types";
 
 type Tab = "today" | "week";
 
+/* ------------------------------------------------------------------ *
+ * 출근·퇴근 아이콘
+ *
+ * ★ 주방에서 젖은 손으로 흘깃 보고 누르는 버튼이다. 글자만 있으면
+ *   「출근 07:28」·「퇴근 15:40」 이 비슷하게 보인다 — 화살표 방향이
+ *   다르면 글자를 안 읽어도 구분된다.
+ *
+ * ★ 파일을 안 불러온다. `<svg>` 를 그대로 쓴다 — 아이콘 하나 때문에
+ *   런타임 의존성을 늘리지 않는다 (지금 3개다).
+ * ------------------------------------------------------------------ */
+
+const ICON = "h-[18px] w-[18px] shrink-0";
+
+/** 안으로 들어가는 화살표 */
+function ArrowIn() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden focusable="false" className={ICON}
+      fill="none" stroke="currentColor" strokeWidth="2.2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <path d="M10 17l5-5-5-5" />
+      <path d="M15 12H3" />
+    </svg>
+  );
+}
+
+/** 밖으로 나가는 화살표 */
+function ArrowOut() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden focusable="false" className={ICON}
+      fill="none" stroke="currentColor" strokeWidth="2.2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4" />
+      <path d="M16 17l5-5-5-5" />
+      <path d="M21 12H9" />
+    </svg>
+  );
+}
+
 export default function AttendanceView({
   storeName,
   shifts: seedShifts,
@@ -284,8 +323,13 @@ export default function AttendanceView({
 
       {tab === "today" ? (
         /* ============ 오늘 ============ */
-        <div className="mt-4 flex flex-col gap-3">
-          <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
+        /* ★ 2026-09-18 — 여백을 줄였다 (사장님 지적: *"공백이 너무 심합니다"*).
+           직원이 늘수록 카드가 세로로만 쌓여서 태블릿 화면의 절반이 빈칸이었다.
+           md(768px+)부터 **두 열**로 세우고, 카드 안 간격도 좁혔다.
+           폰은 한 줄 그대로다 — 주방에서 젖은 손으로 누르는 버튼이라
+           **버튼 크기 자체는 안 줄였다.** */
+        <div className="mt-3 grid gap-2.5 md:grid-cols-2 md:items-start">
+          <p className="text-[12px] text-zinc-500 dark:text-zinc-400 md:col-span-2">
             지금 {hhmm(now)} · 버튼을 누르면 그 시각으로 찍힙니다. 잘못
             찍었으면 시각을 직접 고칠 수 있습니다.
           </p>
@@ -335,18 +379,20 @@ export default function AttendanceView({
                     </span>
                   </div>
 
-                  {/* 큰 버튼 두 개 */}
-                  <div className="mt-3 flex gap-2">
+                  {/* 큰 버튼 두 개. 아이콘을 넣어서 글자 없이도 구분된다 —
+                      주방에서 흘깃 보고 누르는 버튼이다 */}
+                  <div className="mt-2.5 flex gap-2">
                     <button
                       type="button"
                       onClick={() => stamp(s.id, "in")}
                       className={[
-                        "flex-1 rounded-xl py-4 text-[15px] font-bold",
+                        "flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-[15px] font-bold",
                         p?.inAt
                           ? "border-2 border-zinc-300 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
                           : "bg-orange-500 text-white active:bg-orange-600",
                       ].join(" ")}
                     >
+                      <ArrowIn />
                       {p?.inAt ? `출근 ${p.inAt}` : "출근"}
                     </button>
                     <button
@@ -354,7 +400,7 @@ export default function AttendanceView({
                       onClick={() => stamp(s.id, "out")}
                       disabled={!p?.inAt}
                       className={[
-                        "flex-1 rounded-xl py-4 text-[15px] font-bold",
+                        "flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-[15px] font-bold",
                         !p?.inAt
                           ? "border-2 border-zinc-200 text-zinc-300 dark:border-zinc-800 dark:text-zinc-600"
                           : p?.outAt
@@ -362,12 +408,13 @@ export default function AttendanceView({
                             : "bg-zinc-900 text-white active:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900",
                       ].join(" ")}
                     >
+                      <ArrowOut />
                       {p?.outAt ? `퇴근 ${p.outAt}` : "퇴근"}
                     </button>
                   </div>
 
                   {p?.inAt && (
-                    <div className="mt-3 flex flex-wrap items-end gap-2">
+                    <div className="mt-2 flex flex-wrap items-end gap-1.5">
                       <label className="flex items-center gap-1.5">
                         <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
                           출근
@@ -379,7 +426,7 @@ export default function AttendanceView({
                           aria-readonly={timeLocked}
                           placeholder="07:30"
                           aria-label={`${s.name} 출근 시각`}
-                          className={`${INPUT} w-24 text-center font-mono ${timeLocked ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" : ""}`}
+                          className={`${INPUT} w-20 py-1.5 text-center font-mono ${timeLocked ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" : ""}`}
                         />
                       </label>
                       <label className="flex items-center gap-1.5">
@@ -393,7 +440,7 @@ export default function AttendanceView({
                           aria-readonly={timeLocked}
                           placeholder="15:30"
                           aria-label={`${s.name} 퇴근 시각`}
-                          className={`${INPUT} w-24 text-center font-mono ${timeLocked ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" : ""}`}
+                          className={`${INPUT} w-20 py-1.5 text-center font-mono ${timeLocked ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" : ""}`}
                         />
                       </label>
                       <label className="flex items-center gap-1.5">

@@ -318,7 +318,7 @@ test("★ 매장마다 다른 바 부재료는 한 카드에 모여 있다", () 
 
   // 카드는 다섯 개다 — 콜드브루 / 반죽 / 바 부재료 / 발주 2
   const tops = af.tasks.filter((t) => t.optionOf === null);
-  assert.equal(tops.length, 5, `카드가 ${tops.length}개다 (5개여야 한다)`);
+  assert.equal(tops.length, 6, `카드가 ${tops.length}개다 (6개여야 한다)`);
 });
 
 test("★ 옵션으로 내려도 되돌릴 수 없는 것은 안내에서 안 빠진다", () => {
@@ -396,7 +396,7 @@ test("★★ 진행률 분모 — 묶음 머리는 안 세고 그 안의 항목�
   const af = getPrepListBySlug("afternoon");
   assert.ok(af);
   // 바 부재료는 안에 든 게 전부 optional 이라 그 카드 자체가 할 일(점검했다)이다
-  assert.equal(countedOf(af).length, 5, "오후 프렙 분모가 5가 아니다");
+  assert.equal(countedOf(af).length, 6, "오후 프렙 분모가 6이 아니다");
 
   /* 마감 준비(evening)는 2026-09-13 에 마감 체크리스트로 합쳐졌다.
      프렙에 남을 이유가 없었다 — 세 항목 다 `routine` 이라 기다릴 것이 없었다. */
@@ -477,7 +477,7 @@ const 정본 = "docs/deliverables/21_화면명세.md §1-b 를 같이 고칠 것
 
 test("★ 숫자 정본 — 프렙 목록의 개수", () => {
   const want: Record<string, { all: number; counted: number; irreversible: number }> = {
-    afternoon: { all: 11, counted: 5, irreversible: 7 },
+    afternoon: { all: 12, counted: 6, irreversible: 7 },
     cycle: { all: 16, counted: 13, irreversible: 4 },
   };
   assert.equal(listPrepLists().length, 2, `프렙 목록 수가 바뀌었다 — ${정본}`);
@@ -510,7 +510,7 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   assert.equal(recipeSteps, 32, `레시피 스텝 합계 — ${정본}`);
 
   const prepTasks = listPrepLists().reduce((n, l) => n + l.tasks.length, 0);
-  assert.equal(prepTasks, 27, `프렙 항목 합계 — ${정본}`);
+  assert.equal(prepTasks, 28, `프렙 항목 합계 — ${정본}`);
 
   /* ★ 촬영 대상은 프렙 **전체(27)가 아니라 묶음 머리를 뺀 24** 이다.
    *
@@ -537,11 +537,11 @@ test("★ 숫자 정본 — 레시피 · 포지션 · 근무조 · 촬영 대상
   assert.equal(filmable, prepTasks - heads.length, "filmableTasks 가 묶음 머리만 뺀다");
 
   // /shoot 이 실제로 만드는 목록과 같은 셈법이다 (src/app/shoot/page.tsx)
-  assert.equal(positionSteps + recipeSteps + filmable, 91, `촬영 대상 합계 — ${정본}`);
+  assert.equal(positionSteps + recipeSteps + filmable, 92, `촬영 대상 합계 — ${정본}`);
 });
 
 test("★ 숫자 정본 — 레시피가 붙은 프렙 · 수량이 바뀌는 프렙", () => {
   const all = listPrepLists().flatMap((l) => l.tasks);
   assert.equal(all.filter((t) => t.recipeSlug).length, 8, `레시피가 붙은 프렙 — ${정본}`);
-  assert.equal(all.filter((t) => t.quantityVaries).length, 9, `수량이 바뀌는 프렙 — ${정본}`);
+  assert.equal(all.filter((t) => t.quantityVaries).length, 10, `수량이 바뀌는 프렙 — ${정본}`);
 });

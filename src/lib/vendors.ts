@@ -10,7 +10,7 @@
  * 그 항목에 거래처를 붙이기만 한다.
  * ------------------------------------------------------------------ */
 
-import { loadJson, newId, saveJson } from "./store.ts";
+import { loadJson, newId, saveJson, newUuid } from "./store.ts";
 import { convert } from "./units.ts";
 
 export type Vendor = {
@@ -76,7 +76,7 @@ export function saveVendors(data: VendorData): boolean {
 
 export function newVendor(): Vendor {
   return {
-    id: newId("vd"),
+    id: newUuid(),
     name: "",
     phone: "",
     contact: "",
@@ -90,7 +90,7 @@ export function newVendor(): Vendor {
 
 export function newVendorItem(vendorId: string): VendorItem {
   return {
-    id: newId("vi"),
+    id: newUuid(),
     vendorId,
     name: "",
     packAmount: 0,
@@ -200,4 +200,68 @@ export function cutoffOrder(a: Vendor, b: Vendor, now: Date): number {
   const pastB = lb < 0;
   if (pastA !== pastB) return pastA ? 1 : -1;
   return pastA ? lb - la : la - lb;
+}
+
+/* ------------------------------------------------------------------ *
+ * 옛 id 를 uuid 로 옮긴다 (2026-09-18)
+ *
+ * ★ 서버 `suppliers.id` · `items.id` 는 uuid 인데, 이 파일이 만들던 id 는
+ *   `vd-a1b2c3` 였다. 그래서 **거래처를 넣어도 서버에 한 줄도 안 올라갔다** —
+ *   직원에서 한 번 겪은 것과 똑같은 일이다 (2026-09-14).
+ *
+ * ★ 그런데 직원 때와 달리 **이미 넣어둔 거래처가 있다.** 「지우고 다시
+ *   넣으세요」 라고 하면 사장님이 단가를 전부 다시 친다. 그래서 **id 만
+ *   바꿔 끼운다** — 이름·단가·연락처는 그대로 두고 잇는 곳만 새 id 로 고친다.
+ *
+ *   잇는 곳은 둘이다:
+ *     · 품목의 `vendorId`
+ *     · 발주 화면의 거래처 연결(`sop:orderLinks`) — 이걸 빼먹으면
+ *       「주문함」을 눌러도 문자 보낼 상대를 못 찾는다
+ *
+ * ★ 이미 전부 uuid 면 **아무것도 안 한다.** 열 때마다 새 id 를 발급하면
+ *   서버에 같은 거래처가 계속 쌓인다.
+ * ------------------------------------------------------------------ */
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function needsIdMigration(data: VendorData): boolean {
+  return (
+    data.vendors.some((v) => !UUID_RE.test(v.id)) ||
+    data.items.some((i) => !UUID_RE.test(i.id))
+  );
+}
+
+/** 옛 id → 새 uuid 로 바꾼 결과. 연결도 같이 고쳐서 돌려준다 */
+export function migrateVendorIds(
+  data: VendorData,
+  links: Record<string, string>,
+): { data: VendorData; links: Record<string, string>; changed: boolean } {
+  if (!needsIdMigration(data)) return { data, links, changed: false };
+
+  const map = new Map<string, string>();
+  const idFor = (old: string): string => {
+    if (UUID_RE.test(old)) return old;
+    let next = map.get(old);
+    if (!next) {
+      next = newUuid();
+      map.set(old, next);
+    }
+    return next;
+  };
+
+  const vendors = data.vendors.map((v) => ({ ...v, id: idFor(v.id) }));
+  const items = data.items.map((i) => ({
+    ...i,
+    id: idFor(i.id),
+    /* 품목이 가리키는 거래처도 같은 새 id 로 */
+    vendorId: i.vendorId ? idFor(i.vendorId) : i.vendorId,
+  }));
+
+  const nextLinks: Record<string, string> = {};
+  for (const [taskId, vendorId] of Object.entries(links)) {
+    nextLinks[taskId] = vendorId ? idFor(vendorId) : vendorId;
+  }
+
+  return { data: { vendors, items }, links: nextLinks, changed: true };
 }

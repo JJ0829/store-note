@@ -1386,8 +1386,38 @@
         },
         {
           "id": "p-5",
-          "title": "우유·식자재 발주",
-          "desc": "재고 확인하고 주문합니다. 금요일에는 주말치까지 함께 넣습니다.",
+          "title": "우유 발주",
+          "desc": "냉장고 우유·생크림 재고를 보고 주문합니다. 금요일에는 주말치까지 함께 넣습니다.",
+          "kind": "order",
+          "trigger": {
+            "type": "weekday",
+            "days": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "at": "15:00"
+          },
+          "leadTimeHours": null,
+          "leadTimeDays": 1,
+          "recoverable": true,
+          "consequence": "",
+          "quantityVaries": true,
+          "critical": false,
+          "goodImage": null,
+          "badImage": null,
+          "videoUrl": null,
+          "recipeSlug": null,
+          "optionOf": null,
+          "optional": false,
+          "group": "발주"
+        },
+        {
+          "id": "p-5b",
+          "title": "식자재 발주",
+          "desc": "밀가루·설탕·과일 같은 식자재 재고를 보고 주문합니다. 금요일에는 주말치까지 함께 넣습니다.",
           "kind": "order",
           "trigger": {
             "type": "weekday",
